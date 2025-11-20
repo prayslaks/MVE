@@ -19,7 +19,8 @@ public class MVE : ModuleRules
 			"GameplayStateTreeModule",
 			"UMG",
 			"Slate",
-			"glTFRuntime"
+			"glTFRuntime",
+			"IKRig"
 		});
 
 		PrivateDependencyModuleNames.AddRange(new string[] { });

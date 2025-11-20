@@ -17,7 +17,11 @@ public:
 protected:
 	virtual void BeginPlay() override;
 
-public:    
+public:
+	// 에디터에서 설정할 표준 IK Rig
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "IK Retargeting")
+	class UIKRigDefinition* StandardIKRig;
+	
 	// GLB 파일 경로 (Content 폴더 기준)
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "glTF Test")
 	FString GLBFilePath;
@@ -28,8 +32,15 @@ public:
     
 	// GLB 로드 함수
 	UFUNCTION(BlueprintCallable, Category = "glTF Test")
-	void LoadGLBFile();
+	USkeletalMesh* LoadGLBFile();
+
+	// 테스트 함수
+	UFUNCTION(BlueprintCallable, Category = "IK Retargeting")
+	void LoadAndTestRetargeting();
     
 	// 콜백 함수
 	void OnSkeletalMeshLoaded(USkeletalMesh* LoadedMesh);
+
+	// 본 매핑 출력 (디버깅용)
+	void PrintBoneStructure(USkeletalMesh* Mesh);
 };
