@@ -41,12 +41,14 @@ public class MVE : ModuleRules
 			"MVE/Variant_SideScrolling/UI"
 		});
 
-		// Uncomment if you are using Slate UI
-		// PrivateDependencyModuleNames.AddRange(new string[] { "Slate", "SlateCore" });
-
-		// Uncomment if you are using online features
-		// PrivateDependencyModuleNames.Add("OnlineSubsystem");
-
-		// To include OnlineSubsystemSteam, add it to the plugins section in your uproject file with the Enabled attribute set to true
+		// 모든 하위 Public 폴더를 자동으로 추가
+		string ModulePath = ModuleDirectory;
+		string[] PublicFolders = System.IO.Directory.GetDirectories(ModulePath, "Public", System.IO.SearchOption.AllDirectories);
+        
+		foreach (string Folder in PublicFolders)
+		{
+			PublicIncludePaths.Add(Folder);
+		}
+		
 	}
 }
