@@ -1,0 +1,47 @@
+{
+	"FileVersion": 3,
+	"Version": 1,
+	"VersionName": "2.2",
+	"FriendlyName": "Remocapp",
+	"Description": "This plugin is a tool to get the captured motion data from Remocapp software. Remocapp software is a marker-less AI-based application that captures human motions and sends the real-time animation data to Unreal Engine, without the need to wear gloves and suits. It lets you setup your free MoCap studio.",
+	"Category": "Motion Capture",
+	"CreatedBy": "REMOCAPP PTY LTD",
+	"CreatedByURL": "https://remocapp.com",
+	"DocsURL": "https://www.youtube.com/@remocapp",
+	"MarketplaceURL": "com.epicgames.launcher://ue/marketplace/product/fa02402072ab4d928728daf6ce565ec7",
+	"SupportURL": "mailto: support@remocapp.com",
+	"EngineVersion": "5.6.0",
+	"CanContainContent": true,
+	"Installed": true,
+	"SupportedTargetPlatforms": [
+		"Win64"
+	],
+	"Modules": [
+		{
+			"Name": "RemocappEditor",
+			"Type": "Editor",
+			"LoadingPhase": "Default",
+			"PlatformAllowList": [
+				"Win64"
+			]
+		}
+	],
+	"Plugins": [
+		{
+			"Name": "SequencerScripting",
+			"Enabled": true
+		},
+		{
+			"Name": "Takes",
+			"Enabled": true
+		},
+		{
+			"Name": "OSC",
+			"Enabled": true
+		},
+		{
+			"Name": "LiveLink",
+			"Enabled": true
+		}
+	]
+}
