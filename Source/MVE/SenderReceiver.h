@@ -12,7 +12,7 @@ class MVE_API UGenAISenderReceiver : public UGameInstanceSubsystem
     GENERATED_BODY()
 
 public:
-
+// ---------------------------------- UI 바인딩할 델리게이트 ---------------------------------------//
     // 에셋 생성 완료시 발동
     UPROPERTY(BlueprintAssignable, Category = "GenAI")
     FOnAssetGenerated OnAssetGenerated;
@@ -33,14 +33,14 @@ public:
 
 public:
   
-    // 송신부
+    // --------------------------------------- 송신부 ------------------------------------------------//
     UFUNCTION(BlueprintCallable, Category = "GenAI")
     void RequestGeneration(
         const FString& Prompt,
         const FString& UserEmail,
         const FString& OptionalImagePath = TEXT("")
     );
-    // 수신부
+    // ---------------------------------------- 수신부 -----------------------------------------------//
     UFUNCTION(BlueprintCallable, Category = "GenAI")
     void DownloadAsset(const FAssetMetadata& Metadata);
 

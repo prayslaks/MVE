@@ -235,7 +235,7 @@ void UGenAISenderReceiver::OnAssetDownloaded(
     // 로컬 파일로 저장
     // 저장 디렉토리 경로
     // 예: "C:/MyProject/Saved/GenAIAssets/"
-    FString SaveDir = FPaths::ProjectSavedDir() / TEXT("GenAIAssets");
+    FString SaveDir = FPaths::ProjectSavedDir() / TEXT("SourceAssets");
     
     // 디렉토리 생성 (없으면)
     IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();

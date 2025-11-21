@@ -62,7 +62,7 @@ public:
 
 
 private:
-	/** 에셋 수신 핸들러 */
+	/** 에셋 수신 핸들러 */   // --TODO 이걸로 에셋 화면에 띄울꺼임
 	UFUNCTION()
 	void OnAssetReceived(UObject* Asset, const FAssetMetadata& Metadata);
 
