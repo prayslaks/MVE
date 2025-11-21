@@ -11,7 +11,13 @@ UCLASS()
 class MVE_API UMVE_WidgetClass_MainLevel_Credit : public UUserWidget
 {
 	GENERATED_BODY()
+
+protected:
+	virtual void NativeConstruct() override;
 	
 	UPROPERTY(meta = (BindWidget))
-	TObjectPtr<UButton> GoMainButton;
+	TObjectPtr<UButton> MoveMainButton;
+
+	UFUNCTION()
+	void OnMoveMainButtonClicked();
 };

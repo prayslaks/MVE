@@ -14,6 +14,9 @@ class MVE_API UMVE_WidgetClass_MainLevel_Register : public UUserWidget
 {
 	GENERATED_BODY()
 
+protected:
+	virtual void NativeConstruct() override;
+
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UButton> SwitchLoginButton;
 
@@ -45,4 +48,14 @@ public:
 	void OnUserPasswordEditableBoxCommitted();
 	void OnVerificationPasswordEditableBoxCommitted();
 	void ValidPasswordCondition();
+
+private:
+	UFUNCTION()
+	void OnSendVerificationCodeButtonClicked();
+
+	UFUNCTION()
+	void OnRegisterButtonClicked();
+
+	UFUNCTION()
+	void OnMoveLoginScreenButtonClicked();
 };

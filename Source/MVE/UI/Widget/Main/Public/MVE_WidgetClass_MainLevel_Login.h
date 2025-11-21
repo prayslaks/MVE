@@ -14,8 +14,11 @@ class MVE_API UMVE_WidgetClass_MainLevel_Login : public UUserWidget
 {
 	GENERATED_BODY()
 
+protected:
+	virtual void NativeConstruct() override;
+
 	UPROPERTY(meta = (BindWidget))
-	TObjectPtr<UButton> GoMainButton;
+	TObjectPtr<UButton> MoveMainButton;
 
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UEditableTextBox> UserEmailEditableBox;
@@ -30,13 +33,24 @@ class MVE_API UMVE_WidgetClass_MainLevel_Login : public UUserWidget
 	TObjectPtr<UButton> TryLoginButton;
 
 	UPROPERTY(meta = (BindWidget))
-	TObjectPtr<UButton> GoRegisterButton;
+	TObjectPtr<UButton> MoveRegisterButton;
 	
 	FString CommittedUserEmail;
 	FString CommittedUserPassword;
 	
-public:
+private:
 	void OnUserEmailEditableBoxCommitted();
 	void OnUserPasswordEditableBoxCommitted();
 	bool ValidLoginForm();
+
+
+	// 버튼 콜백 함수
+	UFUNCTION()
+	void OnLoginButtonClicked();
+
+	UFUNCTION()
+	void OnRegisterButtonClicked();
+
+	UFUNCTION()
+	void OnMoveMainMenuButtonClicked();
 };
