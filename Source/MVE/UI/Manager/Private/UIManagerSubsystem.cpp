@@ -2,6 +2,7 @@
 #include "../Public/UIManagerSubsystem.h"
 #include "MVE.h"
 #include "Blueprint/UserWidget.h"
+#include "UI/Manager/ScreenTypes.h"
 
 void UUIManagerSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
@@ -9,6 +10,8 @@ void UUIManagerSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 
 	CurrentScreen = EUIScreen::None;
 	CurrentWidget = nullptr;
+
+	InitScreenClasses();
     
 	PRINTLOG(TEXT("UIManagerSubsystem Initialized"));
 }
@@ -48,6 +51,33 @@ UUIManagerSubsystem* UUIManagerSubsystem::Get(const UObject* WorldContextObject)
 	}
     
 	return GameInstance->GetSubsystem<UUIManagerSubsystem>();
+}
+
+void UUIManagerSubsystem::InitScreenClasses()
+{
+	if (UIClassesTableAsset.IsNull()) return;
+	UDataTable* DT = UIClassesTableAsset.LoadSynchronous();
+
+	for (auto& It : DT->GetRowMap())
+	{
+		const FScreenClassInfo* Row = DT->FindRow<FScreenClassInfo>(It.Key, TEXT("UUIManagerSubsystem::CacheUIScreen"), true);
+		if (!Row) continue;
+
+		if (Row->Screen == EUIScreen::None)
+		{
+			PRINTLOG(TEXT("UIScreen Enum 잘못 지정됨"));
+			continue;
+		}
+
+		if (!Row->WidgetClass)
+		{
+			PRINTLOG(TEXT("Widget Class 지정 안함"));
+			continue;
+		}
+		
+		//ScreenWidgetClasses[Row->Screen] = Row->WidgetClass;
+		ScreenWidgetClasses.Add(Row->Screen, Row->WidgetClass);
+	}
 }
 
 void UUIManagerSubsystem::ShowScreen(EUIScreen ScreenType)

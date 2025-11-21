@@ -21,7 +21,7 @@ enum class EUIScreen : uint8
 	AudienceView
 };
 
-UCLASS()
+UCLASS(Config=Game)
 class MVE_API UUIManagerSubsystem : public UGameInstanceSubsystem
 {
 	GENERATED_BODY()
@@ -29,8 +29,14 @@ class MVE_API UUIManagerSubsystem : public UGameInstanceSubsystem
 public:
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
 	virtual void Deinitialize() override;
+	
     
 	static UUIManagerSubsystem* Get(const UObject* WorldContextObject);
+
+	UPROPERTY(Config, EditDefaultsOnly, Category = "DataTable")
+	TSoftObjectPtr<UDataTable> UIClassesTableAsset;
+
+	void InitScreenClasses();
     
 	// 화면 전환 - 이게 전부
 	UFUNCTION(BlueprintCallable, Category = "UI")
