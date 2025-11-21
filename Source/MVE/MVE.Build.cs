@@ -20,7 +20,12 @@ public class MVE : ModuleRules
 			"UMG",
 			"Slate",
 			"glTFRuntime",
-			"IKRig"
+			"IKRig",
+			"HTTP",              // FHttpModule, IHttpRequest, IHttpResponse
+			"Json",              // FJsonObject, FJsonValue
+			"JsonUtilities",     // FJsonObjectConverter, FJsonSerializer
+			"ImageWrapper",      // IImageWrapper (이미지 로딩)
+			"glTFRuntime"   
 		});
 
 		PrivateDependencyModuleNames.AddRange(new string[] { });
