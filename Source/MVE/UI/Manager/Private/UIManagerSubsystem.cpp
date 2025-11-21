@@ -136,6 +136,22 @@ void UUIManagerSubsystem::RegisterScreenWidget(EUIScreen ScreenType, TSubclassOf
 	}
 }
 
+UUserWidget* UUIManagerSubsystem::ShowPopup(FName PopupName, bool bAddToStack)
+{
+}
+
+void UUIManagerSubsystem::CloseTopPopup()
+{
+}
+
+void UUIManagerSubsystem::ClosePopup(UUserWidget* PopupWidget)
+{
+}
+
+void UUIManagerSubsystem::CloseAllPopups()
+{
+}
+
 UUserWidget* UUIManagerSubsystem::CreateOrGetWidget(EUIScreen ScreenType)
 {
 	// 캐싱 사용 시 캐시에서 찾기
