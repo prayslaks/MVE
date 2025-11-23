@@ -2,7 +2,7 @@
 #include "../Public/UIManagerSubsystem.h"
 #include "MVE.h"
 #include "Blueprint/UserWidget.h"
-#include "UI/ScreenTypes.h"
+#include "Data/ScreenTypes.h"
 
 void UUIManagerSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {

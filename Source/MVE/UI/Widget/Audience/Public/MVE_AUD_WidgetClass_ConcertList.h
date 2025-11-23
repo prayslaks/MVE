@@ -1,0 +1,59 @@
+﻿
+#pragma once
+
+#include "CoreMinimal.h"
+#include "Blueprint/UserWidget.h"
+#include "Data/RoomInfo.h"
+#include "Data/RoomInfoData.h"
+#include "MVE_AUD_WidgetClass_ConcertList.generated.h"
+
+class UListView;
+
+UCLASS()
+class MVE_API UMVE_AUD_WidgetClass_ConcertList : public UUserWidget
+{
+	GENERATED_BODY()
+
+protected:
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<UListView> RoomListView;
+
+public:
+	/**
+	 * 방 목록 업데이트
+	 */
+	UFUNCTION(BlueprintCallable)
+	void UpdateRoomList(const TArray<FRoomInfo>& Rooms);
+
+	/**
+	 * 방 목록 초기화
+	 */
+	UFUNCTION(BlueprintCallable)
+	void ClearRoomList();
+
+	/**
+	 * 제목 변경
+	 */
+	UFUNCTION(BlueprintCallable)
+	void SetTitle(const FText& NewTitle);
+
+	// 방 선택 이벤트
+	DECLARE_MULTICAST_DELEGATE_OneParam(FOnRoomSelected, URoomInfoData*);
+	FOnRoomSelected OnRoomSelected;
+
+protected:
+	virtual void NativeConstruct() override;
+
+private:
+	/**
+	 * ListView 항목 선택 이벤트
+	 */
+	UFUNCTION()
+	void OnRoomItemSelected(UObject* SelectedItem);
+
+	/**
+	 * ListView 항목 클릭 이벤트
+	 */
+	UFUNCTION()
+	void OnRoomItemClicked(UObject* ClickedItem);
+};
