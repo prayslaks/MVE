@@ -30,11 +30,13 @@ public:
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
 	virtual void Deinitialize() override;
 	
-    
 	static UUIManagerSubsystem* Get(const UObject* WorldContextObject);
 
 	UPROPERTY(Config, EditDefaultsOnly, Category = "DataTable")
 	TSoftObjectPtr<UDataTable> UIClassesTableAsset;
+
+	UPROPERTY(Config, EditDefaultsOnly, Category = "DataTable")
+	TSoftObjectPtr<UDataTable> PopUpClassesTableAsset;
 
 	void InitScreenClasses();
     
