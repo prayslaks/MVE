@@ -30,6 +30,11 @@ void UMVE_WidgetClass_MainLevel_ModeSelect::OnMoveStudioButtonClicked()
 
 void UMVE_WidgetClass_MainLevel_ModeSelect::OnMoveAudienceButtonClicked()
 {
+	UUIManagerSubsystem* UIManager = UUIManagerSubsystem::Get(this);
+	if (UIManager)
+	{
+		UIManager->ShowScreen(EUIScreen::AudienceStation);
+	}
 }
 
 void UMVE_WidgetClass_MainLevel_ModeSelect::OnMoveMainButtonClicked()

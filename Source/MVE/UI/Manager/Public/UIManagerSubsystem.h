@@ -5,6 +5,8 @@
 #include "Subsystems/GameInstanceSubsystem.h"
 #include "UIManagerSubsystem.generated.h"
 
+class UMVE_WidgetClass_ModalBackgroundWidget;
+
 UENUM(BlueprintType)
 enum class EUIScreen : uint8
 {
@@ -17,8 +19,8 @@ enum class EUIScreen : uint8
 	StudioCharacterCustomize,
 	StudioBroadcastSetting,
 	StudioBroadcast,
-	AudienceMenu,
-	AudienceView
+	AudienceStation,
+	AudienceConcertRoom
 };
 
 UCLASS(Config=Game)
@@ -39,6 +41,14 @@ public:
 	TSoftObjectPtr<UDataTable> PopUpClassesTableAsset;
 
 	void InitScreenClasses();
+
+	// 모달 배경 위젯
+	UPROPERTY()
+	TObjectPtr<UMVE_WidgetClass_ModalBackgroundWidget> ModalBackground;
+
+	// 모달 배경 위젯 클래스
+	UPROPERTY()
+	TSubclassOf<UMVE_WidgetClass_ModalBackgroundWidget> ModalBackgroundClass;
     
 	// 화면 전환 - 이게 전부
 	UFUNCTION(BlueprintCallable, Category = "UI")
@@ -58,7 +68,7 @@ public:
 
 	// 팝업 표시 (동적 생성)
 	UFUNCTION(BlueprintCallable)
-	UUserWidget* ShowPopup(FName PopupName, bool bAddToStack = true);
+	UUserWidget* ShowPopup(FName PopupName, bool bShowModalBackground = true);
     
 	// 최상위 팝업 닫기
 	UFUNCTION(BlueprintCallable)
@@ -102,4 +112,13 @@ private:
 	// 팝업 위젯 클래스 맵
 	UPROPERTY()
 	TMap<FName, TSubclassOf<UUserWidget>> PopupWidgetClasses;
+
+	// 모달 배경 표시
+	void ShowModalBackground();
+
+	// 모달 배경 숨기기
+	void HideModalBackground();
+
+	// 모달 배경 클릭 처리
+	void OnModalBackgroundClicked();
 };

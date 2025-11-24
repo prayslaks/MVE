@@ -1,11 +1,13 @@
 ﻿
 #include "../Public/MVE_AUD_WidgetClass_RoomInfoWidget.h"
 #include "MVE.h"
+#include "UIManagerSubsystem.h"
 #include "Components/Border.h"
 #include "Components/Button.h"
 #include "Components/Image.h"
 #include "Components/TextBlock.h"
 #include "Data/RoomInfoData.h"
+#include "UI/Widget/PopUp/Public/MVE_AUD_WidgetClass_JoinRoomConfirmPopup.h"
 
 void UMVE_AUD_WidgetClass_RoomInfoWidget::NativeConstruct()
 {
@@ -14,6 +16,8 @@ void UMVE_AUD_WidgetClass_RoomInfoWidget::NativeConstruct()
 	if (RoomButton)
 	{
 		RoomButton.Get()->OnClicked.AddDynamic(this, &UMVE_AUD_WidgetClass_RoomInfoWidget::OnRoomButtonClicked);
+		RoomButton.Get()->OnHovered.AddDynamic(this, &UMVE_AUD_WidgetClass_RoomInfoWidget::OnButtonHovered);
+		RoomButton.Get()->OnUnhovered.AddDynamic(this, &UMVE_AUD_WidgetClass_RoomInfoWidget::OnButtonUnhovered);
 	}
 }
 
@@ -52,8 +56,8 @@ void UMVE_AUD_WidgetClass_RoomInfoWidget::NativeOnItemSelectionChanged(bool bIsS
 	if (RoomBorder)
 	{
 		FLinearColor BorderColor = bIsSelected 
-			? FLinearColor(1.0f, 0.5f, 0.0f, 1.0f) // 주황색
-			: FLinearColor(0.2f, 0.2f, 0.2f, 1.0f); // 회색
+			? FLinearColor(0.2f, 0.2f, 0.2f, 1.0f) // 회색
+			: FLinearColor(0.2f, 0.2f, 0.2f, 0.0f); // 투명
         
 		RoomBorder->SetBrushColor(BorderColor);
 	}
@@ -71,7 +75,7 @@ void UMVE_AUD_WidgetClass_RoomInfoWidget::UpdateUI(URoomInfoData* RoomData)
 	// 방 ID
 	if (RoomIDText)
 	{
-		RoomIDText->SetText(FText::FromString(FString::Printf(TEXT("방 %s"), *RoomData->RoomInfo.RoomID)));
+		RoomIDText->SetText(FText::FromString(FString::Printf(TEXT("%s"), *RoomData->RoomInfo.RoomID)));
 	}
 
 	// 방 제목
@@ -90,7 +94,7 @@ void UMVE_AUD_WidgetClass_RoomInfoWidget::UpdateUI(URoomInfoData* RoomData)
 	// 시청자 수
 	if (ViewerCountText)
 	{
-		ViewerCountText->SetText(FText::FromString(FString::Printf(TEXT("%d명"), RoomData->RoomInfo.ViewerCount)));
+		ViewerCountText->SetText(FText::FromString(FString::Printf(TEXT("%d"), RoomData->RoomInfo.ViewerCount)));
 	}
 
 	// 썸네일
@@ -133,5 +137,36 @@ void UMVE_AUD_WidgetClass_RoomInfoWidget::OnRoomButtonClicked()
 	{
 		PRINTLOG(TEXT("Room button clicked: %s"), *CachedRoomData->RoomInfo.RoomTitle);
 		OnRoomClicked.Broadcast(CachedRoomData);
+
+		// 참가 확인 팝업 띄우기
+		if (UUIManagerSubsystem* UIManager = UUIManagerSubsystem::Get(this))
+		{
+			UUserWidget* PopupWidget = UIManager->ShowPopup(FName("EnterRoomConfirmation"), true);
+			UMVE_AUD_WidgetClass_JoinRoomConfirmPopup* JoinPopup = Cast<UMVE_AUD_WidgetClass_JoinRoomConfirmPopup>(PopupWidget);
+			
+			if (JoinPopup)
+			{
+				const FRoomInfo Info = FRoomInfo(CachedRoomData->GetRoomInfo());
+				JoinPopup->SetRoomInfo(Info);
+			}
+		}
+	}
+}
+
+void UMVE_AUD_WidgetClass_RoomInfoWidget::OnButtonHovered()
+{
+	if (RoomBorder)
+	{
+		FLinearColor BorderColor = HoveredColor; // 회색
+		RoomBorder->SetBrushColor(BorderColor);
+	}
+}
+
+void UMVE_AUD_WidgetClass_RoomInfoWidget::OnButtonUnhovered()
+{
+	if (RoomBorder)
+	{
+		FLinearColor BorderColor = UnhoveredColor; // 투명색
+		RoomBorder->SetBrushColor(BorderColor);
 	}
 }

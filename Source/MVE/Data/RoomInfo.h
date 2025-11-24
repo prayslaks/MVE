@@ -13,34 +13,34 @@ struct FRoomInfo
 {
 	GENERATED_BODY()
 
-	UPROPERTY(BlueprintReadWrite)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FString RoomID;
 
-	UPROPERTY(BlueprintReadWrite)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FString RoomTitle;
 
-	UPROPERTY(BlueprintReadWrite)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FDateTime BroadcastTime;
 
-	UPROPERTY(BlueprintReadWrite)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	UTexture2D* Thumbnail;
 
-	UPROPERTY(BlueprintReadWrite)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FString ConcertType;
 
-	UPROPERTY(BlueprintReadWrite)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	int32 ViewerCount;
 
-	UPROPERTY(BlueprintReadWrite)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	bool bIsLive;
 
-	UPROPERTY(BlueprintReadWrite)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	bool bIsFeatured;
 
-	UPROPERTY(BlueprintReadWrite)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	bool bIsNew;
 
-	UPROPERTY(BlueprintReadWrite)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FLinearColor RoomColor;
 
 	// 기본 생성자
@@ -55,4 +55,17 @@ struct FRoomInfo
 		, bIsFeatured(false)
 		, bIsNew(false)
 	{}
+};
+
+// 테스트용 Room 정보들을 담은 데이터 테이블
+// 나중에 안 쓸 예정
+USTRUCT(BlueprintType)
+struct FDTRoomInfo : public FTableRowBase
+{
+	GENERATED_BODY()
+
+	FDTRoomInfo() : RoomInfo(){}
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FRoomInfo RoomInfo;
 };
