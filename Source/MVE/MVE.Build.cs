@@ -24,6 +24,8 @@ public class MVE : ModuleRules
 			"Json",              // FJsonObject, FJsonValue
 			"JsonUtilities",     // FJsonObjectConverter, FJsonSerializer
 			"ImageWrapper",      // IImageWrapper (이미지 로딩)
+			"RenderCore",		 // 
+			"Niagara",			 // 나이아가라 이펙트
 			"glTFRuntime"   
 		});
 
