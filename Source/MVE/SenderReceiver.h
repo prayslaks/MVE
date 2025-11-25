@@ -25,11 +25,11 @@ public:
     // 서버 설정
     // TODO 나중에 로그 가져와야한다
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Config")
-    FString ServerURL = TEXT("http://localhost:8000");
+    FString ServerURL = TEXT("http://127.0.0.1:8000");
 
     // api TODO 얘도 똑같이
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Config")
-    FString GenerateEndpoint = TEXT("/api/generate");
+    FString GenerateEndpoint = TEXT("/upload/api/generate");
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Config")
     FString LocalAssetDiscovery = TEXT("SourceAssets");
@@ -53,6 +53,9 @@ public:
     // 로컬에서 직접 로드
     UFUNCTION(BlueprintCallable, Category = "Responses")
     void LoadLocalAsset(const FAssetMetadata& Metadata);
+
+    UFUNCTION(BlueprintCallable, Category = "Utill")
+    FString GetFileExtensionAsset(EAssetType AssetType);
 
 
     // 송신내부구현
@@ -82,7 +85,5 @@ public:
     FString GetSaveDirectory();
 
     // 에셋 타입별 확장자 (glb 이긴 한데 이후에 쓸가봐)
-    static const TMap<EAssetType, FString> AssetTypeMap;
-
-
+    static const TMap<EAssetType, FString> AssetTypeExtensions;
 };

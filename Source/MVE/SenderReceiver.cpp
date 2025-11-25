@@ -14,6 +14,42 @@
 
 #include "MVE.h"
 
+const TMap<EAssetType, FString> USenderReceiver::AssetTypeExtensions = {
+	{ EAssetType::MESH, TEXT("glb")},
+	{ EAssetType::IMAGE, TEXT("png")},
+	{ EAssetType::AUDIO, TEXT("wav")},
+	{ EAssetType::GENERIC, TEXT("dat")}
+};
+
+FString USenderReceiver::GetFileExtensionAsset(EAssetType AssetType)
+{
+	if (const FString* Extension = AssetTypeExtensions.Find(AssetType))
+	{
+		return *Extension;
+	}
+	return TEXT("dat");
+}
+
+// 파일 위치가 없다면 하나 만든다
+FString USenderReceiver::GetSaveDirectory()
+{
+	FString SaveDir = FPaths::ProjectSavedDir() / LocalAssetDiscovery;
+
+	IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
+	if (!PlatformFile.DirectoryExists(*SaveDir))
+	{
+		if (!PlatformFile.CreateDirectoryTree(*SaveDir))
+		{
+			UE_LOG(LogMVE, Warning , TEXT("디렉토리 생성 : %s"),*SaveDir)
+		}
+		else
+		{
+			UE_LOG(LogMVE, Error , TEXT("디렉토리 생성 실패 : %s"),*SaveDir)
+		}
+	}
+	return SaveDir;
+}
+
 void USenderReceiver::RequestGeneration(const FString& Prompt, const FString& UserEmail,
                                              const FString& OptionalImagePath)
 {
@@ -25,8 +61,6 @@ void USenderReceiver::RequestGeneration(const FString& Prompt, const FString& Us
 	// http 요청 객체 생성
 	TSharedPtr<IHttpRequest, ESPMode::ThreadSafe> HttpRequest = FHttpModule::Get().CreateRequest();
 	FString FullURL = ServerURL + GenerateEndpoint;
-
-	
 	
 	HttpRequest->SetURL(FullURL);
 	HttpRequest->SetVerb(TEXT("POST"));
@@ -513,3 +547,5 @@ void USenderReceiver::LoadLocalAsset(const FAssetMetadata& Metadata)
 	}
 	
 }
+
+
