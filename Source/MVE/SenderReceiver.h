@@ -14,38 +14,38 @@ class MVE_API UGenAISenderReceiver : public UGameInstanceSubsystem
 public:
 // ---------------------------------- UI 바인딩할 델리게이트 ---------------------------------------//
     // 에셋 생성 완료시 발동
-    UPROPERTY(BlueprintAssignable, Category = "GenAI")
+    UPROPERTY(BlueprintAssignable, Category = "DOWNLOAD")
     FOnAssetGenerated OnAssetGenerated;
 
     // 다운로드 진행중 발동
-    UPROPERTY(BlueprintAssignable, Category = "GenAI")
+    UPROPERTY(BlueprintAssignable, Category = "DOWNLOAD")
     FOnDownloadProgress OnDownloadProgress;
 
 public:
     // 서버 설정
     // TODO 나중에 로그 가져와야한다
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GenAI|Config")
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Config")
     FString ServerURL = TEXT("http://localhost:8000");
 
     // api TODO 얘도 똑같이
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GenAI|Config")
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Config")
     FString GenerateEndpoint = TEXT("/api/generate");
 
 public:
   
     // --------------------------------------- 송신부 ------------------------------------------------//
-    UFUNCTION(BlueprintCallable, Category = "GenAI")
+    UFUNCTION(BlueprintCallable, Category = "Request")
     void RequestGeneration(
         const FString& Prompt,
         const FString& UserEmail,
         const FString& OptionalImagePath = TEXT("")
     );
     // ---------------------------------------- 수신부 -----------------------------------------------//
-    UFUNCTION(BlueprintCallable, Category = "GenAI")
+    UFUNCTION(BlueprintCallable, Category = "Responses")
     void DownloadAsset(const FAssetMetadata& Metadata);
 
     // 로컬에서 직접 로드
-    UFUNCTION(BlueprintCallable, Category = "GenAI")
+    UFUNCTION(BlueprintCallable, Category = "Responses")
     void LoadLocalAsset(const FAssetMetadata& Metadata);
 
 private:

@@ -21,31 +21,31 @@ struct FAssetMetadata
     GENERATED_BODY()
 
     // 고유 식별자 에셋 추적용
-    UPROPERTY(BlueprintReadWrite, Category = "GenAI Asset")
+    UPROPERTY(BlueprintReadWrite, Category = "Asset")
     FGuid AssetID;
 
     //생성자 계정
-    UPROPERTY(BlueprintReadWrite, Category = "GenAI Asset")
+    UPROPERTY(BlueprintReadWrite, Category = "Asset")
     FString UserEmail;
 
     //표시 이름 캐릭터 닉네임 등 
-    UPROPERTY(BlueprintReadWrite, Category = "GenAI Asset")
+    UPROPERTY(BlueprintReadWrite, Category = "Asset")
     FString DisplayName;
 
     // 리소스 데이터     MESH = GLB,FBX IMAGE = PNG , AUDIO = WAV , VIDEO = MP4
-    UPROPERTY(BlueprintReadWrite, Category = "GenAI Asset")
+    UPROPERTY(BlueprintReadWrite, Category = "Asset")
     EGenAIAssetType AssetType = EGenAIAssetType::GENERIC;
 
     // 다운로드 url
-    UPROPERTY(BlueprintReadWrite, Category = "GenAI Asset")
+    UPROPERTY(BlueprintReadWrite, Category = "Asset")
     FString RemotePath;
 
     // 로컬 저장 경로
-    UPROPERTY(BlueprintReadWrite, Category = "GenAI Asset")
+    UPROPERTY(BlueprintReadWrite, Category = "Asset")
     FString LocalPath;
 
     // 생성 날짜 등 시간
-    UPROPERTY(BlueprintReadWrite, Category = "GenAI Asset")
+    UPROPERTY(BlueprintReadWrite, Category = "Asset")
     FDateTime Date;
 
     // 기본 생성자
