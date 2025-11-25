@@ -102,7 +102,7 @@ void UGenAISenderReceiver::RequestGeneration(const FString& Prompt, const FStrin
 	// 최종 Body 완성
 	BodyData.Append((uint8*)TCHAR_TO_UTF8(*BodyString), BodyString.Len());
 
-	UE_LOG(LogMVE, Log, TEXT("[GenAI Sender] 최종 Body 크기: %d bytes"), BodyData.Num());
+	UE_LOG(LogMVE, Log, TEXT("[MVE] 최종 Body 크기: %d bytes"), BodyData.Num());
 	
 	// HTTP 요청 전송
 	HttpRequest->SetContent(BodyData);
@@ -133,21 +133,21 @@ void UGenAISenderReceiver::OnGenerationRequestComplete(
     // 응답 유효성 검사
 	if (!bWasSuccessful || !Response.IsValid())
     {
-        UE_LOG(LogMVE, Error, TEXT("[GenAI Sender] HTTP 요청 실패"));
+        UE_LOG(LogMVE, Error, TEXT("[MVE] HTTP 요청 실패"));
         return;
     }
 
     int32 ResponseCode = Response->GetResponseCode();
     FString ResponseString = Response->GetContentAsString();
 
-    UE_LOG(LogMVE, Log, TEXT("[GenAI Sender] 응답 코드: %d"), ResponseCode);
-    UE_LOG(LogMVE, Verbose, TEXT("[GenAI Sender] 응답 내용: %s"), *ResponseString);
+    UE_LOG(LogMVE, Log, TEXT("[MVE] 응답 코드: %d"), ResponseCode);
+    UE_LOG(LogMVE, Verbose, TEXT("[MVE] 응답 내용: %s"), *ResponseString);
 	
     // 응답 코드별 처리
     if (ResponseCode == 200)
     {
         // 성공: 요청이 큐에 등록됨
-        UE_LOG(LogMVE, Log, TEXT("[GenAI Sender] ✓ 생성 요청이 큐에 등록되었습니다"));
+        UE_LOG(LogMVE, Log, TEXT("[MVE] ✓ 생성 요청이 큐에 등록되었습니다"));
         
         // 서버 응답 JSON 파싱 (선택사항)
     }
@@ -155,14 +155,14 @@ void UGenAISenderReceiver::OnGenerationRequestComplete(
     {
         // 클라이언트 에러 (잘못된 요청)
         UE_LOG(LogMVE, Error, 
-            TEXT("[GenAI Sender] ✗ 클라이언트 에러 (%d): %s"), 
+            TEXT("[MVE] ✗ 클라이언트 에러 (%d): %s"), 
             ResponseCode, *ResponseString);
     }
     else if (ResponseCode >= 500)
     {
         // 서버 에러
         UE_LOG(LogMVE, Error, 
-            TEXT("[GenAI Sender] ✗ 서버 에러 (%d): %s"), 
+            TEXT("[MVE] ✗ 서버 에러 (%d): %s"), 
             ResponseCode, *ResponseString);
     }
 }
@@ -171,7 +171,7 @@ void UGenAISenderReceiver::OnGenerationRequestComplete(
 //수신부: 에셋 다운로드 및 로드
 void UGenAISenderReceiver::DownloadAsset(const FAssetMetadata& Metadata)
 {
-    UE_LOG(LogMVE, Log, TEXT("[GenAI Receiver] 다운로드 시작"));
+    UE_LOG(LogMVE, Log, TEXT("[Metadata] 다운로드 시작"));
     UE_LOG(LogMVE, Log, TEXT("  - AssetID: %s"), *Metadata.AssetID.ToString());
     UE_LOG(LogMVE, Log, TEXT("  - Type: %d"), (int32)Metadata.AssetType);
     UE_LOG(LogMVE, Log, TEXT("  - URL: %s"), *Metadata.RemotePath);
