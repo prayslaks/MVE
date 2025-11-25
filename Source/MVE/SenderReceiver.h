@@ -7,7 +7,7 @@
 #include "SenderReceiver.generated.h"
 
 UCLASS()
-class MVE_API UGenAISenderReceiver : public UGameInstanceSubsystem
+class MVE_API USenderReceiver : public UGameInstanceSubsystem
 {
     GENERATED_BODY()
 
@@ -25,11 +25,17 @@ public:
     // 서버 설정
     // TODO 나중에 로그 가져와야한다
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Config")
-    FString ServerURL = TEXT("http://localhost:8000");
+    FString ServerURL = TEXT("http://127.0.0.1:8000");
 
     // api TODO 얘도 똑같이
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Config")
-    FString GenerateEndpoint = TEXT("/api/generate");
+    FString GenerateEndpoint = TEXT("/upload/api/generate");
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Config")
+    FString LocalAssetDiscovery = TEXT("SourceAssets");
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Config")
+    float RequestTimeOut = 30.0f;
 
 public:
   
@@ -48,7 +54,10 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Responses")
     void LoadLocalAsset(const FAssetMetadata& Metadata);
 
-private:
+    UFUNCTION(BlueprintCallable, Category = "Utill")
+    FString GetFileExtensionAsset(EAssetType AssetType);
+
+
     // 송신내부구현
     void OnGenerationRequestComplete(
         TSharedPtr<class IHttpRequest, ESPMode::ThreadSafe> Request,
@@ -72,5 +81,9 @@ private:
     // GLB 파일 로더
     USkeletalMesh* LoadMeshFromFile(const FString& FilePath);
 
+    // 저장 디렉 가져오기
+    FString GetSaveDirectory();
 
+    // 에셋 타입별 확장자 (glb 이긴 한데 이후에 쓸가봐)
+    static const TMap<EAssetType, FString> AssetTypeExtensions;
 };
