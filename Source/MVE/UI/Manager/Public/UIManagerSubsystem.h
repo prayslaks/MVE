@@ -21,7 +21,7 @@ enum class EUIScreen : uint8
 	AudienceView
 };
 
-UCLASS()
+UCLASS(Config=Game)
 class MVE_API UUIManagerSubsystem : public UGameInstanceSubsystem
 {
 	GENERATED_BODY()
@@ -29,8 +29,16 @@ class MVE_API UUIManagerSubsystem : public UGameInstanceSubsystem
 public:
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
 	virtual void Deinitialize() override;
-    
+	
 	static UUIManagerSubsystem* Get(const UObject* WorldContextObject);
+
+	UPROPERTY(Config, EditDefaultsOnly, Category = "DataTable")
+	TSoftObjectPtr<UDataTable> UIClassesTableAsset;
+
+	UPROPERTY(Config, EditDefaultsOnly, Category = "DataTable")
+	TSoftObjectPtr<UDataTable> PopUpClassesTableAsset;
+
+	void InitScreenClasses();
     
 	// 화면 전환 - 이게 전부
 	UFUNCTION(BlueprintCallable, Category = "UI")
@@ -48,6 +56,22 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "UI")
 	void RegisterScreenWidget(EUIScreen ScreenType, TSubclassOf<UUserWidget> WidgetClass);
 
+	// 팝업 표시 (동적 생성)
+	UFUNCTION(BlueprintCallable)
+	UUserWidget* ShowPopup(FName PopupName, bool bAddToStack = true);
+    
+	// 최상위 팝업 닫기
+	UFUNCTION(BlueprintCallable)
+	void CloseTopPopup();
+    
+	// 특정 팝업 닫기
+	UFUNCTION(BlueprintCallable)
+	void ClosePopup(UUserWidget* PopupWidget);
+    
+	// 모든 팝업 닫기
+	UFUNCTION(BlueprintCallable)
+	void CloseAllPopups();
+	
 protected:
 	UPROPERTY(EditDefaultsOnly, Category = "UI")
 	TMap<EUIScreen, TSubclassOf<UUserWidget>> ScreenWidgetClasses;
@@ -70,4 +94,12 @@ protected:
 private:
 	UUserWidget* CreateOrGetWidget(EUIScreen ScreenType);
 	APlayerController* GetPlayerController();
+
+	// 팝업 스택 관리
+	UPROPERTY()
+	TArray<TObjectPtr<UUserWidget>> PopupStack;
+
+	// 팝업 위젯 클래스 맵
+	UPROPERTY()
+	TMap<FName, TSubclassOf<UUserWidget>> PopupWidgetClasses;
 };
