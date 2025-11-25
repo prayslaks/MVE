@@ -24,7 +24,9 @@ public class MVE : ModuleRules
 			"HTTP",              // FHttpModule, IHttpRequest, IHttpResponse
 			"Json",              // FJsonObject, FJsonValue
 			"JsonUtilities",     // FJsonObjectConverter, FJsonSerializer
-			"ImageWrapper",      // IImageWrapper (이미지 로딩) ,
+			"ImageWrapper",      // IImageWrapper (이미지 로딩) 
+			"Niagara",
+			"ImageWrapper"
 		});
 
 		PrivateDependencyModuleNames.AddRange(new string[] { });
