@@ -8,7 +8,7 @@
 UENUM(BlueprintType)
 enum class EAssetType : uint8
 {
-    MESH        UMETA(DisplayName = "Mesh"),      // 3D 모델  (GLB)
+    MESH        UMETA(DisplayName = "Mesh"),      // 3D 모델  (GLB GLTF)
     AUDIO       UMETA(DisplayName = "Audio"),     // 오디오 파일  (WAV)
     VIDEO       UMETA(DisplayName = "Video"),     // 비디오 파일  (MP4)
     IMAGE       UMETA(DisplayName = "Image"),     // 이미지 파일  (Png)
@@ -60,10 +60,10 @@ struct FAssetMetadata
 // 에셋 생성 완료 델리게이트 TODO OnAssetGenerated.AddDynamic(this, &AMyActor::OnAssetReceived); 처럼 사용하세요
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
-    FOnAssetGenerated,
+    FOnAssetLoaded,
     UObject*, LoadedAsset,
     const FAssetMetadata&, Metadata
-);
+    );
 
 // 다운로드 진행 상황 델리게이트
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(
@@ -71,4 +71,12 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(
     FGuid, AssetID,
     int32, BytesReceived,
     int32, TotalBytes
-);
+    );
+
+// 서버 요청 수신 확인 델리게이트
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(
+    FOnGenerationResponse,
+    bool, bSuccess,
+    const FAssetMetadata&, Meradata,
+    const FString&, ErrorMessage
+    );

@@ -50,7 +50,7 @@ FString USenderReceiver::GetSaveDirectory()
 	return SaveDir;
 }
 
-void USenderReceiver::RequestGeneration(const FString& Prompt, const FString& UserEmail,
+void USenderReceiver::SendGenerationRequest(const FString& Prompt, const FString& UserEmail,
                                              const FString& OptionalImagePath)
 {
 	PRINTLOG(TEXT("생성 요청 시작"))
@@ -64,13 +64,14 @@ void USenderReceiver::RequestGeneration(const FString& Prompt, const FString& Us
 	
 	HttpRequest->SetURL(FullURL);
 	HttpRequest->SetVerb(TEXT("POST"));
+	HttpRequest->SetTimeout(RequestTimeOut);
 
 	// 멀티파츠 구성
 	FString Boundary = FString::Printf(TEXT("----UnrealBoundary%d"),FDateTime::Now().GetTicks());
 
 	HttpRequest->SetHeader(TEXT("Content-Type"), FString::Printf(TEXT("application/octet-stream, boundary=%s"), *Boundary));
 
-	//Json 메타 데이터
+	// Json 메타 데이터
 	// Json 객체 생성
 	TSharedPtr<FJsonObject> JsonObject = MakeShareable(new FJsonObject);
 	JsonObject->SetStringField(TEXT("Prompt"), Prompt);
@@ -180,6 +181,9 @@ void USenderReceiver::OnGenerationRequestComplete(
     // 응답 코드별 처리
     if (ResponseCode == 200)
     {
+    	// json 응답 파싱하고 메타 데이터 추출
+    	TSharedPtr<FJsonObject> JsonObject;
+    	TSharedPtr<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(*ResponseString);
         // 성공: 요청이 큐에 등록됨
         UE_LOG(LogMVE, Log, TEXT("[MVE] ✓ 생성 요청이 큐에 등록되었습니다"));
         
@@ -203,7 +207,7 @@ void USenderReceiver::OnGenerationRequestComplete(
 
 
 //수신부: 에셋 다운로드 및 로드
-void USenderReceiver::DownloadAsset(const FAssetMetadata& Metadata)
+void USenderReceiver::DownloadFileServer(const FAssetMetadata& Metadata)
 {
     UE_LOG(LogMVE, Log, TEXT("[Metadata] 다운로드 시작"));
     UE_LOG(LogMVE, Log, TEXT("  - AssetID: %s"), *Metadata.AssetID.ToString());
