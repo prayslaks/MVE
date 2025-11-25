@@ -14,7 +14,7 @@
 
 #include "MVE.h"
 
-void UGenAISenderReceiver::RequestGeneration(const FString& Prompt, const FString& UserEmail,
+void USenderReceiver::RequestGeneration(const FString& Prompt, const FString& UserEmail,
                                              const FString& OptionalImagePath)
 {
 	PRINTLOG(TEXT("생성 요청 시작"))
@@ -110,7 +110,7 @@ void UGenAISenderReceiver::RequestGeneration(const FString& Prompt, const FStrin
 	// 응답 핸들러 바인딩
 	HttpRequest->OnProcessRequestComplete().BindUObject(
 		this,
-		&UGenAISenderReceiver::OnGenerationRequestComplete
+		&USenderReceiver::OnGenerationRequestComplete
 	);
 
 	// 요청 전송
@@ -124,7 +124,7 @@ void UGenAISenderReceiver::RequestGeneration(const FString& Prompt, const FStrin
 	}
 }
 
-void UGenAISenderReceiver::OnGenerationRequestComplete(
+void USenderReceiver::OnGenerationRequestComplete(
     TSharedPtr<IHttpRequest, ESPMode::ThreadSafe> Request,
     TSharedPtr<IHttpResponse, ESPMode::ThreadSafe> Response,
     bool bWasSuccessful)
@@ -169,7 +169,7 @@ void UGenAISenderReceiver::OnGenerationRequestComplete(
 
 
 //수신부: 에셋 다운로드 및 로드
-void UGenAISenderReceiver::DownloadAsset(const FAssetMetadata& Metadata)
+void USenderReceiver::DownloadAsset(const FAssetMetadata& Metadata)
 {
     UE_LOG(LogMVE, Log, TEXT("[Metadata] 다운로드 시작"));
     UE_LOG(LogMVE, Log, TEXT("  - AssetID: %s"), *Metadata.AssetID.ToString());
@@ -188,22 +188,22 @@ void UGenAISenderReceiver::DownloadAsset(const FAssetMetadata& Metadata)
     // 응답 핸들러 바인딩
     HttpRequest->OnProcessRequestComplete().BindUObject(
         this,
-        &UGenAISenderReceiver::OnAssetDownloaded,
+        &USenderReceiver::OnAssetDownloaded,
         Metadata  // 메타데이터를 복사하여 핸들러에 전달
     );
 	
     //요청 전송
     if (HttpRequest->ProcessRequest())
     {
-        UE_LOG(LogMVE, Log, TEXT("[GenAI Receiver] ✓ 다운로드 요청 전송 성공"));
+        UE_LOG(LogMVE, Log, TEXT("[MVE] ✓ 다운로드 요청 전송 성공"));
     }
     else
     {
-        UE_LOG(LogMVE, Error, TEXT("[GenAI Receiver] ✗ 다운로드 요청 전송 실패"));
+        UE_LOG(LogMVE, Error, TEXT("[MVE] ✗ 다운로드 요청 전송 실패"));
     }
 }
 
-void UGenAISenderReceiver::OnAssetDownloaded(
+void USenderReceiver::OnAssetDownloaded(
     TSharedPtr<IHttpRequest, ESPMode::ThreadSafe> Request,
     TSharedPtr<IHttpResponse, ESPMode::ThreadSafe> Response,
     bool bWasSuccessful,
@@ -213,7 +213,7 @@ void UGenAISenderReceiver::OnAssetDownloaded(
     // 응답 유효성 검사
     if (!bWasSuccessful || !Response.IsValid())
     {
-        UE_LOG(LogMVE, Error, TEXT("[GenAI Receiver] 다운로드 실패"));
+        UE_LOG(LogMVE, Error, TEXT("[MVE] 다운로드 실패"));
         return;
     }
 
@@ -221,7 +221,7 @@ void UGenAISenderReceiver::OnAssetDownloaded(
     if (ResponseCode != 200)
     {
         UE_LOG(LogMVE, Error, 
-            TEXT("[GenAI Receiver] 다운로드 실패 (코드: %d)"), ResponseCode);
+            TEXT("[MVE] 다운로드 실패 (코드: %d)"), ResponseCode);
         return;
     }
 
@@ -229,7 +229,7 @@ void UGenAISenderReceiver::OnAssetDownloaded(
     const TArray<uint8>& FileData = Response->GetContent();
     
     UE_LOG(LogMVE, Log, 
-        TEXT("[GenAI Receiver] 다운로드 완료: %d bytes"), FileData.Num());
+        TEXT("[MVE] 다운로드 완료: %d bytes"), FileData.Num());
 
 
     // 로컬 파일로 저장
@@ -242,23 +242,23 @@ void UGenAISenderReceiver::OnAssetDownloaded(
     if (!PlatformFile.DirectoryExists(*SaveDir))
     {
         PlatformFile.CreateDirectory(*SaveDir);
-        UE_LOG(LogMVE, Log, TEXT("[GenAI Receiver] 디렉토리 생성: %s"), *SaveDir);
+        UE_LOG(LogMVE, Log, TEXT("[MVE] 디렉토리 생성: %s"), *SaveDir);
     }
 
     // 파일 확장자 결정
     FString Extension;
     switch (Metadata.AssetType)
     {
-    case EGenAIAssetType::MESH:
+    case EAssetType::MESH:
         Extension = TEXT("glb");
         break;
-    case EGenAIAssetType::IMAGE:
+    case EAssetType::IMAGE:
         Extension = TEXT("png");
         break;
-    case EGenAIAssetType::AUDIO:
+    case EAssetType::AUDIO:
         Extension = TEXT("wav");
         break;
-    case EGenAIAssetType::VIDEO:
+    case EAssetType::VIDEO:
         Extension = TEXT("mp4");
         break;
     default:
@@ -275,12 +275,12 @@ void UGenAISenderReceiver::OnAssetDownloaded(
     if (!FFileHelper::SaveArrayToFile(FileData, *LocalFilePath))
     {
         UE_LOG(LogMVE, Error, 
-            TEXT("[GenAI Receiver] 파일 저장 실패: %s"), *LocalFilePath);
+            TEXT("[MVE] 파일 저장 실패: %s"), *LocalFilePath);
         return;
     }
 
     UE_LOG(LogMVE, Log, 
-        TEXT("[GenAI Receiver] ✓ 파일 저장 완료: %s"), *LocalFilePath);
+        TEXT("[MVE] ✓ 파일 저장 완료: %s"), *LocalFilePath);
 
 
     // 메타데이터 업데이트
@@ -293,7 +293,7 @@ void UGenAISenderReceiver::OnAssetDownloaded(
     if (LoadedAsset)
     {
         UE_LOG(LogMVE, Log, 
-            TEXT("[GenAI Receiver] ✓ 에셋 로드 완료: %s"), 
+            TEXT("[MVE] ✓ 에셋 로드 완료: %s"), 
             *LoadedAsset->GetClass()->GetName());
 
         // 델리게이트 발동 (블루프린트/UI에 전달)
@@ -301,13 +301,13 @@ void UGenAISenderReceiver::OnAssetDownloaded(
     }
     else
     {
-        UE_LOG(LogMVE, Error, TEXT("[GenAI Receiver] 에셋 로드 실패"));
+        UE_LOG(LogMVE, Error, TEXT("[MVE] 에셋 로드 실패"));
     }
 }
 
 
 // 타입별 에셋 로더
-UObject* UGenAISenderReceiver::LoadAssetFromLocalFile(const FAssetMetadata& Metadata)
+UObject* USenderReceiver::LoadAssetFromLocalFile(const FAssetMetadata& Metadata)
 {
     UE_LOG(LogMVE, Log, 
         TEXT("[GenAI Loader] 에셋 타입: %d, 경로: %s"),
@@ -316,18 +316,18 @@ UObject* UGenAISenderReceiver::LoadAssetFromLocalFile(const FAssetMetadata& Meta
     // 타입별 로더 호출
     switch (Metadata.AssetType)
     {
-    case EGenAIAssetType::IMAGE:
+    case EAssetType::IMAGE:
         return LoadImageFromFile(Metadata.LocalPath);
 
-    case EGenAIAssetType::MESH:
+    case EAssetType::MESH:
         return LoadMeshFromFile(Metadata.LocalPath);
 
-    case EGenAIAssetType::AUDIO:
+    case EAssetType::AUDIO:
         UE_LOG(LogMVE, Warning, 
             TEXT("[GenAI Loader] 오디오 로더는 아직 구현되지 않았습니다"));
         return nullptr;
 
-    case EGenAIAssetType::VIDEO:
+    case EAssetType::VIDEO:
         UE_LOG(LogMVE, Warning, 
             TEXT("[GenAI Loader] 비디오 로더는 아직 구현되지 않았습니다"));
         return nullptr;
@@ -341,7 +341,7 @@ UObject* UGenAISenderReceiver::LoadAssetFromLocalFile(const FAssetMetadata& Meta
 
 
 // 이미지 로더 (PNG, JPG)
-UTexture2D* UGenAISenderReceiver::LoadImageFromFile(const FString& FilePath)
+UTexture2D* USenderReceiver::LoadImageFromFile(const FString& FilePath)
 {
     UE_LOG(LogMVE, Log, TEXT("[Image Loader] 이미지 로드 시작: %s"), *FilePath);
 
@@ -428,7 +428,7 @@ UTexture2D* UGenAISenderReceiver::LoadImageFromFile(const FString& FilePath)
 }
 
 // GLB 메시 로더
-USkeletalMesh* UGenAISenderReceiver::LoadMeshFromFile(const FString& FilePath)
+USkeletalMesh* USenderReceiver::LoadMeshFromFile(const FString& FilePath)
 {
     UE_LOG(LogMVE, Log, TEXT("[Mesh Loader] GLB 로드 시작: %s"), *FilePath);
 	
@@ -487,7 +487,8 @@ USkeletalMesh* UGenAISenderReceiver::LoadMeshFromFile(const FString& FilePath)
     return LoadedMesh;
 }
 
-void UGenAISenderReceiver::LoadLocalAsset(const FAssetMetadata& Metadata)
+
+void USenderReceiver::LoadLocalAsset(const FAssetMetadata& Metadata)
 {
 	UE_LOG(LogMVE,Warning, TEXT(" 로컬파일 직접 로드 시작합니다"));
 	UE_LOG(LogMVE,Warning, TEXT(" 경로 %s"), *Metadata.RemotePath);

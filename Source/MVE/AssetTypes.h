@@ -6,7 +6,7 @@
 
 // 에셋 타입
 UENUM(BlueprintType)
-enum class EGenAIAssetType : uint8
+enum class EAssetType : uint8
 {
     MESH        UMETA(DisplayName = "Mesh"),      // 3D 모델  (GLB)
     AUDIO       UMETA(DisplayName = "Audio"),     // 오디오 파일  (WAV)
@@ -34,7 +34,7 @@ struct FAssetMetadata
 
     // 리소스 데이터     MESH = GLB,FBX IMAGE = PNG , AUDIO = WAV , VIDEO = MP4
     UPROPERTY(BlueprintReadWrite, Category = "Asset")
-    EGenAIAssetType AssetType = EGenAIAssetType::GENERIC;
+    EAssetType AssetType = EAssetType::GENERIC;
 
     // 다운로드 url
     UPROPERTY(BlueprintReadWrite, Category = "Asset")
@@ -50,7 +50,7 @@ struct FAssetMetadata
 
     // 기본 생성자
     FAssetMetadata()
-        : AssetType(EGenAIAssetType::GENERIC)
+        : AssetType(EAssetType::GENERIC)
     {
         AssetID = FGuid::NewGuid();
         Date = FDateTime::Now();
