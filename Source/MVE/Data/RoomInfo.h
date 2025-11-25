@@ -32,6 +32,9 @@ struct FRoomInfo
 	int32 ViewerCount;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	int32 MaxViewers;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	bool bIsLive;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)

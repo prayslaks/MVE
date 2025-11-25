@@ -1,15 +1,15 @@
-﻿
+
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Subsystems/GameInstanceSubsystem.h"
-#include "Interfaces/OnlineSessionInterface.h"
 #include "Data/RoomInfo.h"
-#include "MVE_GISubsystem_SessionManager.generated.h"
-
+#include "Subsystems/GameInstanceSubsystem.h"
+#include "OnlineSubsystem.h"
+#include "Interfaces/OnlineSessionInterface.h"
+#include "MVE_GIS_SessionManager.generated.h"
 
 UCLASS()
-class MVE_API UMVE_GISubsystem_SessionManager : public UGameInstanceSubsystem
+class MVE_API UMVE_GIS_SessionManager : public UGameInstanceSubsystem
 {
 	GENERATED_BODY()
 
@@ -62,6 +62,7 @@ public:
 	FOnSessionJoined OnSessionJoined;
 
 private:
+	
 	IOnlineSessionPtr SessionInterface;
 
 	// 세션 검색 설정
@@ -72,12 +73,14 @@ private:
 	void OnFindSessionsComplete(bool bSuccess);
 	void OnJoinSessionComplete(FName SessionName, EOnJoinSessionCompleteResult::Type Result);
 	void OnDestroySessionComplete(FName SessionName, bool bSuccess);
+	void OnLeaveSessionComplete(FName SessionName, bool bSuccess);
 
 	// 델리게이트 핸들
 	FDelegateHandle CreateSessionDelegateHandle;
 	FDelegateHandle FindSessionsDelegateHandle;
 	FDelegateHandle JoinSessionDelegateHandle;
 	FDelegateHandle DestroySessionDelegateHandle;
+	FDelegateHandle LeaveSessionDelegateHandle;
 
 	/**
 	 * OnlineSessionSearchResult → FRoomInfo 변환
@@ -85,3 +88,4 @@ private:
 	FRoomInfo ConvertSearchResultToRoomInfo(const FOnlineSessionSearchResult& SearchResult);
 
 };
+

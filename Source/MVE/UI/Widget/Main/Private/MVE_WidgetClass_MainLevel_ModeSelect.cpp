@@ -26,6 +26,11 @@ void UMVE_WidgetClass_MainLevel_ModeSelect::NativeConstruct()
 
 void UMVE_WidgetClass_MainLevel_ModeSelect::OnMoveStudioButtonClicked()
 {
+	UUIManagerSubsystem* UIManager = UUIManagerSubsystem::Get(this);
+	if (UIManager)
+	{
+		UIManager->ShowScreen(EUIScreen::StudioBroadcast);
+	}
 }
 
 void UMVE_WidgetClass_MainLevel_ModeSelect::OnMoveAudienceButtonClicked()
