@@ -95,8 +95,8 @@ public:
     // 에셋 타입별 확장자 (glb 이긴 한데 이후에 쓸가봐)
     static const TMap<EAssetType, FString> AssetTypeExtensions;
 
-    // -------------------------------------------- comfyUI 연동 --------------------------------------------------//
-
+    // -------------------------------------------- comfyUI 연동 (퍠기) --------------------------------------------------//
+/*
     // comfyUI 서버 설정
     UPROPERTY(EditAnywhere, Category = "ComfyUI")
     FString ComfyUIServerURL = TEXT("https://127.0.0.1:7800");
@@ -124,16 +124,19 @@ public:
     UFUNCTION(BlueprintCallable, Category = "ComfyUI")
     UTexture2D* Base64ToTexture2D(FString& Base64Data);
 
+    // 나이아가라 추가
     UFUNCTION(BlueprintCallable, Category = "Niagara")
     bool ApplyTextureToNiagara(UNiagaraComponent* NiagaraComp,
         UTexture2D* Texture,
         FName ParameterName = TEXT("UserTTexture"));
 
+    // 메테리얼 추가
     UFUNCTION(BlueprintCallable, Category = "Material")
     bool ApplyTextureToMaterial(UMaterialInstanceDynamic* MID,
         UTexture2D* Texture,
         FName ParameterName = TEXT("UserTTexture"));
 
+    // ComfyUICOmplete 부문 호출 함수
     void OnComfyUIUploadComplete(
         TSharedPtr<class IHttpRequest, ESPMode::ThreadSafe> Request,
         TSharedPtr<class IHttpResponse, ESPMode::ThreadSafe> Response,
@@ -152,4 +155,5 @@ public:
         TSharedPtr<class IHttpResponse, ESPMode::ThreadSafe> Response,
         bool bWasSuccessful,
         FGuid RequestID);
+ */
 };

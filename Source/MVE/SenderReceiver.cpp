@@ -13,6 +13,7 @@
 #include "glTFRuntimeFunctionLibrary.h"
 
 #include "MVE.h"
+#include "Engine/TextureRenderTarget2D.h"
 
 const TMap<EAssetType, FString> USenderReceiver::AssetTypeExtensions = {
 	{ EAssetType::MESH, TEXT("glb")},
@@ -524,6 +525,7 @@ USkeletalMesh* USenderReceiver::LoadMeshFromFile(const FString& FilePath)
 
     return LoadedMesh;
 }
+
 
 
 void USenderReceiver::LoadLocalAsset(const FAssetMetadata& Metadata)
