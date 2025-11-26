@@ -47,7 +47,7 @@ public:
   
     // --------------------------------------- 송신부 ------------------------------------------------//
     UFUNCTION(BlueprintCallable, Category = "Request")
-    void SendGenerationRequest(
+    void RequestGeneration(
         const FString& Prompt,
         const FString& UserEmail,
         const FString& OptionalImagePath = TEXT("")

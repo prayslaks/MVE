@@ -157,7 +157,7 @@ void ATestGenAIActor::TestSendRequest()
     }
 
     // [수정] 새로운 API 호출
-    SR->SendGenerationRequest(
+    SR->RequestGeneration(
         TEXT("A futuristic robot warrior"),
         TEXT("test@example.com"),
         TEXT("")  // 이미지 없음
@@ -190,7 +190,7 @@ void ATestGenAIActor::TestSendWithImage()
     }
 
     // [수정] 새로운 API 호출
-    SR->SendGenerationRequest(
+    SR->RequestGeneration(
         TEXT("Transform this character into sci-fi style"),
         TEXT("test@example.com"),
         TestImagePath
