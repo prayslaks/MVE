@@ -20,6 +20,7 @@ enum class EUIScreen : uint8
 	StudioBroadcastSetting,
 	StudioBroadcast,
 	AudienceStation,
+	AudienceGenerateMesh,
 	AudienceConcertRoom
 };
 

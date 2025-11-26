@@ -1,8 +1,12 @@
 
 #include "../Public/MVE_GIS_SessionManager.h"
-#include "OnlineSessionSettings.h"
 #include "MVE.h"
+#include "OnlineSubsystem.h"
+#include "OnlineSubsystemUtils.h"
+#include "OnlineSessionSettings.h"
 #include "Online/OnlineSessionNames.h"
+#include "Kismet/GameplayStatics.h"
+#include <string>
 
 void UMVE_GIS_SessionManager::Initialize(FSubsystemCollectionBase& Collection)
 {
@@ -51,28 +55,80 @@ void UMVE_GIS_SessionManager::Deinitialize()
 	Super::Deinitialize();
 }
 
-void UMVE_GIS_SessionManager::CreateSession(const FRoomInfo& RoomInfo)
+void UMVE_GIS_SessionManager::CreateSession(const FRoomInfo& RoomInfo, APlayerController* RequestingPlayer)
 {
-	// 세션 설정
-	TSharedPtr<FOnlineSessionSettings> SessionSettings = MakeShared<FOnlineSessionSettings>();
-    
-	SessionSettings->NumPublicConnections = RoomInfo.MaxViewers;
-	SessionSettings->bShouldAdvertise = true; // 검색 가능
-	SessionSettings->bUsesPresence = true;
-	SessionSettings->bUseLobbiesIfAvailable = true;
-	SessionSettings->bIsLANMatch = false;
-	SessionSettings->bAllowJoinInProgress = true;
-	SessionSettings->bAllowJoinViaPresence = true;
+	if (!SessionInterface.IsValid())
+	{
+		SESSIONPRINTLOG(TEXT("SessionInterface is invalid"));
+		OnSessionCreated.Broadcast(false);
+		return;
+	}
 
-	// 커스텀 데이터 설정
-	SessionSettings->Set(FName("ROOM_TITLE"), RoomInfo.RoomTitle, EOnlineDataAdvertisementType::ViaOnlineServiceAndPing);
-	SessionSettings->Set(FName("CONCERT_TYPE"), RoomInfo.ConcertType, EOnlineDataAdvertisementType::ViaOnlineServiceAndPing);
-	SessionSettings->Set(FName("IS_LIVE"), RoomInfo.bIsLive, EOnlineDataAdvertisementType::ViaOnlineServiceAndPing);
-	
+	// 요청한 PlayerController 저장
+	RequestingPlayerController = RequestingPlayer;
 
-	// 세션 생성
-	const ULocalPlayer* LocalPlayer = GetWorld()->GetFirstLocalPlayerFromController();
-	SessionInterface->CreateSession(*LocalPlayer->GetPreferredUniqueNetId(), NAME_GameSession, *SessionSettings);
+	// 기존 세션이 있는지 확인
+	auto ExistingSession = SessionInterface->GetNamedSession(NAME_GameSession);
+	if (ExistingSession != nullptr)
+	{
+		SESSIONPRINTLOG(TEXT("Existing session found. Destroying before creating new one..."));
+
+		// 세션 생성 정보를 저장하고 대기 플래그 설정
+		PendingRoomInfo = RoomInfo;
+		bPendingCreateSession = true;
+
+		// 기존 세션 파괴
+		SessionInterface->DestroySession(NAME_GameSession);
+		return;
+	}
+
+	// 기존 세션이 없으면 바로 생성
+	CreateSessionInternal(RoomInfo, RequestingPlayer);
+}
+
+void UMVE_GIS_SessionManager::CreateSessionInternal(const FRoomInfo& RoomInfo, APlayerController* RequestingPlayer)
+{
+	if (!SessionInterface.IsValid())
+	{
+		SESSIONPRINTLOG(TEXT("SessionInterface is invalid"));
+		OnSessionCreated.Broadcast(false);
+		return;
+	}
+
+	// 요청한 PlayerController 저장
+	RequestingPlayerController = RequestingPlayer;
+
+	SESSIONPRINTLOG(TEXT("Creating new session..."));
+
+	// 세션을 만들기 위한 옵션 담을 변수
+	FOnlineSessionSettings sessionSettings;
+	// 현재 사용중인 서브시스템 이름 가져오자.
+	FName subsysName = Online::GetSubsystem(GetWorld())->GetSubsystemName();
+	// 만약에 서브시스템이 이름이 NULL 이면 Lan 을 이용하게 설정
+	sessionSettings.bIsLANMatch = subsysName.IsEqual(FName(TEXT("NULL")));
+	UE_LOG(LogTemp, Warning, TEXT("서브시스템 : %s"), *subsysName.ToString());
+
+	// Steam 에선 필수 (bUseLobbiesIfAvailable, bUsesPresence)
+	// Lobby 사용 여부 설정
+	sessionSettings.bUseLobbiesIfAvailable = true;
+	// 친구 상태를 확인할 수 있는 여부
+	sessionSettings.bUsesPresence = true;
+
+	// 세션 검색 허용 여부
+	sessionSettings.bShouldAdvertise = true;
+	// 세션 최대 참여 인원 설정
+	sessionSettings.NumPublicConnections = RoomInfo.MaxViewers;
+	// 세션 중간에 참여 가능 여부 설정
+	sessionSettings.bAllowJoinInProgress = true;
+
+	// displayName 을 Base64 로 변환
+	FString displayName = StringBase64Encode(RoomInfo.RoomTitle);
+	sessionSettings.Set(FName("ROOM_TITLE"), displayName, EOnlineDataAdvertisementType::ViaOnlineServiceAndPing);
+
+	// sessionSettings 이용해서 세션 생성 (NAME_GameSession으로 통일)
+	FUniqueNetIdPtr netId =
+		GetWorld()->GetFirstLocalPlayerFromController()->GetUniqueNetIdForPlatformUser().GetUniqueNetId();
+	SessionInterface->CreateSession(*netId, NAME_GameSession, sessionSettings);
 }
 
 void UMVE_GIS_SessionManager::FindSessions()
@@ -140,25 +196,48 @@ void UMVE_GIS_SessionManager::DestroySession()
 	SessionInterface->DestroySession(NAME_GameSession);
 }
 
+FString UMVE_GIS_SessionManager::StringBase64Encode(FString str)
+{
+	// str을 std::string 로 변환
+	std::string utf8string = TCHAR_TO_UTF8(*str);
+	// utf8string 을 uint8 의 Array 변환
+	TArray<uint8> arrayData = TArray<uint8>((uint8*)utf8string.c_str(), utf8string.length());
+
+	return FBase64::Encode(arrayData);
+}
+
+FString UMVE_GIS_SessionManager::StringBase64Decode(FString str)
+{
+	TArray<uint8> arrayData;
+	FBase64::Decode(str, arrayData);
+	std::string utf8String((char*)arrayData.GetData(), arrayData.Num());
+	return UTF8_TO_TCHAR(utf8String.c_str());
+}
+
 void UMVE_GIS_SessionManager::OnCreateSessionComplete(FName SessionName, bool bSuccess)
 {
-	OnSessionCreated.Broadcast(bSuccess);
+	SESSIONPRINTLOG(TEXT("Session creation complete: %s"), bSuccess ? TEXT("SUCCESS") : TEXT("FAILED"));
 
 	if (bSuccess)
 	{
-		PRINTLOG(TEXT("Starting listen server..."));
-        
-		// 리슨 서버로 방송 맵 이동
-		// ?listen 옵션이 리슨 서버를 활성화합니다
-		UWorld* World = GetWorld();
-		if (World)
+		SESSIONPRINTLOG(TEXT("Opening StageLevel as new Listen Server..."));
+
+		// 요청한 PlayerController만 이동시키기
+		if (RequestingPlayerController)
 		{
-			// 방송용 맵으로 서버 이동
-			// "/Game/Maps/Studio/StudioBroadcastMap" 같은 경로를 사용
-			World->ServerTravel("/Game/Maps/ConcertMap?listen'");
+			SESSIONPRINTLOG(TEXT("Moving requesting player to StageLevel"));
+			// Console Command로 해당 PlayerController만 이동
+			RequestingPlayerController->ConsoleCommand(TEXT("open StageLevel?listen"));
+		}
+		else
+		{
+			// fallback: 모든 플레이어 이동
+			SESSIONPRINTLOG(TEXT("No requesting player found, using OpenLevel (all players will move)"));
+			UGameplayStatics::OpenLevel(GetWorld(), FName(TEXT("StageLevel")), true, TEXT("listen"));
 		}
 	}
 
+	// 세션 생성 결과 브로드캐스트
 	OnSessionCreated.Broadcast(bSuccess);
 }
 
@@ -212,7 +291,15 @@ void UMVE_GIS_SessionManager::OnJoinSessionComplete(FName SessionName, EOnJoinSe
 
 void UMVE_GIS_SessionManager::OnDestroySessionComplete(FName SessionName, bool bSuccess)
 {
-	PRINTLOG(TEXT("Session destroyed: %s"), bSuccess ? TEXT("SUCCESS") : TEXT("FAILED"));
+	SESSIONPRINTLOG(TEXT("Session destroyed: %s"), bSuccess ? TEXT("SUCCESS") : TEXT("FAILED"));
+
+	// 세션 생성 대기 중이었다면 이제 생성
+	if (bPendingCreateSession && bSuccess)
+	{
+		SESSIONPRINTLOG(TEXT("Retrying session creation after destroy..."));
+		bPendingCreateSession = false;
+		CreateSessionInternal(PendingRoomInfo, RequestingPlayerController.Get());
+	}
 }
 
 FRoomInfo UMVE_GIS_SessionManager::ConvertSearchResultToRoomInfo(const FOnlineSessionSearchResult& SearchResult)

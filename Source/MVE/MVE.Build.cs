@@ -25,10 +25,9 @@ public class MVE : ModuleRules
 			"Json",              // FJsonObject, FJsonValue
 			"JsonUtilities",     // FJsonObjectConverter, FJsonSerializer
 			"ImageWrapper",		 // IImageWrapper (이미지 로딩) ,
-			"OnlineSubsystem",      
+			"OnlineSubsystem",
+			"OnlineSubsystemSteam"
 		});
-
-		PrivateDependencyModuleNames.AddRange(new string[] { });
 
 		PublicIncludePaths.AddRange(new string[] {
 			"MVE",
