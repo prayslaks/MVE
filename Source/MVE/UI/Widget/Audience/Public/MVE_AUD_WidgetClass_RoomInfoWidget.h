@@ -50,6 +50,12 @@ protected:
 	UPROPERTY(meta = (BindWidgetOptional))
 	TObjectPtr<UImage> NewBadge;
 
+	UPROPERTY(EditAnywhere)
+	FLinearColor HoveredColor = FLinearColor(0.2f, 0.2f, 0.2f, 1.0f);
+
+	UPROPERTY(EditAnywhere)
+	FLinearColor UnhoveredColor = FLinearColor(0.2f, 0.2f, 0.2f, 0.0f);;
+
 private:
 	// 현재 표시 중인 데이터
 	UPROPERTY()
@@ -88,4 +94,10 @@ private:
 	 */
 	UFUNCTION()
 	void OnRoomButtonClicked();
+
+	UFUNCTION()
+	void OnButtonHovered();
+
+	UFUNCTION()
+	void OnButtonUnhovered();
 };

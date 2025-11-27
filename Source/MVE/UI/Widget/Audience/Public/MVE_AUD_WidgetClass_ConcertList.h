@@ -7,16 +7,20 @@
 #include "Data/RoomInfoData.h"
 #include "MVE_AUD_WidgetClass_ConcertList.generated.h"
 
-class UListView;
+class UTileView;
 
-UCLASS()
+UCLASS(Config=Game)
 class MVE_API UMVE_AUD_WidgetClass_ConcertList : public UUserWidget
 {
 	GENERATED_BODY()
 
+private:
+	UPROPERTY(Config, EditDefaultsOnly, Category = "DataTable")
+	TSoftObjectPtr<UDataTable> TempRoomSessionTableAsset;
+
 protected:
 	UPROPERTY(meta = (BindWidget))
-	TObjectPtr<UListView> RoomListView;
+	TObjectPtr<UTileView> RoomTileView;
 
 public:
 	/**
@@ -31,20 +35,28 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void ClearRoomList();
 
-	/**
-	 * 제목 변경
-	 */
-	UFUNCTION(BlueprintCallable)
-	void SetTitle(const FText& NewTitle);
-
 	// 방 선택 이벤트
 	DECLARE_MULTICAST_DELEGATE_OneParam(FOnRoomSelected, URoomInfoData*);
 	FOnRoomSelected OnRoomSelected;
 
+public:
+	/**
+	 * 세션 목록 새로고침
+	 */
+	UFUNCTION(BlueprintCallable)
+	void RefreshSessionList();
+
 protected:
 	virtual void NativeConstruct() override;
+	virtual void NativeDestruct() override;
 
 private:
+	/**
+	 * SessionManager의 OnSessionsFound 콜백
+	 */
+	UFUNCTION()
+	void OnSessionsFoundCallback(bool bSuccess, const TArray<FRoomInfo>& Sessions);
+
 	/**
 	 * ListView 항목 선택 이벤트
 	 */

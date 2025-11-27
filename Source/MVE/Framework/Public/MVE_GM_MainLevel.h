@@ -9,5 +9,7 @@ UCLASS()
 class MVE_API AMVE_GM_MainLevel : public AGameModeBase
 {
 	GENERATED_BODY()
-	
+
+public:
+	AMVE_GM_MainLevel();
 };
