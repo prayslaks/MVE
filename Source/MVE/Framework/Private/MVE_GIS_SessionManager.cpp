@@ -55,7 +55,7 @@ void UMVE_GIS_SessionManager::Deinitialize()
 	Super::Deinitialize();
 }
 
-void UMVE_GIS_SessionManager::CreateSession(const FRoomInfo& RoomInfo, APlayerController* RequestingPlayer)
+void UMVE_GIS_SessionManager::CreateSession(const FRoomInfo& RoomInfo)
 {
 	if (!SessionInterface.IsValid())
 	{
@@ -63,10 +63,7 @@ void UMVE_GIS_SessionManager::CreateSession(const FRoomInfo& RoomInfo, APlayerCo
 		OnSessionCreated.Broadcast(false);
 		return;
 	}
-
-	// 요청한 PlayerController 저장
-	RequestingPlayerController = RequestingPlayer;
-
+	
 	// 기존 세션이 있는지 확인
 	auto ExistingSession = SessionInterface->GetNamedSession(NAME_GameSession);
 	if (ExistingSession != nullptr)
@@ -83,10 +80,10 @@ void UMVE_GIS_SessionManager::CreateSession(const FRoomInfo& RoomInfo, APlayerCo
 	}
 
 	// 기존 세션이 없으면 바로 생성
-	CreateSessionInternal(RoomInfo, RequestingPlayer);
+	CreateSessionInternal(RoomInfo);
 }
 
-void UMVE_GIS_SessionManager::CreateSessionInternal(const FRoomInfo& RoomInfo, APlayerController* RequestingPlayer)
+void UMVE_GIS_SessionManager::CreateSessionInternal(const FRoomInfo& RoomInfo)
 {
 	if (!SessionInterface.IsValid())
 	{
@@ -94,10 +91,7 @@ void UMVE_GIS_SessionManager::CreateSessionInternal(const FRoomInfo& RoomInfo, A
 		OnSessionCreated.Broadcast(false);
 		return;
 	}
-
-	// 요청한 PlayerController 저장
-	RequestingPlayerController = RequestingPlayer;
-
+	
 	SESSIONPRINTLOG(TEXT("Creating new session..."));
 
 	// 세션을 만들기 위한 옵션 담을 변수
@@ -129,6 +123,11 @@ void UMVE_GIS_SessionManager::CreateSessionInternal(const FRoomInfo& RoomInfo, A
 	FUniqueNetIdPtr netId =
 		GetWorld()->GetFirstLocalPlayerFromController()->GetUniqueNetIdForPlatformUser().GetUniqueNetId();
 	SessionInterface->CreateSession(*netId, NAME_GameSession, sessionSettings);
+}
+
+APlayerController* UMVE_GIS_SessionManager::GetPlayerController()
+{
+	return GetGameInstance()->GetWorld()->GetFirstPlayerController();
 }
 
 void UMVE_GIS_SessionManager::FindSessions()
@@ -221,20 +220,7 @@ void UMVE_GIS_SessionManager::OnCreateSessionComplete(FName SessionName, bool bS
 	if (bSuccess)
 	{
 		SESSIONPRINTLOG(TEXT("Opening StageLevel as new Listen Server..."));
-
-		// 요청한 PlayerController만 이동시키기
-		if (RequestingPlayerController)
-		{
-			SESSIONPRINTLOG(TEXT("Moving requesting player to StageLevel"));
-			// Console Command로 해당 PlayerController만 이동
-			RequestingPlayerController->ConsoleCommand(TEXT("open StageLevel?listen"));
-		}
-		else
-		{
-			// fallback: 모든 플레이어 이동
-			SESSIONPRINTLOG(TEXT("No requesting player found, using OpenLevel (all players will move)"));
-			UGameplayStatics::OpenLevel(GetWorld(), FName(TEXT("StageLevel")), true, TEXT("listen"));
-		}
+		UGameplayStatics::OpenLevel(GetWorld(), FName(TEXT("StageLevel")), true, TEXT("listen"));
 	}
 
 	// 세션 생성 결과 브로드캐스트
@@ -298,7 +284,7 @@ void UMVE_GIS_SessionManager::OnDestroySessionComplete(FName SessionName, bool b
 	{
 		SESSIONPRINTLOG(TEXT("Retrying session creation after destroy..."));
 		bPendingCreateSession = false;
-		CreateSessionInternal(PendingRoomInfo, RequestingPlayerController.Get());
+		CreateSessionInternal(PendingRoomInfo);
 	}
 }
 

@@ -20,10 +20,9 @@ public:
 	/**
 	 * 세션(방) 생성
 	 * @param RoomInfo 방 정보
-	 * @param RequestingPlayer 세션 생성을 요청한 PlayerController (이동시킬 플레이어)
 	 */
 	UFUNCTION(BlueprintCallable)
-	void CreateSession(const FRoomInfo& RoomInfo, APlayerController* RequestingPlayer = nullptr);
+	void CreateSession(const FRoomInfo& RoomInfo);
 
 	/**
 	 * 세션 목록 조회 (Find Sessions)
@@ -98,12 +97,9 @@ private:
 	// 세션 생성 대기 플래그
 	bool bPendingCreateSession = false;
 
-	// 세션 생성을 요청한 PlayerController
-	UPROPERTY()
-	TObjectPtr<APlayerController> RequestingPlayerController;
-
 	// 실제 세션 생성 로직
-	void CreateSessionInternal(const FRoomInfo& RoomInfo, APlayerController* RequestingPlayer);
+	void CreateSessionInternal(const FRoomInfo& RoomInfo);
 
+	APlayerController* GetPlayerController();
 };
 
