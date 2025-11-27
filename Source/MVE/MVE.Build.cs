@@ -26,8 +26,7 @@ public class MVE : ModuleRules
 			"JsonUtilities",     // FJsonObjectConverter, FJsonSerializer
 			"ImageWrapper",      // IImageWrapper (이미지 로딩) 
 			"Niagara",
-			"ImageWrapper"
-			"ImageWrapper",		 // IImageWrapper (이미지 로딩) ,
+			"ImageWrapper",
 			"OnlineSubsystem",
 			"OnlineSubsystemSteam"
 		});

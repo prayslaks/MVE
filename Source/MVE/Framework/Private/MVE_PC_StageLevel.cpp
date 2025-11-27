@@ -16,7 +16,7 @@ void AMVE_PC_StageLevel::BeginPlay()
 	}
 
 	// 호스트/클라이언트 구분
-	bool bIsHost = IsListenServerHost();
+	bool bIsHost = HasAuthority() && IsListenServerHost();
     
 	if (bIsHost)
 	{
