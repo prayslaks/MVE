@@ -3,6 +3,7 @@
 #include "MVE.h"
 #include "Blueprint/UserWidget.h"
 #include "Data/ScreenTypes.h"
+#include "UI/Widget/PopUp/Public/MVE_WidgetClass_ModalBackgroundWidget.h"
 
 void UUIManagerSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
@@ -99,6 +100,12 @@ void UUIManagerSubsystem::InitScreenClasses()
 			PRINTLOG(TEXT("Widget Class 지정 안함"));
 			continue;
 		}
+
+		if (Row->PopupName == FName("ModalBackground"))
+		{
+			ModalBackgroundClass = Row->WidgetClass;
+			continue;
+		}
 		
 		PopupWidgetClasses.Add(Row->PopupName, Row->WidgetClass);
 	}
@@ -161,7 +168,7 @@ void UUIManagerSubsystem::RegisterScreenWidget(EUIScreen ScreenType, TSubclassOf
 	}
 }
 
-UUserWidget* UUIManagerSubsystem::ShowPopup(FName PopupName, bool bAddToStack)
+UUserWidget* UUIManagerSubsystem::ShowPopup(FName PopupName, bool bShowModalBackground)
 {
 	// 팝업 클래스가 등록되어 있는지 확인
 	if (!PopupWidgetClasses.Contains(PopupName))
@@ -178,6 +185,11 @@ UUserWidget* UUIManagerSubsystem::ShowPopup(FName PopupName, bool bAddToStack)
 			PRINTLOG(TEXT("Popup '%s' is already open!"), *PopupName.ToString());
 			return ExistingPopup;
 		}
+	}
+
+	if (bShowModalBackground && PopupStack.Num() == 0)
+	{
+		ShowModalBackground();
 	}
 
 	// 팝업 위젯 생성
@@ -210,14 +222,9 @@ UUserWidget* UUIManagerSubsystem::ShowPopup(FName PopupName, bool bAddToStack)
     
 	PRINTLOG(TEXT("Popup '%s' created with ZOrder: %d"), *PopupName.ToString(), ZOrder);
 
-	// 스택에 추가 (옵션)
-	if (bAddToStack)
-	{
-		PopupStack.Add(PopupWidget);
-		PRINTLOG(TEXT("Popup '%s' added to stack. Current stack size: %d"), 
-				 *PopupName.ToString(), PopupStack.Num());
-	}
 
+	PopupStack.Add(PopupWidget);
+	
 	return PopupWidget;
 }
 
@@ -249,6 +256,12 @@ void UUIManagerSubsystem::CloseTopPopup()
 		PRINTLOG(TEXT("Top popup is nullptr!"));
 		PopupStack.RemoveAt(PopupStack.Num() - 1);
 	}
+
+	// 모든 팝업이 닫혔으면 모달 배경도 제거
+	if (PopupStack.Num() == 0)
+	{
+		HideModalBackground();
+	}
 }
 
 void UUIManagerSubsystem::ClosePopup(UUserWidget* PopupWidget)
@@ -278,6 +291,12 @@ void UUIManagerSubsystem::ClosePopup(UUserWidget* PopupWidget)
     
 	// 스택에서 제거
 	PopupStack.RemoveAt(FoundIndex);
+
+	// 모달 배경 제거
+	if (PopupStack.Num() == 0)
+	{
+		HideModalBackground();
+	}
     
 	PRINTLOG(TEXT("Popup closed. Remaining stack size: %d"), PopupStack.Num());
 	
@@ -360,4 +379,68 @@ APlayerController* UUIManagerSubsystem::GetPlayerController()
 		}
 	}
 	return CachedPlayerController;
+}
+
+void UUIManagerSubsystem::ShowModalBackground()
+{
+	if (ModalBackground && ModalBackground->IsInViewport())
+	{
+		PRINTLOG(TEXT("Modal background already visible."));
+		return;
+	}
+
+	if (!ModalBackgroundClass)
+	{
+		PRINTLOG(TEXT("ModalBackgroundClass is not set!"));
+		return;
+	}
+
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		PRINTLOG(TEXT("World is nullptr!"));
+		return;
+	}
+
+	APlayerController* PlayerController = World->GetFirstPlayerController();
+	if (!PlayerController)
+	{
+		PRINTLOG(TEXT("PlayerController is nullptr!"));
+		return;
+	}
+
+	// 모달 배경 생성
+	ModalBackground = CreateWidget<UMVE_WidgetClass_ModalBackgroundWidget>(
+		PlayerController, ModalBackgroundClass);
+
+	if (!ModalBackground)
+	{
+		PRINTLOG(TEXT("Failed to create modal background!"));
+		return;
+	}
+
+	// 배경 클릭 이벤트 바인딩
+	ModalBackground->OnBackgroundClicked.AddUObject(
+		this, &UUIManagerSubsystem::OnModalBackgroundClicked);
+
+	// ZOrder: 50 (화면 위, 팝업 아래)
+	ModalBackground->AddToViewport(50);
+
+	PRINTLOG(TEXT("Modal background shown."));
+}
+
+void UUIManagerSubsystem::HideModalBackground()
+{
+	if (ModalBackground && ModalBackground->IsInViewport())
+	{
+		ModalBackground->RemoveFromParent();
+		PRINTLOG(TEXT("Modal background hidden."));
+	}
+
+	ModalBackground = nullptr;
+}
+
+void UUIManagerSubsystem::OnModalBackgroundClicked()
+{
+	CloseTopPopup();
 }

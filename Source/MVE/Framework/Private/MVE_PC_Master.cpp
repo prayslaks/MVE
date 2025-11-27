@@ -24,13 +24,5 @@ void AMVE_PC_Master::BeginPlay()
 	{
 		UIManager->ShowScreen(EUIScreen::Main);
 	}
-
-	/*
-	UMVE_WidgetClass_MainLevel* MainWidget = CreateWidget<UMVE_WidgetClass_MainLevel>(MainWidgetClass);
-	if (MainWidgetClass)
-	{
-		if (!IsLocalPlayerController()) return;
-		MainWidget->AddToViewport();
-	}
-	*/
+	
 }
