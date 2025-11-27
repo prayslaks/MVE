@@ -18,12 +18,6 @@ void AMVE_PC_StageLevel::BeginPlay()
 	// 호스트/클라이언트 구분
 	bool bIsHost = IsListenServerHost();
     
-	PRINTLOG(TEXT("Player Type: %s"), bIsHost ? TEXT("HOST (Studio)") : TEXT("CLIENT (Audience)"));
-	PRINTLOG(TEXT("HasAuthority: %s"), HasAuthority() ? TEXT("TRUE") : TEXT("FALSE"));
-	PRINTLOG(TEXT("GetNetMode: %d"), (int32)GetNetMode());
-	PRINTLOG(TEXT("GetLocalRole: %d"), (int32)GetLocalRole());
-	PRINTLOG(TEXT("GetRemoteRole: %d"), (int32)GetRemoteRole());
-
 	if (bIsHost)
 	{
 		ShowStudioUI();

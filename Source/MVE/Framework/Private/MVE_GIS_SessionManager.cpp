@@ -300,7 +300,7 @@ FRoomInfo UMVE_GIS_SessionManager::ConvertSearchResultToRoomInfo(const FOnlineSe
 	FString RoomTitle;
 	if (SearchResult.Session.SessionSettings.Get(FName("ROOM_TITLE"), RoomTitle))
 	{
-		RoomInfo.RoomTitle = RoomTitle;
+		RoomInfo.RoomTitle = StringBase64Decode(RoomTitle);
 	}
 
 	FString ConcertType;
