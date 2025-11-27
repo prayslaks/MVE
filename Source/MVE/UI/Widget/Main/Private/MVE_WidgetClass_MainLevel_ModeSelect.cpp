@@ -35,7 +35,7 @@ void UMVE_WidgetClass_MainLevel_ModeSelect::OnMoveStudioButtonClicked()
 
 		// 현재 PlayerController를 전달하여 이 플레이어만 이동시킴
 		APlayerController* PC = GetOwningPlayer();
-		SessionManager->CreateSession(RoomInfo, PC);
+		SessionManager->CreateSession(RoomInfo);
 	}
 }
 

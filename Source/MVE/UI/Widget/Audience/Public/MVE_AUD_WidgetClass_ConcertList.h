@@ -39,10 +39,24 @@ public:
 	DECLARE_MULTICAST_DELEGATE_OneParam(FOnRoomSelected, URoomInfoData*);
 	FOnRoomSelected OnRoomSelected;
 
+public:
+	/**
+	 * 세션 목록 새로고침
+	 */
+	UFUNCTION(BlueprintCallable)
+	void RefreshSessionList();
+
 protected:
 	virtual void NativeConstruct() override;
+	virtual void NativeDestruct() override;
 
 private:
+	/**
+	 * SessionManager의 OnSessionsFound 콜백
+	 */
+	UFUNCTION()
+	void OnSessionsFoundCallback(bool bSuccess, const TArray<FRoomInfo>& Sessions);
+
 	/**
 	 * ListView 항목 선택 이벤트
 	 */

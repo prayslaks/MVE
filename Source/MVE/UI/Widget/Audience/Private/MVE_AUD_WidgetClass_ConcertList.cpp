@@ -1,7 +1,8 @@
-﻿
+
 #include "../Public/MVE_AUD_WidgetClass_ConcertList.h"
 #include "MVE.h"
 #include "UIManagerSubsystem.h"
+#include "MVE_GIS_SessionManager.h"
 #include "Components/TileView.h"
 
 void UMVE_AUD_WidgetClass_ConcertList::NativeConstruct()
@@ -15,27 +16,40 @@ void UMVE_AUD_WidgetClass_ConcertList::NativeConstruct()
 		RoomTileView->OnItemClicked().AddUObject(this, &UMVE_AUD_WidgetClass_ConcertList::OnRoomItemClicked);
 
 		PRINTLOG(TEXT("ListView initialized."));
+	}
 
-		if (!TempRoomSessionTableAsset.IsNull())
+	// SessionManager 델리게이트 바인딩 및 세션 찾기
+	if (UGameInstance* GI = GetGameInstance())
+	{
+		if (UMVE_GIS_SessionManager* SessionManager = GI->GetSubsystem<UMVE_GIS_SessionManager>())
 		{
-			UDataTable* DT = TempRoomSessionTableAsset.LoadSynchronous();
-			TArray<FDTRoomInfo*> AllRowsPtr;
-			DT->GetAllRows(TEXT("LoadAllRooms"), AllRowsPtr);
+			// 델리게이트 바인딩
+			SessionManager->OnSessionsFound.AddUObject(this, &UMVE_AUD_WidgetClass_ConcertList::OnSessionsFoundCallback);
 
-			TArray<FRoomInfo> RoomInfoArray;
-			RoomInfoArray.Reserve(AllRowsPtr.Num());
+			// 세션 목록 조회 시작
+			RefreshSessionList();
 
-			for (FDTRoomInfo* RowPtr : AllRowsPtr)
-			{
-				if (RowPtr)
-				{
-					RoomInfoArray.Add(RowPtr->RoomInfo);
-				}
-			}
-
-			UpdateRoomList(RoomInfoArray);
+			PRINTLOG(TEXT("SessionManager delegate bound and FindSessions called."));
+		}
+		else
+		{
+			PRINTLOG(TEXT("Failed to get SessionManager subsystem!"));
 		}
 	}
+}
+
+void UMVE_AUD_WidgetClass_ConcertList::NativeDestruct()
+{
+	// 델리게이트 언바인딩
+	if (UGameInstance* GI = GetGameInstance())
+	{
+		if (UMVE_GIS_SessionManager* SessionManager = GI->GetSubsystem<UMVE_GIS_SessionManager>())
+		{
+			SessionManager->OnSessionsFound.RemoveAll(this);
+		}
+	}
+
+	Super::NativeDestruct();
 }
 
 void UMVE_AUD_WidgetClass_ConcertList::UpdateRoomList(const TArray<FRoomInfo>& Rooms)
@@ -93,7 +107,33 @@ void UMVE_AUD_WidgetClass_ConcertList::OnRoomItemClicked(UObject* ClickedItem)
 	}
 
 	const FRoomInfo& RoomInfo = RoomData->GetRoomInfo();
-	PRINTLOG(TEXT("Room clicked: %s (ID: %s)"), 
+	PRINTLOG(TEXT("Room clicked: %s (ID: %s)"),
 			 *RoomInfo.RoomTitle, *RoomInfo.RoomID);
-	
+
+}
+
+void UMVE_AUD_WidgetClass_ConcertList::RefreshSessionList()
+{
+	if (UGameInstance* GI = GetGameInstance())
+	{
+		if (UMVE_GIS_SessionManager* SessionManager = GI->GetSubsystem<UMVE_GIS_SessionManager>())
+		{
+			PRINTLOG(TEXT("Refreshing session list..."));
+			SessionManager->FindSessions();
+		}
+	}
+}
+
+void UMVE_AUD_WidgetClass_ConcertList::OnSessionsFoundCallback(bool bSuccess, const TArray<FRoomInfo>& Sessions)
+{
+	if (bSuccess)
+	{
+		PRINTLOG(TEXT("Sessions found: %d"), Sessions.Num());
+		UpdateRoomList(Sessions);
+	}
+	else
+	{
+		PRINTLOG(TEXT("Failed to find sessions!"));
+		ClearRoomList();
+	}
 }

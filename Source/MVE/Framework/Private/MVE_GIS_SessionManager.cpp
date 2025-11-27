@@ -118,7 +118,8 @@ void UMVE_GIS_SessionManager::CreateSessionInternal(const FRoomInfo& RoomInfo)
 	// displayName 을 Base64 로 변환
 	FString displayName = StringBase64Encode(RoomInfo.RoomTitle);
 	sessionSettings.Set(FName("ROOM_TITLE"), displayName, EOnlineDataAdvertisementType::ViaOnlineServiceAndPing);
-
+	
+	
 	// sessionSettings 이용해서 세션 생성 (NAME_GameSession으로 통일)
 	FUniqueNetIdPtr netId =
 		GetWorld()->GetFirstLocalPlayerFromController()->GetUniqueNetIdForPlatformUser().GetUniqueNetId();

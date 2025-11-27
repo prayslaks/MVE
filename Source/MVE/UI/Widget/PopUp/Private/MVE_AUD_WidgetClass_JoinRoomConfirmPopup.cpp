@@ -1,6 +1,7 @@
 
 #include "../Public/MVE_AUD_WidgetClass_JoinRoomConfirmPopup.h"
 
+#include "MVE_GIS_SessionManager.h"
 #include "UIManagerSubsystem.h"
 #include "Components/Button.h"
 #include "Components/TextBlock.h"
@@ -33,6 +34,11 @@ void UMVE_AUD_WidgetClass_JoinRoomConfirmPopup::OnConfirmButtonClicked()
 {
 	// 델리게이트 브로드캐스트
 	OnConfirmed.Broadcast(CurrentRoomInfo);
+
+	if (UMVE_GIS_SessionManager* SessionManager = GetGameInstance()->GetSubsystem<UMVE_GIS_SessionManager>())
+	{
+		SessionManager->JoinSession()
+	}
 
 	// 팝업 닫기
 	if (UUIManagerSubsystem* UIManager = UUIManagerSubsystem::Get(this))
