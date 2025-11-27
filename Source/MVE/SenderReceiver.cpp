@@ -13,6 +13,7 @@
 #include "glTFRuntimeFunctionLibrary.h"
 
 #include "MVE.h"
+#include "Engine/TextureRenderTarget2D.h"
 
 const TMap<EAssetType, FString> USenderReceiver::AssetTypeExtensions = {
 	{ EAssetType::MESH, TEXT("glb")},
@@ -64,33 +65,37 @@ void USenderReceiver::RequestGeneration(const FString& Prompt, const FString& Us
 	
 	HttpRequest->SetURL(FullURL);
 	HttpRequest->SetVerb(TEXT("POST"));
+	HttpRequest->SetTimeout(RequestTimeOut);
 
 	// 멀티파츠 구성
 	FString Boundary = FString::Printf(TEXT("----UnrealBoundary%d"),FDateTime::Now().GetTicks());
 
 	HttpRequest->SetHeader(TEXT("Content-Type"), FString::Printf(TEXT("application/octet-stream, boundary=%s"), *Boundary));
-
-	//Json 메타 데이터
-	// Json 객체 생성
-	TSharedPtr<FJsonObject> JsonObject = MakeShareable(new FJsonObject);
-	JsonObject->SetStringField(TEXT("Prompt"), Prompt);
-	JsonObject->SetStringField(TEXT("UserEmail"), UserEmail);
-	JsonObject->SetStringField(TEXT("OptionalImagePath"), FGuid::NewGuid().ToString());
-
-	// Json을 문자열로 직렬화
-	FString JsonContent;
-	TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&JsonContent);
-	FJsonSerializer::Serialize(JsonObject.ToSharedRef(), Writer);
-
-	// HTTP Body 데이터
 	TArray<uint8> BodyData;
-	FString BodyString;
 
-	//Json 데이터
-	BodyString += FString::Printf(TEXT("%s\r\n"),*Boundary);
-	BodyString += TEXT("Content-Disposition: form-data; name=\"metadata\"\r\n");
-	BodyString += TEXT("Content-Type: application/json\r\n\r\n");
-	
+	//json metadata 부분
+	{
+		// JSON 생성
+		TSharedPtr<FJsonObject> JsonObject = MakeShareable(new FJsonObject);
+		JsonObject->SetStringField(TEXT("prompt"), Prompt);
+		JsonObject->SetStringField(TEXT("user_email"), UserEmail);
+		JsonObject->SetStringField(TEXT("request_id"), FGuid::NewGuid().ToString());
+
+		FString JsonString;
+		TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&JsonString);
+		FJsonSerializer::Serialize(JsonObject.ToSharedRef(), Writer);
+
+		// Multipart 형식
+		FString Part;
+		Part += FString::Printf(TEXT("--%s\r\n"), *Boundary);
+		Part += TEXT("Content-Disposition: form-data; name=\"metadata\"\r\n");
+		Part += TEXT("Content-Type: application/json\r\n\r\n");
+		Part += JsonString;
+		Part += TEXT("\r\n");
+
+		FTCHARToUTF8 Converter(*Part);
+		BodyData.Append((const uint8*)Converter.Get(), Converter.Length());
+	}
 	// 이미지 파일
 	if (!OptionalImagePath.IsEmpty() && FPaths::FileExists(OptionalImagePath))
 	{
@@ -107,20 +112,25 @@ void USenderReceiver::RequestGeneration(const FString& Prompt, const FString& Us
 				MimeType = TEXT("image/jpeg");
 			else if (Extension == TEXT("webp"))
 				MimeType = TEXT("image/webp");
-			//Image Part 헤더
-			BodyString += FString::Printf(TEXT("%s\r\n"),*Boundary);
-			BodyString += TEXT("Content-Disposition: form-data; name=\"metadata\"\r\n");
-			BodyString += TEXT("Content-Type: application/json\r\n\r\n");
-			
-			// 현재까지의 텍스트를 바이너리로 변환 하여 바디에 추가한다
-			BodyData.Append((uint8*)TCHAR_TO_UTF8(*BodyString), BodyString.Len());
-			BodyString.Empty();
-			
-			// 이미지 바이너리 데이터를 Body에 추가
+
+			// 헤더  그리고 네임을 이미지로 변경 한다
+			FString Header;
+			Header += FString::Printf(TEXT("--%s\r\n"), *Boundary);
+			Header += FString::Printf(TEXT("Content-Disposition: form-data; name=\"image\"; filename=\"%s\"\r\n"),
+			*FPaths::GetCleanFilename(OptionalImagePath));
+			Header += FString::Printf(TEXT("Content-Type: %s\r\n\r\n"), *MimeType);
+
+
+			FTCHARToUTF8 HeaderConv(*Header);
+			BodyData.Append((uint8*)HeaderConv.Get(), HeaderConv.Length());
+
+			// 이미지 바이너리 불러내라
 			BodyData.Append(ImageData);
 
 			// 줄바꿈
-			BodyString += TEXT("\r\n");
+			FString LineBreak = TEXT("\r\n");
+			FTCHARToUTF8 LBConv(*LineBreak);
+			BodyData.Append((uint8*)LBConv.Get(), LBConv.Length());
 		}
 		else
 		{
@@ -131,13 +141,15 @@ void USenderReceiver::RequestGeneration(const FString& Prompt, const FString& Us
 	{
 		UE_LOG(LogMVE, Warning,TEXT("이미지 파일이 존재하지 않음 %s"),*OptionalImagePath);
 	}
-	BodyString += FString::Printf(TEXT("--%s--\r\n"), *Boundary);
-
-	// 최종 Body 완성
-	BodyData.Append((uint8*)TCHAR_TO_UTF8(*BodyString), BodyString.Len());
-
-	UE_LOG(LogMVE, Log, TEXT("[MVE] 최종 Body 크기: %d bytes"), BodyData.Num());
+	// 종료 부분
+	{
+		FString Closing = FString::Printf(TEXT("--%s--\r\n"), *Boundary);
+		FTCHARToUTF8 Converter(*Closing);
+		BodyData.Append((const uint8*)Converter.Get(), Converter.Length());
+	}
 	
+	UE_LOG(LogMVE, Log, TEXT("[송신] Body 크기: %d bytes"), BodyData.Num());
+
 	// HTTP 요청 전송
 	HttpRequest->SetContent(BodyData);
 
@@ -180,6 +192,9 @@ void USenderReceiver::OnGenerationRequestComplete(
     // 응답 코드별 처리
     if (ResponseCode == 200)
     {
+    	// json 응답 파싱하고 메타 데이터 추출
+    	TSharedPtr<FJsonObject> JsonObject;
+    	TSharedPtr<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(*ResponseString);
         // 성공: 요청이 큐에 등록됨
         UE_LOG(LogMVE, Log, TEXT("[MVE] ✓ 생성 요청이 큐에 등록되었습니다"));
         
@@ -203,7 +218,7 @@ void USenderReceiver::OnGenerationRequestComplete(
 
 
 //수신부: 에셋 다운로드 및 로드
-void USenderReceiver::DownloadAsset(const FAssetMetadata& Metadata)
+void USenderReceiver::DownloadFileServer(const FAssetMetadata& Metadata)
 {
     UE_LOG(LogMVE, Log, TEXT("[Metadata] 다운로드 시작"));
     UE_LOG(LogMVE, Log, TEXT("  - AssetID: %s"), *Metadata.AssetID.ToString());
@@ -522,6 +537,8 @@ USkeletalMesh* USenderReceiver::LoadMeshFromFile(const FString& FilePath)
 }
 
 
+
+// 테스트용
 void USenderReceiver::LoadLocalAsset(const FAssetMetadata& Metadata)
 {
 	UE_LOG(LogMVE,Warning, TEXT(" 로컬파일 직접 로드 시작합니다"));
