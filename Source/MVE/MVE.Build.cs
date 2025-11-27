@@ -26,12 +26,19 @@ public class MVE : ModuleRules
 			"JsonUtilities",     // FJsonObjectConverter, FJsonSerializer
 			"ImageWrapper",      // IImageWrapper (이미지 로딩) 
 			"Niagara",
+<<<<<<< HEAD
 			"ImageWrapper",
+=======
+			"ImageWrapper", // IImageWrapper (이미지 로딩) ,
+>>>>>>> main
 			"OnlineSubsystem",
 			"OnlineSubsystemSteam"
 		});
 
-		PrivateDependencyModuleNames.AddRange(new string[] { });
+		PrivateDependencyModuleNames.AddRange(new string[]
+		{
+			"DesktopPlatform"
+		});
 
 		PublicIncludePaths.AddRange(new string[] {
 			"MVE",

@@ -44,7 +44,7 @@ void AMVE_PC_StageLevel::ShowAudienceUI()
     
 	if (UIManager)
 	{
-		UIManager->ShowScreen(EUIScreen::AudienceConcertRoom);
+		UIManager->ShowScreen(EUIScreen::AudienceGenerateMesh);
 	}
 }
 
