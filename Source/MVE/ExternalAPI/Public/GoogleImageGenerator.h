@@ -25,7 +25,7 @@ private:
 	void OnResponseReceived(FHttpRequestPtr Request, FHttpResponsePtr Response, bool bWasSuccessful);
 
 	// API 키 (실제 게임에서는 별도 관리 필요)
-	const FString ApiKey = TEXT("AIzaSyAiGNwf-7yRaZo50YbHhLaauFG-vSIC8oA");
+	const FString ApiKey = TEXT("");
 	
 	// Base64 문자열을 UTexture2D로 변환하는 핵심 함수
 	UTexture2D* LoadTextureFromBase64(const FString& Base64String);
