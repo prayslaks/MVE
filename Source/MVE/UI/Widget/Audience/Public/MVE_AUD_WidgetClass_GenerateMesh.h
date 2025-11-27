@@ -5,6 +5,7 @@
 #include "Blueprint/UserWidget.h"
 #include "MVE_AUD_WidgetClass_GenerateMesh.generated.h"
 
+class UTextBlock;
 class UButton;
 class UMultiLineEditableTextBox;
 
@@ -25,8 +26,23 @@ protected:
 	UPROPERTY(meta=(BindWidget))
 	TObjectPtr<UUserWidget> MeshPreviewWidget;
 
+	UPROPERTY(meta=(BindWidget))
+	TObjectPtr<UButton> EnterConcertRoomButton;
+
+	UPROPERTY(meta=(BindWidget))
+	TObjectPtr<UButton> InputImageButton;
+
+	UPROPERTY(meta=(BindWidget))
+	TObjectPtr<UTextBlock> ImportedImageNameTextBlock;
+
 private:
 	UFUNCTION()
 	void OnSendPromptButtonClicked();
+
+	UFUNCTION()
+	void OnEnterConcertRoomButtonClicked();
+
+	UFUNCTION()
+	void OnInputImageButtonClicked();
 	
 };
