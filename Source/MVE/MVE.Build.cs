@@ -25,10 +25,10 @@ public class MVE : ModuleRules
 			"Json",              // FJsonObject, FJsonValue
 			"JsonUtilities",     // FJsonObjectConverter, FJsonSerializer
 			"ImageWrapper",      // IImageWrapper (이미지 로딩) 
-			"Niagara",
-			"ImageWrapper", // IImageWrapper (이미지 로딩) ,
 			"OnlineSubsystem",
-			"OnlineSubsystemSteam"
+			"OnlineSubsystemSteam",
+			"RenderCore",		 // 
+			"Niagara",			 // 나이아가라 이펙트
 		});
 
 		PrivateDependencyModuleNames.AddRange(new string[]
