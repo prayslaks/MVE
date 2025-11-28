@@ -163,15 +163,20 @@ void UMVE_GIS_SessionManager::JoinSession(const FString& SessionId)
 	}
 
 	// SessionId로 검색 결과에서 해당 세션 찾기
-	for (const FOnlineSessionSearchResult& SearchResult : SessionSearch->SearchResults)
+	for (FOnlineSessionSearchResult& SearchResult : SessionSearch->SearchResults)
 	{
 		FString ResultSessionId = SearchResult.GetSessionIdStr();
-        
+
 		if (ResultSessionId == SessionId)
 		{
+			// 5.5 이후 부터 바꼈다...
+			SearchResult.Session.SessionSettings.bUseLobbiesIfAvailable = true;
+			SearchResult.Session.SessionSettings.bUsesPresence = true;
+
 			PRINTLOG(TEXT("Joining session: %s"), *SessionId);
 
 			const ULocalPlayer* LocalPlayer = GetWorld()->GetFirstLocalPlayerFromController();
+			
 			SessionInterface->JoinSession(*LocalPlayer->GetPreferredUniqueNetId(), NAME_GameSession, SearchResult);
 			return;
 		}
@@ -221,7 +226,8 @@ void UMVE_GIS_SessionManager::OnCreateSessionComplete(FName SessionName, bool bS
 	if (bSuccess)
 	{
 		SESSIONPRINTLOG(TEXT("Opening StageLevel as new Listen Server..."));
-		UGameplayStatics::OpenLevel(GetWorld(), FName(TEXT("StageLevel")), true, TEXT("listen"));
+		GetWorld()->ServerTravel(TEXT("/Game/Maps/StageLevel?listen"));
+		//UGameplayStatics::OpenLevel(GetWorld(), FName(TEXT("StageLevel")), true, TEXT("listen"));
 	}
 
 	// 세션 생성 결과 브로드캐스트
