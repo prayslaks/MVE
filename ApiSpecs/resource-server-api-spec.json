@@ -931,45 +931,7 @@
         },
         "responses": {
           "200": {
-            "description": "콘서트 생성 성공",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "status": {
-                      "type": "integer",
-                      "example": 200
-                    },
-                    "statusText": {
-                      "type": "string",
-                      "example": "OK"
-                    },
-                    "duration": {
-                      "type": "string",
-                      "example": "50ms"
-                    },
-                    "data": {
-                      "type": "object",
-                      "properties": {
-                        "success": {
-                          "type": "boolean",
-                          "example": true
-                        },
-                        "roomId": {
-                          "type": "string",
-                          "example": "concert_1765192726094_abcdefg"
-                        },
-                        "expiresIn": {
-                          "type": "integer",
-                          "example": 7200
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
+            "description": "콘서트 생성 성공"
           },
           "400": {
             "description": "잘못된 요청"
@@ -1000,94 +962,16 @@
                 "schema": {
                   "type": "object",
                   "properties": {
-                    "status": {
-                      "type": "integer",
-                      "example": 200
+                    "success": {
+                      "type": "boolean"
                     },
-                    "statusText": {
-                      "type": "string",
-                      "example": "OK"
+                    "count": {
+                      "type": "integer"
                     },
-                    "duration": {
-                      "type": "string",
-                      "example": "33ms"
-                    },
-                    "data": {
-                      "type": "object",
-                      "properties": {
-                        "success": {
-                          "type": "boolean",
-                          "example": true
-                        },
-                        "count": {
-                          "type": "integer",
-                          "example": 1
-                        },
-                        "concerts": {
-                          "type": "array",
-                          "items": {
-                            "type": "object",
-                            "properties": {
-                              "roomId": { "type": "string", "example": "concert_1765192726094_dzyli3tc4" },
-                              "studioUserId": { "type": "integer", "example": 1 },
-                              "studioName": { "type": "string", "example": "prayslaks @naver.com" },
-                              "concertName": { "type": "string", "example": "First" },
-                              "songs": {
-                                "type": "array",
-                                "items": {
-                                  "type": "object",
-                                  "properties": {
-                                    "songNum": { "type": "integer", "example": 1 },
-                                    "audioId": { "type": "integer", "example": 1 },
-                                    "streamUrl": { "type": "string", "example": "/api/audio/stream/1" },
-                                    "stageDirectionId": { "type": "integer", "example": 10 }
-                                  }
-                                }
-                              },
-                              "accessories": {
-                                "type": "array",
-                                "items": {
-                                  "type": "object",
-                                  "properties": {
-                                    "socketName": { "type": "string", "example": "head_socket" },
-                                    "relativeLocation": {
-                                      "type": "object",
-                                      "properties": {
-                                        "x": { "type": "number", "format": "float", "example": 0 },
-                                        "y": { "type": "number", "format": "float", "example": 0 },
-                                        "z": { "type": "number", "format": "float", "example": 10 }
-                                      }
-                                    },
-                                    "relativeRotation": {
-                                      "type": "object",
-                                      "properties": {
-                                        "pitch": { "type": "number", "format": "float", "example": 0 },
-                                        "yaw": { "type": "number", "format": "float", "example": 0 },
-                                        "roll": { "type": "number", "format": "float", "example": 0 }
-                                      }
-                                    },
-                                    "relativeScale": { "type": "number", "format": "float", "example": 1.0 },
-                                    "modelUrl": { "type": "string", "example": "/models/hat.glb" }
-                                  }
-                                }
-                              },
-                              "maxAudience": { "type": "integer", "example": 100 },
-                              "createdAt": { "type": "integer", "format": "int64", "example": 1765192726094 },
-                              "listenServer": {
-                                "type": "object",
-                                "properties": {
-                                  "localIP": { "type": "string", "example": "192.168.10.100" },
-                                  "port": { "type": "integer", "example": 7777 },
-                                  "publicIP": { "type": "string", "nullable": true, "example": null },
-                                  "publicPort": { "type": "integer", "nullable": true, "example": null }
-                                }
-                              },
-                              "isOpen": { "type": "boolean", "example": false },
-                              "currentSong": { "type": "integer", "example": 1 },
-                              "currentAudience": { "type": "integer", "example": 0 }
-                            }
-                          }
-                        }
+                    "concerts": {
+                      "type": "array",
+                      "items": {
+                        "type": "object"
                       }
                     }
                   }
@@ -1772,64 +1656,7 @@
         },
         "responses": {
           "200": {
-            "description": "리슨 서버 정보 등록 성공",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "status": {
-                      "type": "integer",
-                      "example": 200
-                    },
-                    "statusText": {
-                      "type": "string",
-                      "example": "OK"
-                    },
-                    "duration": {
-                      "type": "string",
-                      "example": "22ms"
-                    },
-                    "data": {
-                      "type": "object",
-                      "properties": {
-                        "success": {
-                          "type": "boolean",
-                          "example": true
-                        },
-                        "message": {
-                          "type": "string",
-                          "example": "Listen server info updated successfully"
-                        },
-                        "listenServer": {
-                          "type": "object",
-                          "properties": {
-                            "localIP": {
-                              "type": "string",
-                              "example": "192.168.10.100"
-                            },
-                            "port": {
-                              "type": "integer",
-                              "example": 7777
-                            },
-                            "publicIP": {
-                              "type": "string",
-                              "nullable": true,
-                              "example": null
-                            },
-                            "publicPort": {
-                              "type": "integer",
-                              "nullable": true,
-                              "example": null
-                            }
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
+            "description": "리슨 서버 정보 등록 성공"
           },
           "400": {
             "description": "잘못된 요청"
@@ -1897,6 +1724,66 @@
           },
           "403": {
             "description": "권한 없음 (스튜디오만 가능)"
+          }
+        }
+      }
+    },
+    "/api/concert/{roomId}": {
+      "delete": {
+        "summary": "콘서트 세션 파괴",
+        "description": "콘서트 세션을 명시적으로 종료하고 모든 관련 데이터를 삭제합니다 (스튜디오만 가능)",
+        "tags": [
+          "Concert"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "roomId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "콘서트 방 ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "콘서트 세션 파괴 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "roomId": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "인증 실패"
+          },
+          "403": {
+            "description": "권한 없음 (스튜디오만 가능)"
+          },
+          "404": {
+            "description": "콘서트를 찾을 수 없음"
           }
         }
       }

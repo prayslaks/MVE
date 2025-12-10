@@ -32,9 +32,9 @@ protected:
 private:
 	// Map of error codes to localized error messages
 	UPROPERTY()
-	TMap<FString, FText> ErrorCodeMap;
+	TMap<FString, FText> ResponseCodeToKoreanTextMap;
 
-	// Initializes the ErrorCodeMap with values
-	void InitializeErrorCodes();
+	// Initializes the ResponseCodeToKoreanTextMap with values
+	void MapResponseCodeToText();
 	
 };
