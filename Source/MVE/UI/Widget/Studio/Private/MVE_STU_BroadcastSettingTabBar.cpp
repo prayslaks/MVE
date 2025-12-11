@@ -3,6 +3,7 @@
 
 #include "MVE.h"
 #include "MVE_STU_Button_TabButton.h"
+#include "Blueprint/SlateBlueprintLibrary.h"
 #include "Components/Button.h"
 #include "Components/HorizontalBox.h"
 #include "Data/BroadcastSettingTypes.h"
@@ -12,6 +13,9 @@ void UMVE_STU_BroadcastSettingTabBar::NativeConstruct()
 	Super::NativeConstruct();
 
 	InitializeTabs();
+
+	if (UserSettingButton)
+		UserSettingButton.Get()->OnClicked.AddDynamic(this, &UMVE_STU_BroadcastSettingTabBar::OnUserSettingButtonClicked);
 }
 
 void UMVE_STU_BroadcastSettingTabBar::InitializeTabs()
@@ -121,26 +125,37 @@ void UMVE_STU_BroadcastSettingTabBar::CreateTabButtons()
 		// 공통 색상으로 TabInfo 구성
 		FBroadcastSettingTabInfo TabInfoWithColors = TabInfo;
 
-		// 탭 버튼 생성
-		UMVE_STU_Button_TabButton* TabButton = CreateWidget<UMVE_STU_Button_TabButton>(this, TabButtonClass);
-		if (!TabButton)
-		{
-			continue;
-		}
-
-		TabButton->SetupTab(TabInfoWithColors);
-		TabButton->OnTabButtonClicked.AddDynamic(this, &UMVE_STU_BroadcastSettingTabBar::OnTabClicked);
-
+		
 		if (TabType != EBroadcastSettingTab::CheckSettings)
 		{
+			// 탭 버튼 생성
+			UMVE_STU_Button_TabButton* TabButton = CreateWidget<UMVE_STU_Button_TabButton>(this, TabButtonClass);
+			if (!TabButton)
+			{
+				continue;
+			}
+
+			TabButton->SetupTab(TabInfoWithColors);
+			TabButton->OnTabButtonClicked.AddDynamic(this, &UMVE_STU_BroadcastSettingTabBar::OnTabClicked);
+		
 			HBox_Tabs->AddChildToHorizontalBox(TabButton);
+			TabButtons.Add(TabButton);
 		}
 		else
 		{
-			HBox_Right->AddChildToHorizontalBox(TabButton);	
-		}
+			// 탭 버튼 생성
+			UMVE_STU_Button_TabButton* TabButton = CreateWidget<UMVE_STU_Button_TabButton>(this, ConfirmButtonClass);
+			if (!TabButton)
+			{
+				continue;
+			}
+
+			TabButton->SetupTab(TabInfoWithColors);
+			TabButton->OnTabButtonClicked.AddDynamic(this, &UMVE_STU_BroadcastSettingTabBar::OnTabClicked);
 		
-		TabButtons.Add(TabButton);
+			HBox_Right->AddChildToHorizontalBox(TabButton);
+			TabButtons.Add(TabButton);
+		}
 	}
 
 	PRINTLOG(TEXT("Created %d tab buttons"), TabButtons.Num());
@@ -166,5 +181,48 @@ void UMVE_STU_BroadcastSettingTabBar::SwitchToScreen(EBroadcastSettingTab TabTyp
 	{
 		UIManager->ShowScreen(TabInfo.TargetScreen);
 	}
+}
+
+void UMVE_STU_BroadcastSettingTabBar::OnUserSettingButtonClicked()
+{
+	if (UUIManagerSubsystem* UIManager = UUIManagerSubsystem::Get(this))
+	{
+		FVector2D ButtonPosition = GetProfileButtonScreenPosition();
+		// TODO: 유저이메일 주소 불러오기
+		UIManager->ShowUserDropdown(ButtonPosition, TEXT("유저이메일주소"));
+	}
+}
+
+FVector2D UMVE_STU_BroadcastSettingTabBar::GetProfileButtonScreenPosition() const
+{
+	if (!UserSettingButton)
+	{
+		return FVector2D::ZeroVector;
+	}
+
+	// 버튼의 Geometry 가져오기
+	FGeometry ButtonGeometry = UserSettingButton->GetCachedGeometry();
+    
+	// 로컬 좌표를 화면 절대 좌표로 변환
+	FVector2D PixelPosition;
+	FVector2D ViewportPosition;
+    
+	USlateBlueprintLibrary::LocalToViewport(
+		GetWorld(),
+		ButtonGeometry,
+		FVector2D::ZeroVector, // 버튼의 로컬 원점
+		PixelPosition,
+		ViewportPosition
+	);
+    
+	// 버튼의 크기를 고려하여 버튼 왼쪽 상단 아래쪽 위치 반환
+	FVector2D ButtonSize = ButtonGeometry.GetLocalSize();
+	// 드롭다운은 버튼 왼쪽 끝 아래쪽에 배치
+	FVector2D FinalPosition = FVector2D(ViewportPosition.X, ViewportPosition.Y + ButtonSize.Y);
+
+	PRINTLOG(TEXT("Button Position - Pixel: %s, Viewport: %s, ButtonSize: %s, Final: %s"),
+		*PixelPosition.ToString(), *ViewportPosition.ToString(), *ButtonSize.ToString(), *FinalPosition.ToString());
+
+	return FinalPosition;
 }
 

@@ -2,7 +2,11 @@
 #include "../Public/UIManagerSubsystem.h"
 #include "MVE.h"
 #include "Blueprint/UserWidget.h"
+#include "Components/CanvasPanelSlot.h"
 #include "Data/ScreenTypes.h"
+#include "UI/Widget/Dropdown/Public/MVE_WidgetClass_Dropdown.h"
+#include "UI/Widget/Dropdown/Public/MVE_WidgetClass_DropdownOverlay.h"
+#include "UI/Widget/Dropdown/Public/MVE_WidgetClass_Dropdown_UserSetting.h"
 #include "UI/Widget/PopUp/Public/MVE_WidgetClass_ModalBackgroundWidget.h"
 
 void UUIManagerSubsystem::Initialize(FSubsystemCollectionBase& Collection)
@@ -557,4 +561,76 @@ void UUIManagerSubsystem::UpdatePersistentWidgets(EUIScreen NewScreen)
 			HidePersistentWidget(WidgetType);
 		}
 	}
+}
+
+void UUIManagerSubsystem::ShowUserDropdown(const FVector2D& ButtonPosition, const FString& UserName)
+{
+	// 기존 드롭다운이 있으면 닫기
+	CloseDropdown();
+
+	PRINTLOG(TEXT("ShowUserDropdown - Position: %s, UserName: %s"), *ButtonPosition.ToString(), *UserName);
+
+	
+	// 1. 먼저 투명 오버레이 생성 (ZOrder 99)
+	if (DropdownOverlayClass)
+	{
+		DropdownOverlay = CreateWidget<UMVE_WidgetClass_DropdownOverlay>(CachedPlayerController, DropdownOverlayClass);
+		if (DropdownOverlay)
+		{
+			DropdownOverlay->AddToViewport(99);
+            
+			// 오버레이 클릭 이벤트 바인딩
+			DropdownOverlay->OnOverlayClickedEvent.AddDynamic(this, &UUIManagerSubsystem::OnOverlayClicked);
+		}
+	}
+	
+	// 드롭다운 위젯 생성
+	if (UserDropdownWidgetClass)
+	{
+		
+		UMVE_WidgetClass_Dropdown_UserSetting* UserSettingDropdown = CreateWidget<UMVE_WidgetClass_Dropdown_UserSetting>(CachedPlayerController, UserDropdownWidgetClass);
+	if (UserSettingDropdown)
+		{
+			PRINTLOG(TEXT("UserSettingDropdown widget created successfully"));
+			CurrentDropdown = UserSettingDropdown;
+
+			UserSettingDropdown->SetUserName(UserName);
+			UserSettingDropdown->AddToViewport(300); // 높은 ZOrder
+			PRINTLOG(TEXT("UserSettingDropdown Added to Viewport with ZOrder 300"));
+
+			UserSettingDropdown->SetDropdownPosition(ButtonPosition);
+		}
+		else
+		{
+			PRINTLOG(TEXT("Failed to create UserSettingDropdown widget!"));
+		}
+	}
+	else
+	{
+		PRINTLOG(TEXT("UserDropdownWidgetClass is not set!"));
+	}
+}
+
+void UUIManagerSubsystem::CloseDropdown()
+{
+	// 드롭다운 제거
+	if (CurrentDropdown)
+	{
+		CurrentDropdown->RemoveFromParent();
+		CurrentDropdown = nullptr;
+	}
+
+	// 오버레이 제거
+	if (DropdownOverlay)
+	{
+		DropdownOverlay->OnOverlayClickedEvent.RemoveDynamic(this, &UUIManagerSubsystem::OnOverlayClicked);
+		DropdownOverlay->RemoveFromParent();
+		DropdownOverlay = nullptr;
+	}
+}
+
+void UUIManagerSubsystem::OnOverlayClicked()
+{
+	// 오버레이를 클릭하면 드롭다운 닫기
+	CloseDropdown();
 }
