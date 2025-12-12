@@ -19,7 +19,7 @@ struct FMVE_AUD_ConcertSearchResultData
 	FString RoomId;
 
 	UPROPERTY(BlueprintReadOnly)
-	FString HostName;
+	FString StudioName;
 	
 	UPROPERTY(BlueprintReadOnly)
 	int32 CurrentAudience = 0;
@@ -33,7 +33,7 @@ struct FMVE_AUD_ConcertSearchResultData
 	FMVE_AUD_ConcertSearchResultData() = default;
 
 	FMVE_AUD_ConcertSearchResultData(const FString& InConcertName, const FString& InRoomId, const FString& InHostName, int32 InCurrentAudience, int32 InMaxAudience, bool InbIsOpen)
-		: ConcertName(InConcertName), RoomId(InRoomId), HostName(InHostName), CurrentAudience(InCurrentAudience), MaxAudience(InMaxAudience), bIsOpen(InbIsOpen)
+		: ConcertName(InConcertName), RoomId(InRoomId), StudioName(InHostName), CurrentAudience(InCurrentAudience), MaxAudience(InMaxAudience), bIsOpen(InbIsOpen)
 	{
 	}
 };

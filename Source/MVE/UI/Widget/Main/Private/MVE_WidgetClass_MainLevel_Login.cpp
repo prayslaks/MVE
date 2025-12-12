@@ -85,7 +85,7 @@ void UMVE_WidgetClass_MainLevel_Login::OnLoginResultReceived(const bool bSuccess
 	if (bSuccess)
 	{
 		// JWT 토큰 설정
-		UMVE_API_Helper::SetAuthToken(ResponseData.token);
+		UMVE_API_Helper::SetAuthToken(ResponseData.Token);
 		
 		if (LoginValidationTextBlock)
 		{
@@ -103,7 +103,7 @@ void UMVE_WidgetClass_MainLevel_Login::OnLoginResultReceived(const bool bSuccess
 		FText TranslatedErrorMessage;
 		if (const UMVE_GIS_API* Subsystem = UMVE_GIS_API::Get(this))
 		{
-			TranslatedErrorMessage = Subsystem->GetTranslatedErrorMessage(ErrorCode);
+			TranslatedErrorMessage = Subsystem->GetTranslatedTextFromResponseCode(ErrorCode);
 		}
 		
 		if (LoginValidationTextBlock)
