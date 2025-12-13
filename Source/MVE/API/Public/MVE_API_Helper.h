@@ -54,7 +54,7 @@ public:
     static void GetAudioDetail(int32 AudioId, const FOnGetAudioDetailComplete& OnResult);
     static void DownloadAudioFile(int32 AudioId, const FString& SavePath, const FOnGenericApiComplete& OnResult);
     
-	static void CreateConcert(const FString& ConcertName, const TArray<FConcertSong>& Songs, const TArray<FConcertAccessory>& Accessories, int32 MaxAudience, const FOnCreateConcertComplete& OnResult);
+	static void CreateConcert(const FString& ConcertName, const TArray<FConcertSong>& Songs, const TArray<FAccessory>& Accessories, int32 MaxAudience, const FOnCreateConcertComplete& OnResult);
     static void GetConcertInfo(const FString& RoomId, const FOnGetConcertInfoComplete& OnResult);
     static void GetConcertList(const FOnGetConcertListComplete& OnResult);
     static void JoinConcert(const FString& RoomId, int32 ClientId, const FOnGenericApiComplete& OnResult);
@@ -150,7 +150,7 @@ public:
     static void DownloadAudioFileBP(UObject* WorldContextObject, int32 AudioId, const FString& SavePath, const FOnGenericApiCompleteBP& OnResult);
     
     UFUNCTION(BlueprintCallable, Category = "MVE|API|Resource", meta=(WorldContext="WorldContextObject"))
-    static void CreateConcertBP(UObject* WorldContextObject, const FString& ConcertName, const TArray<FConcertSong>& Songs, const TArray<FConcertAccessory>& Accessories, int32 MaxAudience, const FOnCreateConcertCompleteBP& OnResult);
+    static void CreateConcertBP(UObject* WorldContextObject, const FString& ConcertName, const TArray<FConcertSong>& Songs, const TArray<FAccessory>& Accessories, int32 MaxAudience, const FOnCreateConcertCompleteBP& OnResult);
     
     UFUNCTION(BlueprintCallable, Category = "MVE|API|Resource", meta=(WorldContext="WorldContextObject"))
     static void GetConcertInfoBP(UObject* WorldContextObject, const FString& RoomId, const FOnGetConcertInfoCompleteBP& OnResult);

@@ -36,15 +36,15 @@ void UMVE_STD_WC_AudioSearch::OnGetAudioListButtonClicked()
 			SearchResultWidgets.Empty();
 			SelectedSearchResult = nullptr;
 			
-			for (const FAudioFile& AudioFile : ResponseData.audio_files)
+			for (const FAudioFile& AudioFile : ResponseData.AudioFiles)
 			{
 				FString Title, Artist, FilePath;
 				int32 Id, Duration;
 
-				Title = AudioFile.title;
-				Artist = AudioFile.artist;
-				Id = AudioFile.id;
-				Duration = AudioFile.duration;
+				Title = AudioFile.Title;
+				Artist = AudioFile.Artist;
+				Id = AudioFile.Id;
+				Duration = AudioFile.Duration;
 
 				PRINTLOG(TEXT("Title: %s, Artist: %s, Duration: %s"), *Title, *Artist, *FilePath);
 
@@ -63,7 +63,7 @@ void UMVE_STD_WC_AudioSearch::OnGetAudioListButtonClicked()
 		{
 			if (const UMVE_GIS_API* Subsystem = UMVE_GIS_API::Get(this))
 			{
-				FText TranslatedErrorMessage = Subsystem->GetTranslatedErrorMessage(ErrorCode);
+				FText TranslatedErrorMessage = Subsystem->GetTranslatedTextFromResponseCode(ErrorCode);
 			}
 		}
 	});

@@ -52,6 +52,18 @@
 
 ## MVE 프로젝트
 
+### API 스펙 유효성 검사 스크립트 (`scripts/validate_api_structs.py`)
+
+*   **목표**: `ApiSpecs/` 디렉토리에 정의된 서버 API 명세 (JSON)와 `Source/MVE/API/Public/MVE_API_ResponseData.h` 파일 내 C++ USTRUCT 간의 정합성을 자동으로 검사합니다.
+*   **주요 기능**:
+    *   API 명세의 컴포넌트 스키마 및 응답 스키마와 C++ USTRUCT 정의를 비교합니다.
+    *   C++ USTRUCT에 `@MveApiComponentSchema` 또는 `@MveApiResponse` 어노테이션으로 API 스키마를 연결합니다.
+    *   스키마에 정의된 속성이 C++ USTRUCT에 누락되었는지 확인합니다.
+    *   JSON 타입과 C++ 타입 간의 불일치 (예: `string` vs `FString`, `integer` vs `int32`/`int64`, `array` vs `TArray<...>` 등)를 보고합니다.
+    *   API 스펙에는 존재하지만 C++로 구현되지 않은 스키마를 식별합니다.
+    *   C++ USTRUCT에는 존재하지만 API 스키마에 연결되지 않은 USTRUCT를 식별합니다.
+*   **파일 경로**: `scripts/validate_api_structs.py`
+
 
 
 ---

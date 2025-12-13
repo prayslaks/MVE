@@ -2,8 +2,14 @@
 #include "../Public/UIManagerSubsystem.h"
 #include "MVE.h"
 #include "Blueprint/UserWidget.h"
+#include "Components/CanvasPanelSlot.h"
 #include "Data/ScreenTypes.h"
+#include "UI/Widget/Dropdown/Public/MVE_WC_Dropdown_ListItem.h"
+#include "UI/Widget/Dropdown/Public/MVE_WidgetClass_Dropdown.h"
+#include "UI/Widget/Dropdown/Public/MVE_WidgetClass_DropdownOverlay.h"
+#include "UI/Widget/Dropdown/Public/MVE_WidgetClass_Dropdown_UserSetting.h"
 #include "UI/Widget/PopUp/Public/MVE_WidgetClass_ModalBackgroundWidget.h"
+#include "UI/Widget/Studio/FilterList/Public/MVE_STU_WC_FilterableListItem.h"
 
 void UUIManagerSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
@@ -143,6 +149,25 @@ void UUIManagerSubsystem::InitScreenClasses()
 			}
             
 			PRINTLOG(TEXT("Loaded %d persistent widget classes"), PersistentWidgetClasses.Num());
+		}
+	}
+
+	// Dropdown Widget 클래스 설정
+	if (!DropdownClassesTableAsset.IsNull())
+	{
+		UDataTable* DDT = DropdownClassesTableAsset.LoadSynchronous();
+		if (DDT)
+		{
+			for (auto& It : DDT->GetRowMap())
+			{
+				const FDropdownClassInfo* Row = DDT->FindRow<FDropdownClassInfo>(It.Key, TEXT("UUIManagerSubsystem::InitScreenClasses"), true);
+				if (!Row) continue;
+
+				if (Row->DropdownType == EDropdownType::None) continue;
+				if (!Row->WidgetClass) continue;
+
+				DropdownClassMap.Add(Row->DropdownType, Row->WidgetClass);
+			}
 		}
 	}
 }
@@ -557,4 +582,123 @@ void UUIManagerSubsystem::UpdatePersistentWidgets(EUIScreen NewScreen)
 			HidePersistentWidget(WidgetType);
 		}
 	}
+}
+
+void UUIManagerSubsystem::ShowDropdown(EDropdownType DropdownType, const FDropdownContext& Context)
+{
+	// 추가 로그
+	PRINTLOG(TEXT("ButtonPosition: X=%f, Y=%f"), Context.ButtonPosition.X, Context.ButtonPosition.Y);
+	PRINTLOG(TEXT("ButtonSize: X=%f, Y=%f"), Context.ButtonSize.X, Context.ButtonSize.Y);
+	PRINTLOG(TEXT("AnchorPosition: %d"), (int32)Context.AnchorPosition);
+
+	
+	// 기존 드롭다운 닫기
+	CloseDropdown();
+
+	PRINTLOG(TEXT("ShowDropdown - Type: %d, Position: %s, Size: %s"), 
+		(int32)DropdownType, *Context.ButtonPosition.ToString(), *Context.ButtonSize.ToString());
+
+	// 드롭다운 클래스 찾기
+	TSubclassOf<UMVE_WidgetClass_Dropdown>* DropdownClass = DropdownClassMap.Find(DropdownType);
+	if (!DropdownClass || !*DropdownClass)
+	{
+		PRINTLOG(TEXT("Dropdown class not found for type: %d"), (int32)DropdownType);
+		return;
+	}
+
+	// 1. 투명 오버레이 생성 (ZOrder 99)
+	if (DropdownOverlayClass)
+	{
+		DropdownOverlay = CreateWidget<UMVE_WidgetClass_DropdownOverlay>(CachedPlayerController, DropdownOverlayClass);
+		if (DropdownOverlay)
+		{
+			DropdownOverlay->AddToViewport(99);
+			DropdownOverlay->OnOverlayClickedEvent.AddDynamic(this, &UUIManagerSubsystem::OnOverlayClicked);
+			PRINTLOG(TEXT("Dropdown overlay created"));
+		}
+	}
+
+	// 2. 드롭다운 위젯 생성
+	CurrentDropdown = CreateWidget<UMVE_WidgetClass_Dropdown>(CachedPlayerController, *DropdownClass);
+	if (!CurrentDropdown)
+	{
+		PRINTLOG(TEXT("Failed to create dropdown widget!"));
+		CloseDropdown(); // 오버레이만 생성됐으면 정리
+		return;
+	}
+
+	PRINTLOG(TEXT("Dropdown widget created: %s"), *CurrentDropdown->GetClass()->GetName());
+
+	// 3. 타입별 초기화
+	InitializeDropdown(DropdownType, CurrentDropdown, Context);
+
+	// 4. Viewport 추가
+	CurrentDropdown->AddToViewport(100); // 오버레이보다 높은 ZOrder
+	PRINTLOG(TEXT("Dropdown added to viewport with ZOrder 100"));
+
+	// 5. 드롭다운 위치 설정
+	CurrentDropdown->SetDropdownPosition(Context.ButtonPosition, Context.ButtonSize.Y, Context.AnchorPosition);
+}
+
+void UUIManagerSubsystem::CloseDropdown()
+{
+	// 드롭다운 제거
+	if (CurrentDropdown)
+	{
+		CurrentDropdown->RemoveFromParent();
+		CurrentDropdown = nullptr;
+	}
+
+	// 오버레이 제거
+	if (DropdownOverlay)
+	{
+		DropdownOverlay->OnOverlayClickedEvent.RemoveDynamic(this, &UUIManagerSubsystem::OnOverlayClicked);
+		DropdownOverlay->RemoveFromParent();
+		DropdownOverlay = nullptr;
+	}
+}
+
+void UUIManagerSubsystem::InitializeDropdown(EDropdownType Type, UMVE_WidgetClass_Dropdown* Dropdown,
+	const FDropdownContext& Context)
+{
+	if (!Dropdown)
+	{
+		return;
+	}
+
+	switch (Type)
+	{
+	case EDropdownType::UserSetting:
+		{
+			if (UMVE_WidgetClass_Dropdown_UserSetting* UserDropdown = Cast<UMVE_WidgetClass_Dropdown_UserSetting>(Dropdown))
+			{
+				UserDropdown->SetUserName(Context.StringData);
+				PRINTLOG(TEXT("Initialized UserSetting dropdown with UserName: %s"), *Context.StringData);
+			}
+		}
+		break;
+
+	case EDropdownType::BannedWordItem:
+		{
+			if (UMVE_WC_Dropdown_ListItem* ItemDropdown = Cast<UMVE_WC_Dropdown_ListItem>(Dropdown))
+			{
+				if (UMVE_STU_WC_FilterableListItem* OwnerItem = Cast<UMVE_STU_WC_FilterableListItem>(Context.ObjectData))
+				{
+					ItemDropdown->SetOwnerItem(OwnerItem);
+					PRINTLOG(TEXT("Initialized FilterableListItem dropdown with Index: %d"), Context.IndexData);
+				}
+			}
+		}
+		break;
+
+	default:
+		PRINTLOG(TEXT("Unknown dropdown type: %d"), (int32)Type);
+		break;
+	}
+}
+
+void UUIManagerSubsystem::OnOverlayClicked()
+{
+	// 오버레이를 클릭하면 드롭다운 닫기
+	CloseDropdown();
 }

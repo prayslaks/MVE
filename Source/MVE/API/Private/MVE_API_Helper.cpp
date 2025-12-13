@@ -2,7 +2,6 @@
 #include "API/Public/MVE_HTTP_Client.h"
 #include "API/Public/MVE_API_ResponseData.h"
 #include "MVE.h"
-#include "HAL/FileManager.h"
 #include "JsonUtilities.h"
 #include "SocketSubsystem.h" // For ISocketSubsystem
 #include "IPAddress.h"     // For FInternetAddr
@@ -64,6 +63,39 @@
         } \
     })
 
+void UMVE_API_Helper::Initialize()
+{
+    LoginServerURL = FString::Printf(TEXT("%s"), SERVER_URL);
+    ResourceServerURL = FString::Printf(TEXT("%s"), SERVER_URL);
+    
+#if UE_BUILD_DEVELOPMENT
+    // 개발 빌드에서는 미리 정의된 개발용 토큰을 사용하여 로그인 과정을 생략합니다.
+    // 중요: 이 토큰은 서버의 개발 환경과 동일하게 설정되어야 합니다.
+    GlobalAuthToken = TEXT("MVE_DEV_AUTH_TOKEN_2024_A");
+    PRINTLOG(TEXT("개발용 인증 토큰이 설정되었습니다. 로그인 과정을 생략합니다."));
+#endif
+    
+    // 로그인 서버 헬스 체크
+    {
+        FOnGenericApiComplete OnResult;
+        OnResult.BindLambda([](const bool bSuccess, const FString& MessageOrError)
+        {
+            PRINTLOG(TEXT("MVE 로그인 서버 헬스 체크 %s: %s"), bSuccess ? TEXT("정상") : TEXT("비정상"), *MessageOrError);
+        });
+        LoginHealthCheck(OnResult);   
+    }
+    
+    // 리소스 서버 헬스 체크
+    {
+        FOnGenericApiComplete OnResult;
+        OnResult.BindLambda([](const bool bSuccess, const FString& MessageOrError)
+        {
+            PRINTLOG(TEXT("MVE 리소스 서버 헬스 체크 %s: %s"), bSuccess ? TEXT("정상") : TEXT("비정상"), *MessageOrError);
+        });
+        ResourceHealthCheck(OnResult);   
+    }
+}
+
 bool UMVE_API_Helper::GetHostLocalIPAndPort(const UObject* WorldContextObject, FString& OutLocalIP, int32& OutPort) 
 {
     if (!WorldContextObject || !WorldContextObject->GetWorld())
@@ -99,39 +131,6 @@ bool UMVE_API_Helper::GetHostLocalIPAndPort(const UObject* WorldContextObject, F
     PRINTLOG(TEXT("Port: %d"), OutPort);
     
     return true;
-}
-
-void UMVE_API_Helper::Initialize()
-{
-    LoginServerURL = FString::Printf(TEXT("%s"), SERVER_URL);
-    ResourceServerURL = FString::Printf(TEXT("%s"), SERVER_URL);
-    
-#if UE_BUILD_DEVELOPMENT
-	// 개발 빌드에서는 미리 정의된 개발용 토큰을 사용하여 로그인 과정을 생략합니다.
-	// 중요: 이 토큰은 서버의 개발 환경과 동일하게 설정되어야 합니다.
-	GlobalAuthToken = TEXT("MVE_DEV_AUTH_TOKEN_2024_A");
-	PRINTLOG(TEXT("개발용 인증 토큰이 설정되었습니다. 로그인 과정을 생략합니다."));
-#endif
-    
-    // 로그인 서버 헬스 체크
-    {
-        FOnGenericApiComplete OnResult;
-        OnResult.BindLambda([](const bool bSuccess, const FString& MessageOrError)
-        {
-            PRINTLOG(TEXT("MVE 로그인 서버 헬스 체크 %s: %s"), bSuccess ? TEXT("정상") : TEXT("비정상"), *MessageOrError);
-        });
-        LoginHealthCheck(OnResult);   
-    }
-    
-    // 리소스 서버 헬스 체크
-    {
-        FOnGenericApiComplete OnResult;
-        OnResult.BindLambda([](const bool bSuccess, const FString& MessageOrError)
-        {
-            PRINTLOG(TEXT("MVE 리소스 서버 헬스 체크 %s: %s"), bSuccess ? TEXT("정상") : TEXT("비정상"), *MessageOrError);
-        });
-        ResourceHealthCheck(OnResult);   
-    }
 }
 
 // JSON 리스폰스에서 특정 필드의 값을 파싱
@@ -196,7 +195,6 @@ void UMVE_API_Helper::CheckEmail(const FString& Email, const FOnCheckEmailComple
     FString JsonBody;
     TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&JsonBody);
     FJsonSerializer::Serialize(JsonObject.ToSharedRef(), Writer);
-
     FMVE_HTTP_Client::SendPostRequest(URL, JsonBody, "", HANDLE_RESPONSE_STRUCT(FCheckEmailResponseData, OnResult));
 }
 
@@ -208,7 +206,6 @@ void UMVE_API_Helper::SendVerificationCode(const FString& Email, const FOnGeneri
     FString JsonBody;
     TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&JsonBody);
     FJsonSerializer::Serialize(JsonObject.ToSharedRef(), Writer);
-
     FMVE_HTTP_Client::SendPostRequest(URL, JsonBody, "", HANDLE_GENERIC_RESPONSE(OnResult));
 }
 
@@ -249,23 +246,23 @@ void UMVE_API_Helper::Login(const FString& Email, const FString& Password, const
     TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&JsonBody);
     FJsonSerializer::Serialize(JsonObject.ToSharedRef(), Writer);
 
-    auto HandleResponseLambda = [OnResult](bool bSuccess, const FString& ResponseBody)
+    auto HandleResponseLambda = [OnResult](const bool bSuccess, const FString& ResponseBody)
     {
         PRINTLOG(TEXT("Response: %s"), *ResponseBody);
         if (bSuccess)
         {
             FLoginResponseData ParsedData;
-            if (FJsonObjectConverter::JsonObjectStringToUStruct(ResponseBody, &ParsedData, 0, 0) && ParsedData.success)
+            if (FJsonObjectConverter::JsonObjectStringToUStruct(ResponseBody, &ParsedData, 0, 0) && ParsedData.Success)
             {
-                GlobalAuthToken = ParsedData.token;
+                GlobalAuthToken = ParsedData.Token;
                 PRINTLOG(TEXT("로그인 성공. 인증 토큰 : %s"), *GlobalAuthToken);
                 OnResult.ExecuteIfBound(true, ParsedData, TEXT(""));
             }
             else
             {
-                 FString ErrorCode, ErrorMessage;
-                 UMVE_API_Helper::ParseError(ResponseBody, ErrorCode, ErrorMessage);
-                 OnResult.ExecuteIfBound(false, FLoginResponseData(), ErrorCode);
+                FString ErrorCode, ErrorMessage;
+                UMVE_API_Helper::ParseError(ResponseBody, ErrorCode, ErrorMessage);
+                OnResult.ExecuteIfBound(false, FLoginResponseData(), ErrorCode);
             }
         }
         else
@@ -375,19 +372,19 @@ void UMVE_API_Helper::SaveAccessoryPreset(const FString& PresetName, const TArra
 
 }
 
-void UMVE_API_Helper::GetPresetList(bool bIncludePublic, const FOnGetPresetListComplete& OnResult)
+void UMVE_API_Helper::GetPresetList(const bool bIncludePublic, const FOnGetPresetListComplete& OnResult)
 {
     const FString URL = FString::Printf(TEXT("%s/api/presets/list?includePublic=%s"), *ResourceServerURL, bIncludePublic ? TEXT("true") : TEXT("false"));
     FMVE_HTTP_Client::SendGetRequest(URL, GlobalAuthToken, HANDLE_RESPONSE_STRUCT(FGetPresetListResponseData, OnResult));
 }
 
-void UMVE_API_Helper::GetPresetDetail(int32 PresetId, const FOnGetPresetDetailComplete& OnResult)
+void UMVE_API_Helper::GetPresetDetail(const int32 PresetId, const FOnGetPresetDetailComplete& OnResult)
 {
     const FString URL = FString::Printf(TEXT("%s/api/presets/%d"), *ResourceServerURL, PresetId);
     FMVE_HTTP_Client::SendGetRequest(URL, GlobalAuthToken, HANDLE_RESPONSE_STRUCT(FGetPresetDetailResponseData, OnResult));
 }
 
-void UMVE_API_Helper::UpdatePreset(int32 PresetId, const FString& PresetName, const TArray<TSharedPtr<FJsonValue>>& Accessories, const FString& Description, bool bIsPublic, const FOnGenericApiComplete& OnResult)
+void UMVE_API_Helper::UpdatePreset(const int32 PresetId, const FString& PresetName, const TArray<TSharedPtr<FJsonValue>>& Accessories, const FString& Description, bool bIsPublic, const FOnGenericApiComplete& OnResult)
 {
     const FString URL = FString::Printf(TEXT("%s/api/presets/%d"), *ResourceServerURL, PresetId);
     
@@ -404,7 +401,7 @@ void UMVE_API_Helper::UpdatePreset(int32 PresetId, const FString& PresetName, co
     FMVE_HTTP_Client::SendPutRequest(URL, JsonBody, GlobalAuthToken, HANDLE_GENERIC_RESPONSE(OnResult));
 }
 
-void UMVE_API_Helper::DeletePreset(int32 PresetId, const FOnGenericApiComplete& OnResult)
+void UMVE_API_Helper::DeletePreset(const int32 PresetId, const FOnGenericApiComplete& OnResult)
 {
     const FString URL = FString::Printf(TEXT("%s/api/presets/%d"), *ResourceServerURL, PresetId);
     FMVE_HTTP_Client::SendDeleteRequest(URL, GlobalAuthToken, HANDLE_GENERIC_RESPONSE(OnResult));
@@ -422,13 +419,9 @@ void UMVE_API_Helper::GetAudioList(const FOnGetAudioListComplete& OnResult)
 }
 
 void UMVE_API_Helper::StreamAudio(const int32 AudioId, const FOnStreamAudioComplete& OnResult)
-
 {
-
     const FString URL = FString::Printf(TEXT("%s/api/audio/stream/%d"), *ResourceServerURL, AudioId);
-
     FMVE_HTTP_Client::SendGetRequest(URL, GlobalAuthToken, HANDLE_RESPONSE_STRUCT(FStreamAudioResponseData, OnResult));
-
 }
 
 void UMVE_API_Helper::UploadAudio(const FString& FilePath, const FString& Title, const FString& Artist, float Duration, const FOnUploadAudioComplete& OnResult)
@@ -487,7 +480,7 @@ void UMVE_API_Helper::SearchAudio(const FString& Query, const FOnSearchAudioComp
     FMVE_HTTP_Client::SendGetRequest(URL, GlobalAuthToken, HANDLE_RESPONSE_STRUCT(FAudioListResponseData, OnResult));
 }
 
-void UMVE_API_Helper::GetAudioDetail(int32 AudioId, const FOnGetAudioDetailComplete& OnResult)
+void UMVE_API_Helper::GetAudioDetail(const int32 AudioId, const FOnGetAudioDetailComplete& OnResult)
 {
     const FString URL = FString::Printf(TEXT("%s/api/audio/%d"), *ResourceServerURL, AudioId);
     FMVE_HTTP_Client::SendGetRequest(URL, GlobalAuthToken, HANDLE_RESPONSE_STRUCT(FGetAudioDetailResponseData, OnResult));
@@ -538,7 +531,7 @@ void UMVE_API_Helper::DownloadAudioFile(int32 AudioId, const FString& SavePath, 
 }
 
 // 콘서트 관련 API
-void UMVE_API_Helper::CreateConcert(const FString& ConcertName, const TArray<FConcertSong>& Songs, const TArray<FConcertAccessory>& Accessories, const int32 MaxAudience, const FOnCreateConcertComplete& OnResult)
+void UMVE_API_Helper::CreateConcert(const FString& ConcertName, const TArray<FConcertSong>& Songs, const TArray<FAccessory>& Accessories, const int32 MaxAudience, const FOnCreateConcertComplete& OnResult)
 {
     const FString URL = FString::Printf(TEXT("%s/api/concert/create"), *ResourceServerURL);
     TSharedPtr<FJsonObject> JsonObject = MakeShareable(new FJsonObject);
@@ -575,9 +568,9 @@ void UMVE_API_Helper::CreateConcert(const FString& ConcertName, const TArray<FCo
             FConcertCreationData ParsedData;
             if (FJsonObjectConverter::JsonObjectStringToUStruct(ResponseBody, &ParsedData, 0, 0))
             {
-                if(ParsedData.success)
+                if(ParsedData.Success)
                 {
-                    PRINTLOG(TEXT("%s"), *ParsedData.roomId);
+                    PRINTLOG(TEXT("%s"), *ParsedData.RoomId);
                     OnResult.ExecuteIfBound(true, ParsedData, TEXT(""));
                 }
                 else
@@ -609,7 +602,6 @@ void UMVE_API_Helper::GetConcertInfo(const FString& RoomId, const FOnGetConcertI
 void UMVE_API_Helper::GetConcertList(const FOnGetConcertListComplete& OnResult)
 {
     const FString URL = FString::Printf(TEXT("%s/api/concert/list"), *ResourceServerURL);
-    
     auto HandleResponseLambda = [OnResult](const bool bSuccess, const FString& ResponseBody)
     {
         PRINTLOG(TEXT("GetConcertList Response: %s"), *ResponseBody);
@@ -618,7 +610,7 @@ void UMVE_API_Helper::GetConcertList(const FOnGetConcertListComplete& OnResult)
             FGetConcertListData ParsedData;
             if (FJsonObjectConverter::JsonObjectStringToUStruct(ResponseBody, &ParsedData, 0, 0))
             {
-                if(ParsedData.success)
+                if(ParsedData.Success)
                 {
                     OnResult.ExecuteIfBound(true, ParsedData, TEXT(""));
                 }
@@ -639,7 +631,6 @@ void UMVE_API_Helper::GetConcertList(const FOnGetConcertListComplete& OnResult)
             OnResult.ExecuteIfBound(false, FGetConcertListData(), ErrorCode);
         }
     };
-    
     FMVE_HTTP_Client::SendGetRequest(URL, GlobalAuthToken, FOnHttpResponse::CreateLambda(HandleResponseLambda));
 }
 
@@ -691,7 +682,7 @@ void UMVE_API_Helper::RegisterListenServer(const FString& RoomId, const FString&
             FRegisterListenServerData ParsedData;
             if (FJsonObjectConverter::JsonObjectStringToUStruct(ResponseBody, &ParsedData, 0, 0))
             {
-                if(ParsedData.success)
+                if(ParsedData.Success)
                 {
                     OnResult.ExecuteIfBound(true, ParsedData, TEXT(""));
                 }
@@ -906,7 +897,7 @@ void UMVE_API_Helper::DownloadModel(int32 ModelId, const FString& SavePath, cons
 
 }
 
-void UMVE_API_Helper::DeleteModel(int32 ModelId, const FOnDeleteModelComplete& OnResult)
+void UMVE_API_Helper::DeleteModel(const int32 ModelId, const FOnDeleteModelComplete& OnResult)
 {
     const FString URL = FString::Printf(TEXT("%s/api/models/%d"), *ResourceServerURL, ModelId);
     FMVE_HTTP_Client::SendDeleteRequest(URL, GlobalAuthToken, HANDLE_RESPONSE_STRUCT(FDeleteModelResponseData, OnResult));
@@ -1005,19 +996,19 @@ void UMVE_API_Helper::SaveAccessoryPresetBP(UObject* WorldContextObject, const F
     SaveAccessoryPreset(PresetName, Accessories, Description, bIsPublic, OnResult);
 }
 
-void UMVE_API_Helper::GetPresetListBP(UObject* WorldContextObject, bool bIncludePublic, const FOnGetPresetListCompleteBP& OnResultBP)
+void UMVE_API_Helper::GetPresetListBP(UObject* WorldContextObject, const bool bIncludePublic, const FOnGetPresetListCompleteBP& OnResultBP)
 {
     WRAP_DELEGATE(OnGetPresetListComplete, OnResultBP);
     GetPresetList(bIncludePublic, OnResult);
 }
 
-void UMVE_API_Helper::GetPresetDetailBP(UObject* WorldContextObject, int32 PresetId, const FOnGetPresetDetailCompleteBP& OnResultBP)
+void UMVE_API_Helper::GetPresetDetailBP(UObject* WorldContextObject, const int32 PresetId, const FOnGetPresetDetailCompleteBP& OnResultBP)
 {
     WRAP_DELEGATE(OnGetPresetDetailComplete, OnResultBP);
     GetPresetDetail(PresetId, OnResult);
 }
 
-void UMVE_API_Helper::UpdatePresetBP(UObject* WorldContextObject, int32 PresetId, const FString& PresetName, const FString& AccessoriesJson, const FString& Description, bool bIsPublic, const FOnGenericApiCompleteBP& OnResultBP, FLatentActionInfo LatentInfo)
+void UMVE_API_Helper::UpdatePresetBP(UObject* WorldContextObject, const int32 PresetId, const FString& PresetName, const FString& AccessoriesJson, const FString& Description, bool bIsPublic, const FOnGenericApiCompleteBP& OnResultBP, FLatentActionInfo LatentInfo)
 {
     TArray<TSharedPtr<FJsonValue>> Accessories;
     if(!AccessoriesJson.IsEmpty())
@@ -1030,7 +1021,7 @@ void UMVE_API_Helper::UpdatePresetBP(UObject* WorldContextObject, int32 PresetId
     UpdatePreset(PresetId, PresetName, Accessories, Description, bIsPublic, OnResult);
 }
 
-void UMVE_API_Helper::DeletePresetBP(UObject* WorldContextObject, int32 PresetId, const FOnGenericApiCompleteBP& OnResultBP)
+void UMVE_API_Helper::DeletePresetBP(UObject* WorldContextObject, const int32 PresetId, const FOnGenericApiCompleteBP& OnResultBP)
 {
     WRAP_DELEGATE(OnGenericApiComplete, OnResultBP);
     DeletePreset(PresetId, OnResult);
@@ -1042,7 +1033,7 @@ void UMVE_API_Helper::GetAudioListBP(UObject* WorldContextObject, const FOnGetAu
     GetAudioList(OnResult);
 }
 
-void UMVE_API_Helper::StreamAudioBP(UObject* WorldContextObject, int32 AudioId, const FOnStreamAudioCompleteBP& OnResultBP)
+void UMVE_API_Helper::StreamAudioBP(UObject* WorldContextObject, const int32 AudioId, const FOnStreamAudioCompleteBP& OnResultBP)
 {
     WRAP_DELEGATE(OnStreamAudioComplete, OnResultBP);
     StreamAudio(AudioId, OnResult);
@@ -1060,20 +1051,20 @@ void UMVE_API_Helper::SearchAudioBP(UObject* WorldContextObject, const FString& 
     SearchAudio(Query, OnResult);
 }
 
-void UMVE_API_Helper::GetAudioDetailBP(UObject* WorldContextObject, int32 AudioId, const FOnGetAudioDetailCompleteBP& OnResultBP)
+void UMVE_API_Helper::GetAudioDetailBP(UObject* WorldContextObject, const int32 AudioId, const FOnGetAudioDetailCompleteBP& OnResultBP)
 {
     WRAP_DELEGATE(OnGetAudioDetailComplete, OnResultBP);
     GetAudioDetail(AudioId, OnResult);
 }
 
-void UMVE_API_Helper::DownloadAudioFileBP(UObject* WorldContextObject, int32 AudioId, const FString& SavePath, const FOnGenericApiCompleteBP& OnResultBP)
+void UMVE_API_Helper::DownloadAudioFileBP(UObject* WorldContextObject, const int32 AudioId, const FString& SavePath, const FOnGenericApiCompleteBP& OnResultBP)
 {
     WRAP_DELEGATE(OnGenericApiComplete, OnResultBP);
     DownloadAudioFile(AudioId, SavePath, OnResult);
 }
 
 
-void UMVE_API_Helper::CreateConcertBP(UObject* WorldContextObject, const FString& ConcertName, const TArray<FConcertSong>& Songs, const TArray<FConcertAccessory>& Accessories, int32 MaxAudience, const FOnCreateConcertCompleteBP& OnResultBP)
+void UMVE_API_Helper::CreateConcertBP(UObject* WorldContextObject, const FString& ConcertName, const TArray<FConcertSong>& Songs, const TArray<FAccessory>& Accessories, int32 MaxAudience, const FOnCreateConcertCompleteBP& OnResultBP)
 {
     WRAP_DELEGATE(OnCreateConcertComplete, OnResultBP);
     CreateConcert(ConcertName, Songs, Accessories, MaxAudience, OnResult);
@@ -1091,25 +1082,25 @@ void UMVE_API_Helper::GetConcertListBP(UObject* WorldContextObject, const FOnGet
     GetConcertList(OnResult);
 }
 
-void UMVE_API_Helper::JoinConcertBP(UObject* WorldContextObject, const FString& RoomId, int32 ClientId, const FOnGenericApiCompleteBP& OnResultBP)
+void UMVE_API_Helper::JoinConcertBP(UObject* WorldContextObject, const FString& RoomId, const int32 ClientId, const FOnGenericApiCompleteBP& OnResultBP)
 {
     WRAP_DELEGATE(OnGenericApiComplete, OnResultBP);
     JoinConcert(RoomId, ClientId, OnResult);
 }
 
-void UMVE_API_Helper::LeaveConcertBP(UObject* WorldContextObject, const FString& RoomId, int32 ClientId, const FOnGenericApiCompleteBP& OnResultBP)
+void UMVE_API_Helper::LeaveConcertBP(UObject* WorldContextObject, const FString& RoomId, const int32 ClientId, const FOnGenericApiCompleteBP& OnResultBP)
 {
     WRAP_DELEGATE(OnGenericApiComplete, OnResultBP);
     LeaveConcert(RoomId, ClientId, OnResult);
 }
 
-void UMVE_API_Helper::RegisterListenServerBP(UObject* WorldContextObject, const FString& RoomId, const FString& LocalIP, int32 Port, const FString& PublicIP, int32 PublicPort, const FOnRegisterListenServerCompleteBP& OnResultBP)
+void UMVE_API_Helper::RegisterListenServerBP(UObject* WorldContextObject, const FString& RoomId, const FString& LocalIP, const int32 Port, const FString& PublicIP, const int32 PublicPort, const FOnRegisterListenServerCompleteBP& OnResultBP)
 {
     WRAP_DELEGATE(OnRegisterListenServerComplete, OnResultBP);
     RegisterListenServer(RoomId, LocalIP, Port, PublicIP, PublicPort, OnResult);
 }
 
-void UMVE_API_Helper::ToggleConcertOpenBP(UObject* WorldContextObject, const FString& RoomId, bool bIsOpen, const FOnGenericApiCompleteBP& OnResultBP)
+void UMVE_API_Helper::ToggleConcertOpenBP(UObject* WorldContextObject, const FString& RoomId, const bool bIsOpen, const FOnGenericApiCompleteBP& OnResultBP)
 {
     WRAP_DELEGATE(OnGenericApiComplete, OnResultBP);
     ToggleConcertOpen(RoomId, bIsOpen, OnResult);
@@ -1140,13 +1131,13 @@ void UMVE_API_Helper::UploadModelBP(UObject* WorldContextObject, const FString& 
     UploadModel(ModelPath, ThumbnailPath, ModelName, OnResult);
 }
 
-void UMVE_API_Helper::DownloadModelBP(UObject* WorldContextObject, int32 ModelId, const FString& SavePath, const FOnGenericApiCompleteBP& OnResultBP)
+void UMVE_API_Helper::DownloadModelBP(UObject* WorldContextObject, const int32 ModelId, const FString& SavePath, const FOnGenericApiCompleteBP& OnResultBP)
 {
     WRAP_DELEGATE(OnGenericApiComplete, OnResultBP);
     DownloadModel(ModelId, SavePath, OnResult);
 }
 
-void UMVE_API_Helper::DeleteModelBP(UObject* WorldContextObject, int32 ModelId, const FOnDeleteModelCompleteBP& OnResultBP)
+void UMVE_API_Helper::DeleteModelBP(UObject* WorldContextObject, const int32 ModelId, const FOnDeleteModelCompleteBP& OnResultBP)
 {
     WRAP_DELEGATE(OnDeleteModelComplete, OnResultBP);
     DeleteModel(ModelId, OnResult);
