@@ -4,10 +4,12 @@
 #include "Blueprint/UserWidget.h"
 #include "Components/CanvasPanelSlot.h"
 #include "Data/ScreenTypes.h"
+#include "UI/Widget/Dropdown/Public/MVE_WC_Dropdown_ListItem.h"
 #include "UI/Widget/Dropdown/Public/MVE_WidgetClass_Dropdown.h"
 #include "UI/Widget/Dropdown/Public/MVE_WidgetClass_DropdownOverlay.h"
 #include "UI/Widget/Dropdown/Public/MVE_WidgetClass_Dropdown_UserSetting.h"
 #include "UI/Widget/PopUp/Public/MVE_WidgetClass_ModalBackgroundWidget.h"
+#include "UI/Widget/Studio/FilterList/Public/MVE_STU_WC_FilterableListItem.h"
 
 void UUIManagerSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
@@ -678,10 +680,14 @@ void UUIManagerSubsystem::InitializeDropdown(EDropdownType Type, UMVE_WidgetClas
 
 	case EDropdownType::BannedWordItem:
 		{
-			// 필터링 리스트 아이템 드롭다운
-			// 필요한 데이터: Context.IndexData (아이템 인덱스)
-			// 별도 초기화가 필요하면 여기서 구현
-			PRINTLOG(TEXT("Initialized FilterableListItem dropdown with Index: %d"), Context.IndexData);
+			if (UMVE_WC_Dropdown_ListItem* ItemDropdown = Cast<UMVE_WC_Dropdown_ListItem>(Dropdown))
+			{
+				if (UMVE_STU_WC_FilterableListItem* OwnerItem = Cast<UMVE_STU_WC_FilterableListItem>(Context.ObjectData))
+				{
+					ItemDropdown->SetOwnerItem(OwnerItem);
+					PRINTLOG(TEXT("Initialized FilterableListItem dropdown with Index: %d"), Context.IndexData);
+				}
+			}
 		}
 		break;
 

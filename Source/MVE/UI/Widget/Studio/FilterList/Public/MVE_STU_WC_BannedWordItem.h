@@ -16,5 +16,6 @@ public:
 protected:
 	virtual void OnItemHovered() override;
 	virtual void OnItemUnhovered() override;
-	virtual void OnItemClicked() override;
+
+	virtual void HandleItemClicked() override;
 };

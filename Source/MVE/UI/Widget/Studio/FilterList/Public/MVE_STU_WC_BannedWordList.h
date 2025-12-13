@@ -46,5 +46,6 @@ protected:
 
 	UPROPERTY(EditAnywhere, Category = "Banned Words", meta = (ClampMin = "1", ClampMax = "50"))
 	int32 MaxWordLength = 30;
-	
+
+	virtual void HandleUpdateItem(int32 Index, const FString& NewData) override;
 };

@@ -69,6 +69,7 @@ void UMVE_STU_WC_FilterableList::AddItem(const FString& ItemData)
 	// 델리게이트 바인딩
 	NewItemWidget->OnEditRequested.BindUObject(this, &UMVE_STU_WC_FilterableList::HandleItemEdit);
 	NewItemWidget->OnDeleteRequested.BindUObject(this, &UMVE_STU_WC_FilterableList::HandleItemDelete);
+	NewItemWidget->OnUpdateRequested.BindUObject(this, &UMVE_STU_WC_FilterableList::UpdateItem);
 	PRINTLOG(TEXT("델리게이트 바인딩 완료"));
 
 	// ScrollBox에 추가
@@ -120,6 +121,11 @@ void UMVE_STU_WC_FilterableList::RemoveItem(int32 Index)
 }
 
 void UMVE_STU_WC_FilterableList::UpdateItem(int32 Index, const FString& NewData)
+{
+	HandleUpdateItem(Index, NewData);
+}
+
+void UMVE_STU_WC_FilterableList::HandleUpdateItem(int32 Index, const FString& NewData)
 {
 	if (!ItemWidgets.IsValidIndex(Index))
 	{

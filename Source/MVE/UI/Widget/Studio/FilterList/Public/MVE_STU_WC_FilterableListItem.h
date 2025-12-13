@@ -5,6 +5,7 @@
 #include "MVE_STU_WC_FilterableListItem.generated.h"
 
 
+class UEditableTextBox;
 class UButton;
 class UTextBlock;
 
@@ -43,7 +44,10 @@ protected:
 
 	// 클릭 이벤트 (드롭다운 트리거)
 	UFUNCTION()
-	virtual void OnItemClicked();
+	void OnItemClicked();
+
+	UFUNCTION()
+	virtual void HandleItemClicked();
 
 	// Blueprint에서 바인딩할 위젯들
 	UPROPERTY(meta = (BindWidget))
@@ -56,16 +60,26 @@ protected:
 	UPROPERTY(BlueprintReadOnly, Category = "Item")
 	int32 ItemIndex;
 
+	// 수정 모드용 EditableTextBox (옵셔널)
+	UPROPERTY(meta = (BindWidgetOptional))
+	TObjectPtr<UEditableTextBox> EditField;
+
 	// 항목 데이터
 	UPROPERTY(BlueprintReadOnly, Category = "Item")
 	FString ItemData;
 
+	// 현재 수정 모드인지 여부
+	UPROPERTY(BlueprintReadOnly, Category = "Item")
+	bool bIsEditMode;
+
 public:
 	// 수정/삭제 액션을 부모 위젯에 알리기 위한 델리게이트
 	DECLARE_DELEGATE_OneParam(FOnItemActionRequested, int32 /* ItemIndex */);
+	DECLARE_DELEGATE_TwoParams(FOnItemUpdateRequested, int32 /* ItemIndex */, const FString& /* NewData */);
 	
 	FOnItemActionRequested OnEditRequested;
 	FOnItemActionRequested OnDeleteRequested;
+	FOnItemUpdateRequested OnUpdateRequested;
 
 	// 드롭다운에서 수정 선택 시 호출
 	UFUNCTION(BlueprintCallable, Category = "Item")
@@ -74,4 +88,25 @@ public:
 	// 드롭다운에서 삭제 선택 시 호출
 	UFUNCTION(BlueprintCallable, Category = "Item")
 	void RequestDelete();
+
+	// 수정 모드로 전환
+	UFUNCTION(BlueprintCallable, Category = "Item")
+	void SwitchToEditMode();
+
+	// 표시 모드로 전환
+	UFUNCTION(BlueprintCallable, Category = "Item")
+	void SwitchToDisplayMode();
+
+	// Visibility 바인딩용 함수들
+	UFUNCTION(BlueprintPure, Category = "Item")
+	ESlateVisibility GetDisplayTextVisibility() const;
+
+	UFUNCTION(BlueprintPure, Category = "Item")
+	ESlateVisibility GetEditFieldVisibility() const;
+
+protected:
+	// EditField 이벤트 핸들러
+	UFUNCTION()
+	void OnEditFieldCommitted(const FText& Text, ETextCommit::Type CommitType);
+
 };

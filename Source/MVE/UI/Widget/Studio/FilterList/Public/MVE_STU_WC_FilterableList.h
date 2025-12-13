@@ -32,6 +32,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Filterable List")
 	virtual void UpdateItem(int32 Index, const FString& NewData);
 
+	UFUNCTION()
+	virtual void HandleUpdateItem(int32 Index, const FString& NewData);
+
 	// 모든 항목 삭제
 	UFUNCTION(BlueprintCallable, Category = "Filterable List")
 	virtual void ClearAllItems();

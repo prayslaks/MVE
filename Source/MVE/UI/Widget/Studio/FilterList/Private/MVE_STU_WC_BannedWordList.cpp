@@ -79,3 +79,15 @@ bool UMVE_STU_WC_BannedWordList::ValidateInput(const FString& Input) const
 
 	return true;
 }
+
+void UMVE_STU_WC_BannedWordList::HandleUpdateItem(int32 Index, const FString& NewData)
+{
+	Super::HandleUpdateItem(Index, NewData);
+
+	// 데이터 배열도 동기화
+	if (BannedWords.IsValidIndex(Index))
+	{
+		BannedWords[Index] = NewData;
+		UE_LOG(LogTemp, Log, TEXT("[BannedWordList] Updated data array at index %d: %s"), Index, *NewData);
+	}
+}
