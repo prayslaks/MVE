@@ -38,7 +38,7 @@ public class MVE : ModuleRules
 
 		PrivateDependencyModuleNames.AddRange(new string[]
 		{
-			"DesktopPlatform", "MediaAssets"
+			"DesktopPlatform", "MediaAssets", "UE_OSC"
 		});
 
 		PublicIncludePaths.AddRange(new string[] {
