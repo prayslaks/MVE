@@ -6,9 +6,18 @@
 void AMVE_PC_ModeSelectTest::BeginPlay()
 {
 	Super::BeginPlay();
+	
 
 	if (UUIManagerSubsystem* UIManager = UUIManagerSubsystem::Get(this))
 	{
 		UIManager->ShowScreen(EUIScreen::ModeSelect);
+
+		APlayerController* PC = GetWorld()->GetFirstPlayerController();
+		if (PC)
+		{
+			FInputModeUIOnly InputMode;
+			PC->SetInputMode(InputMode);
+			PC->bShowMouseCursor = true;
+		}
 	}
 }

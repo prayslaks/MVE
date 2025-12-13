@@ -40,6 +40,10 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "UI")
 	TSubclassOf<UMVE_STU_Button_TabButton> TabButtonClass;
 
+	// 확인 버튼 위젯 클래스
+	UPROPERTY(EditDefaultsOnly, Category = "UI")
+	TSubclassOf<UMVE_STU_Button_TabButton> ConfirmButtonClass;
+
 	// 탭 색상 설정 (모든 탭 공통)
 	UPROPERTY(EditDefaultsOnly, Category = "UI|Colors")
 	FLinearColor SelectedColor = FLinearColor(0.0f, 0.7f, 1.0f, 1.0f);
@@ -53,6 +57,9 @@ protected:
 
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UHorizontalBox> HBox_Right;
+
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<UButton> UserSettingButton;
 
 
 private:
@@ -78,5 +85,10 @@ private:
 
 	// 화면 전환 (UIManagerSubsystem 사용)
 	void SwitchToScreen(EBroadcastSettingTab TabType);
+
+	UFUNCTION()
+	void OnUserSettingButtonClicked();
+
+	FVector2D GetProfileButtonScreenPosition() const;
 	
 };

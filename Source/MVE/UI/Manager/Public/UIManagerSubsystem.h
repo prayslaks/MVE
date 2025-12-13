@@ -6,7 +6,10 @@
 #include "Subsystems/GameInstanceSubsystem.h"
 #include "UIManagerSubsystem.generated.h"
 
+class UMVE_WidgetClass_DropdownOverlay;
+class UMVE_WidgetClass_Dropdown_UserSetting;
 class UMVE_WidgetClass_ModalBackgroundWidget;
+class UMVE_WidgetClass_Dropdown;
 
 UCLASS(Config=Game)
 class MVE_API UUIManagerSubsystem : public UGameInstanceSubsystem
@@ -29,6 +32,9 @@ public:
 	UPROPERTY(Config, EditDefaultsOnly, Category = "DataTable")
 	TSoftObjectPtr<UDataTable> PersistentWidgetClassesTableAsset;
 
+	UPROPERTY(Config, EditDefaultsOnly, Category = "DataTable")
+	TSoftObjectPtr<UDataTable> DropdownClassesTableAsset;
+	
 	void InitScreenClasses();
 
 	// 모달 배경 위젯
@@ -147,4 +153,43 @@ private:
 	// 현재 활성화된 Persistent Widget들
 	UPROPERTY()
 	TMap<EPersistentWidget, TObjectPtr<UUserWidget>> ActivePersistentWidgets;
+	
+	/**
+	 * --------------- Dropdown Widget ------------------- 
+	 */
+
+public:
+	UFUNCTION(BlueprintCallable, Category = "Dropdown")
+	void ShowDropdown(EDropdownType DropdownType, const FDropdownContext& Context);
+	
+	// 드롭다운 닫기
+	UFUNCTION(BlueprintCallable)
+	void CloseDropdown();
+
+	
+
+protected:
+	UPROPERTY()
+	TMap<EDropdownType, TSubclassOf<UMVE_WidgetClass_Dropdown>> DropdownClassMap;
+	
+	UPROPERTY(Config)
+	TSubclassOf<UMVE_WidgetClass_Dropdown_UserSetting> UserDropdownWidgetClass;
+
+	UPROPERTY(Config)
+	TSubclassOf<UMVE_WidgetClass_DropdownOverlay> DropdownOverlayClass;
+
+	// 드롭다운 타입별 초기화
+	void InitializeDropdown(EDropdownType Type, UMVE_WidgetClass_Dropdown* Dropdown, const FDropdownContext& Context);
+	
+private:
+	// 현재 열려있는 드롭다운
+	UPROPERTY()
+	TObjectPtr<UMVE_WidgetClass_Dropdown> CurrentDropdown;
+
+	// 드롭다운 오버레이
+	UPROPERTY()
+	TObjectPtr<UMVE_WidgetClass_DropdownOverlay> DropdownOverlay;
+
+	UFUNCTION()
+	void OnOverlayClicked();
 };
