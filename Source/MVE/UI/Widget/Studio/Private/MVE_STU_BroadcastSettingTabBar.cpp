@@ -185,11 +185,24 @@ void UMVE_STU_BroadcastSettingTabBar::SwitchToScreen(EBroadcastSettingTab TabTyp
 
 void UMVE_STU_BroadcastSettingTabBar::OnUserSettingButtonClicked()
 {
-	if (UUIManagerSubsystem* UIManager = UUIManagerSubsystem::Get(this))
+	if (!UserSettingButton) return;
+    
+	FGeometry ButtonGeometry = UserSettingButton->GetCachedGeometry();
+	FVector2D ButtonAbsPos = ButtonGeometry.GetAbsolutePosition();
+	FVector2D ButtonSize = ButtonGeometry.GetLocalSize();
+    
+	// 버튼의 오른쪽 상단 좌표 (또는 원하는 기준점)
+	FVector2D ButtonTopRight = ButtonAbsPos + FVector2D(ButtonSize.X, 0);
+    
+	if (UUIManagerSubsystem* UIManager = GetGameInstance()->GetSubsystem<UUIManagerSubsystem>())
 	{
-		FVector2D ButtonPosition = GetProfileButtonScreenPosition();
-		// TODO: 유저이메일 주소 불러오기
-		UIManager->ShowUserDropdown(ButtonPosition, TEXT("유저이메일주소"));
+		// 우상단 앵커로 드롭다운 표시
+		UIManager->ShowUserDropdown(
+			ButtonTopRight,                         // 버튼 오른쪽 상단
+			ButtonSize,                             // 버튼 크기
+			TEXT("UserEmail"),                     // 유저 이름
+			EDropdownAnchorPosition::TopRight       // 우상단 앵커
+		);
 	}
 }
 
@@ -203,26 +216,15 @@ FVector2D UMVE_STU_BroadcastSettingTabBar::GetProfileButtonScreenPosition() cons
 	// 버튼의 Geometry 가져오기
 	FGeometry ButtonGeometry = UserSettingButton->GetCachedGeometry();
     
-	// 로컬 좌표를 화면 절대 좌표로 변환
-	FVector2D PixelPosition;
-	FVector2D ViewportPosition;
+	// 버튼의 화면 절대 위치 (왼쪽 상단)
+	FVector2D AbsolutePosition = ButtonGeometry.GetAbsolutePosition();
     
-	USlateBlueprintLibrary::LocalToViewport(
-		GetWorld(),
-		ButtonGeometry,
-		FVector2D::ZeroVector, // 버튼의 로컬 원점
-		PixelPosition,
-		ViewportPosition
-	);
-    
-	// 버튼의 크기를 고려하여 버튼 왼쪽 상단 아래쪽 위치 반환
+	// 버튼의 크기
 	FVector2D ButtonSize = ButtonGeometry.GetLocalSize();
-	// 드롭다운은 버튼 왼쪽 끝 아래쪽에 배치
-	FVector2D FinalPosition = FVector2D(ViewportPosition.X, ViewportPosition.Y + ButtonSize.Y);
-
-	PRINTLOG(TEXT("Button Position - Pixel: %s, Viewport: %s, ButtonSize: %s, Final: %s"),
-		*PixelPosition.ToString(), *ViewportPosition.ToString(), *ButtonSize.ToString(), *FinalPosition.ToString());
-
-	return FinalPosition;
+    
+	// 버튼의 왼쪽 하단 좌표 = 왼쪽 상단 + (0, Height)
+	FVector2D BottomLeftPosition = AbsolutePosition + FVector2D(0, ButtonSize.Y);
+    
+	return BottomLeftPosition;
 }
 

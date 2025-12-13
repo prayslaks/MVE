@@ -2,6 +2,17 @@
 
 #include "CoreMinimal.h"
 #include "ScreenTypes.generated.h"
+// 드롭다운 위치 옵션
+UENUM(BlueprintType)
+enum class EDropdownAnchorPosition : uint8
+{
+	TopLeft         UMETA(DisplayName = "Top Left"),          // 좌상단
+	TopRight        UMETA(DisplayName = "Top Right"),         // 우상단
+	MiddleLeft      UMETA(DisplayName = "Middle Left"),       // 좌측 중앙
+	MiddleRight     UMETA(DisplayName = "Middle Right"),      // 우측 중앙
+	BottomLeft      UMETA(DisplayName = "Bottom Left"),       // 좌하단
+	BottomRight     UMETA(DisplayName = "Bottom Right")       // 우하단
+};
 
 UENUM(BlueprintType)
 enum class EUIPopup : uint8

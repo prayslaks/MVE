@@ -563,14 +563,14 @@ void UUIManagerSubsystem::UpdatePersistentWidgets(EUIScreen NewScreen)
 	}
 }
 
-void UUIManagerSubsystem::ShowUserDropdown(const FVector2D& ButtonPosition, const FString& UserName)
+void UUIManagerSubsystem::ShowUserDropdown(const FVector2D& ButtonPosition, const FVector2D& ButtonSize, const FString& UserName, EDropdownAnchorPosition AnchorPosition)
 {
 	// 기존 드롭다운이 있으면 닫기
 	CloseDropdown();
 
-	PRINTLOG(TEXT("ShowUserDropdown - Position: %s, UserName: %s"), *ButtonPosition.ToString(), *UserName);
-
-	
+	PRINTLOG(TEXT("ShowUserDropdown - Position: %s, Size: %s, UserName: %s, Anchor: %d"), 
+		*ButtonPosition.ToString(), *ButtonSize.ToString(), *UserName, (int32)AnchorPosition);
+    
 	// 1. 먼저 투명 오버레이 생성 (ZOrder 99)
 	if (DropdownOverlayClass)
 	{
@@ -578,27 +578,27 @@ void UUIManagerSubsystem::ShowUserDropdown(const FVector2D& ButtonPosition, cons
 		if (DropdownOverlay)
 		{
 			DropdownOverlay->AddToViewport(99);
-            
-			// 오버레이 클릭 이벤트 바인딩
 			DropdownOverlay->OnOverlayClickedEvent.AddDynamic(this, &UUIManagerSubsystem::OnOverlayClicked);
 		}
 	}
-	
-	// 드롭다운 위젯 생성
+    
+	// 2. 드롭다운 위젯 생성
 	if (UserDropdownWidgetClass)
 	{
-		
-		UMVE_WidgetClass_Dropdown_UserSetting* UserSettingDropdown = CreateWidget<UMVE_WidgetClass_Dropdown_UserSetting>(CachedPlayerController, UserDropdownWidgetClass);
-	if (UserSettingDropdown)
+		UMVE_WidgetClass_Dropdown_UserSetting* UserSettingDropdown = 
+			CreateWidget<UMVE_WidgetClass_Dropdown_UserSetting>(CachedPlayerController, UserDropdownWidgetClass);
+        
+		if (UserSettingDropdown)
 		{
 			PRINTLOG(TEXT("UserSettingDropdown widget created successfully"));
 			CurrentDropdown = UserSettingDropdown;
 
 			UserSettingDropdown->SetUserName(UserName);
-			UserSettingDropdown->AddToViewport(300); // 높은 ZOrder
-			PRINTLOG(TEXT("UserSettingDropdown Added to Viewport with ZOrder 300"));
+			UserSettingDropdown->AddToViewport(100); // 오버레이보다 높은 ZOrder
+			PRINTLOG(TEXT("UserSettingDropdown Added to Viewport with ZOrder 100"));
 
-			UserSettingDropdown->SetDropdownPosition(ButtonPosition);
+			// 앵커 위치와 함께 드롭다운 위치 설정
+			UserSettingDropdown->SetDropdownPosition(ButtonPosition, ButtonSize.Y, AnchorPosition);
 		}
 		else
 		{

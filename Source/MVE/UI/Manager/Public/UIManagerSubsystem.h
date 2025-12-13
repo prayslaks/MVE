@@ -158,7 +158,7 @@ private:
 public:
 	// 드롭다운 표시
 	UFUNCTION(BlueprintCallable)
-	void ShowUserDropdown(const FVector2D& ButtonPosition, const FString& UserName);
+	void ShowUserDropdown(const FVector2D& ButtonPosition, const FVector2D& ButtonSize, const FString& UserName, EDropdownAnchorPosition AnchorPosition = EDropdownAnchorPosition::TopLeft);
 
 	// 드롭다운 닫기
 	UFUNCTION(BlueprintCallable)
