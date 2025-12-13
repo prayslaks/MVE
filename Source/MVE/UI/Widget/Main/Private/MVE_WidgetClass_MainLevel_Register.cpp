@@ -299,7 +299,7 @@ void UMVE_WidgetClass_MainLevel_Register::OnCheckEmailResult(const bool bSuccess
 		{
 			if (const UMVE_GIS_API* Subsystem = GameInstance->GetSubsystem<UMVE_GIS_API>())
 			{
-				TranslatedErrorMessage = Subsystem->GetTranslatedErrorMessage(ErrorCode);
+				TranslatedErrorMessage = Subsystem->GetTranslatedTextFromResponseCode(ErrorCode);
 			}
 		}
 		
@@ -331,7 +331,7 @@ void UMVE_WidgetClass_MainLevel_Register::OnSendVerificationCodeResult(const boo
 		{
 			if (const UMVE_GIS_API* Subsystem = GameInstance->GetSubsystem<UMVE_GIS_API>())
 			{
-				TranslatedErrorMessage = Subsystem->GetTranslatedErrorMessage(ErrorCode);
+				TranslatedErrorMessage = Subsystem->GetTranslatedTextFromResponseCode(ErrorCode);
 			}
 		}
 
@@ -364,7 +364,7 @@ void UMVE_WidgetClass_MainLevel_Register::OnTryConfirmVerifyCodeResult(const boo
 		{
 			if (const UMVE_GIS_API* Subsystem = GameInstance->GetSubsystem<UMVE_GIS_API>())
 			{
-				TranslatedErrorMessage = Subsystem->GetTranslatedErrorMessage(ErrorCode);
+				TranslatedErrorMessage = Subsystem->GetTranslatedTextFromResponseCode(ErrorCode);
 			}
 		}
 
@@ -407,7 +407,7 @@ void UMVE_WidgetClass_MainLevel_Register::OnSignUpResult(const bool bSuccess, co
 		{
 			if (const UMVE_GIS_API* Subsystem = GameInstance->GetSubsystem<UMVE_GIS_API>())
 			{
-				TranslatedErrorMessage = Subsystem->GetTranslatedErrorMessage(ErrorCode);
+				TranslatedErrorMessage = Subsystem->GetTranslatedTextFromResponseCode(ErrorCode);
 			}
 		}
 

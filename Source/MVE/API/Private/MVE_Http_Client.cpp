@@ -157,7 +157,7 @@ void FMVE_HTTP_Client::OnResponseReceived(FHttpRequestPtr Request, FHttpResponse
         const int32 StatusCode = Response->GetResponseCode();
         const FString ResponseBody = Response->GetContentAsString();
         
-        const bool bSuccess = (StatusCode >= 200 && StatusCode < 800);
+        const bool bSuccess = (StatusCode >= 200 && StatusCode < 500);
         Callback.ExecuteIfBound(bSuccess, ResponseBody);
     }
     else
@@ -171,7 +171,7 @@ void FMVE_HTTP_Client::OnDownloadResponseReceived(FHttpRequestPtr Request, FHttp
     if (bWasSuccessful && Response.IsValid())
     {
         const int32 StatusCode = Response->GetResponseCode();
-        if (StatusCode >= 200 && StatusCode < 800)
+        if (StatusCode >= 200 && StatusCode < 500)
         {
             Callback.ExecuteIfBound(true, Response->GetContent(), TEXT(""));
         }

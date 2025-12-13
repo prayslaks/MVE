@@ -36,7 +36,7 @@ void UMVE_AUD_WC_ConcertSearchResult::UpdateUI(const FMVE_AUD_ConcertSearchResul
 
 	if (HostNameTextBlock)
 	{
-		HostNameTextBlock->SetText(FText::FromString(BindingConcertSearchResult.HostName));
+		HostNameTextBlock->SetText(FText::FromString(BindingConcertSearchResult.StudioName));
 	}
 
 	if (AudienceCountTextBlock)

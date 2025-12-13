@@ -75,7 +75,7 @@ void UMVE_STD_WC_AudioPanel::LoadAudioFromPresignedUrlAndSetPlayer(const FMVE_ST
 	{
 		if (bSuccess)
 		{
-			const FString PresignedUrl = ResponseData.stream_url;
+			const FString PresignedUrl = ResponseData.StreamUrl;
 			PRINTNETLOG(this, TEXT("Got PresignedUrl = {%s}, relaying to GameMode to send to all clients."), *PresignedUrl);
 
 			AMVE_API_GMTest* GameMode = GetWorld()->GetAuthGameMode<AMVE_API_GMTest>();

@@ -1,0 +1,3974 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "MVE Resource Server API",
+    "version": "1.0.0",
+    "description": "MVE (Meta Virtual Environment) Resource Server API\n\n이 API는 다음 기능을 제공합니다:\n- 음원 파일 관리 (스트리밍, 업로드, 검색)\n- 3D 모델 파일 관리 (GLB)\n- AI 기반 3D 모델 생성\n- 아바타 악세서리 프리셋 관리\n- 콘서트 세션 관리\n\n**인증**: 모든 API는 JWT Bearer 토큰 인증이 필요합니다.\n**토큰 발급**: [MVE Login Server](https://github.com/prayslaks/mve-login-server)에서 로그인하여 JWT 토큰을 발급받으세요.",
+    "contact": {
+      "name": "MVE Development Team",
+      "url": "https://github.com/prayslaks"
+    },
+    "license": {
+      "name": "ISC",
+      "url": "https://opensource.org/licenses/ISC"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3001",
+      "description": "로컬 개발 서버"
+    },
+    {
+      "url": "http://your-ec2-public-ip",
+      "description": "AWS EC2 프로덕션 서버 (HTTP)"
+    },
+    {
+      "url": "https://your-domain.com",
+      "description": "AWS EC2 프로덕션 서버 (HTTPS)"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Audio",
+      "description": "음원 파일 관리 API (공용 리소스, JWT 인증 필요)"
+    },
+    {
+      "name": "Models",
+      "description": "3D 모델 파일 관리 API (개인 소유, JWT 인증 필요)"
+    },
+    {
+      "name": "AI Generation",
+      "description": "AI 기반 3D 모델 생성 API"
+    },
+    {
+      "name": "Accessory Presets",
+      "description": "아바타 악세서리 프리셋 관리 API"
+    },
+    {
+      "name": "Concert",
+      "description": "콘서트 세션 관리 API"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "MVE Login Server에서 발급받은 JWT 토큰을 입력하세요."
+      }
+    },
+    "schemas": {
+      "BaseResponse": {
+        "type": "object",
+        "description": "기본 API 응답 포맷 (모든 API가 이 구조를 따름)",
+        "required": [
+          "success",
+          "code",
+          "message"
+        ],
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": "요청 성공 여부",
+            "example": true
+          },
+          "code": {
+            "type": "integer",
+            "description": "응답 코드 (HTTP 상태 코드와 유사)",
+            "example": 200
+          },
+          "message": {
+            "type": "string",
+            "description": "응답 메시지",
+            "example": "Success"
+          }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "description": "에러 응답 포맷",
+        "required": [
+          "success",
+          "code",
+          "message"
+        ],
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": "항상 false",
+            "example": false
+          },
+          "code": {
+            "type": "integer",
+            "description": "에러 코드",
+            "example": 400
+          },
+          "message": {
+            "type": "string",
+            "description": "에러 메시지",
+            "example": "Invalid request"
+          },
+          "error": {
+            "type": "string",
+            "nullable": true,
+            "description": "상세 에러 정보 (디버깅용)",
+            "example": "Missing required field: username"
+          }
+        }
+      },
+      "Vector3D": {
+        "type": "object",
+        "description": "3D 벡터 (위치)",
+        "required": [
+          "x",
+          "y",
+          "z"
+        ],
+        "properties": {
+          "x": {
+            "type": "number",
+            "description": "X 좌표",
+            "example": 0
+          },
+          "y": {
+            "type": "number",
+            "description": "Y 좌표",
+            "example": 0
+          },
+          "z": {
+            "type": "number",
+            "description": "Z 좌표",
+            "example": 0
+          }
+        }
+      },
+      "Rotator": {
+        "type": "object",
+        "description": "3D 회전 (Pitch, Yaw, Roll)",
+        "required": [
+          "pitch",
+          "yaw",
+          "roll"
+        ],
+        "properties": {
+          "pitch": {
+            "type": "number",
+            "description": "Pitch (상하 회전)",
+            "example": 0
+          },
+          "yaw": {
+            "type": "number",
+            "description": "Yaw (좌우 회전)",
+            "example": 0
+          },
+          "roll": {
+            "type": "number",
+            "description": "Roll (롤 회전)",
+            "example": 0
+          }
+        }
+      },
+      "AudioFile": {
+        "type": "object",
+        "description": "음원 파일 정보",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "description": "음원 ID",
+            "example": 1
+          },
+          "title": {
+            "type": "string",
+            "description": "음원 제목",
+            "example": "Sample Track 1"
+          },
+          "artist": {
+            "type": "string",
+            "nullable": true,
+            "description": "아티스트",
+            "example": "Artist A"
+          },
+          "filePath": {
+            "type": "string",
+            "description": "파일 경로",
+            "example": "audio/sample1.m4a"
+          },
+          "fileSize": {
+            "type": "integer",
+            "description": "파일 크기 (bytes)",
+            "example": 3145728
+          },
+          "duration": {
+            "type": "integer",
+            "nullable": true,
+            "description": "재생 시간 (초)",
+            "example": 180
+          },
+          "format": {
+            "type": "string",
+            "description": "파일 포맷",
+            "example": "m4a"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "생성 시간"
+          }
+        }
+      },
+      "ModelInfo": {
+        "type": "object",
+        "description": "3D 모델 파일 정보",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "description": "모델 ID",
+            "example": 1
+          },
+          "modelName": {
+            "type": "string",
+            "description": "모델 이름",
+            "example": "My Avatar"
+          },
+          "filePath": {
+            "type": "string",
+            "description": "파일 경로",
+            "example": "models/user1/avatar.glb"
+          },
+          "fileSize": {
+            "type": "integer",
+            "description": "파일 크기 (bytes)",
+            "example": 5242880
+          },
+          "thumbnailPath": {
+            "type": "string",
+            "nullable": true,
+            "description": "썸네일 경로",
+            "example": "models/user1/avatar_thumb.jpg"
+          },
+          "isAiGenerated": {
+            "type": "boolean",
+            "description": "AI로 생성된 모델 여부 (true: AI 생성, false: 직접 업로드)",
+            "example": false
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "생성 시간"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "수정 시간"
+          }
+        }
+      },
+      "AIJobStatus": {
+        "type": "object",
+        "description": "AI 작업 상태 정보",
+        "properties": {
+          "jobId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "작업 ID",
+            "example": "123e4567-e89b-12d3-a456-426614174000"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "queued",
+              "processing",
+              "completed",
+              "failed"
+            ],
+            "description": "작업 상태",
+            "example": "processing"
+          },
+          "prompt": {
+            "type": "string",
+            "description": "AI 생성 프롬프트",
+            "example": "A futuristic robot character"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "작업 생성 시간"
+          },
+          "completedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "작업 완료 시간"
+          },
+          "modelId": {
+            "type": "integer",
+            "nullable": true,
+            "description": "생성된 모델 ID (완료 시)",
+            "example": 42
+          },
+          "downloadUrl": {
+            "type": "string",
+            "nullable": true,
+            "description": "다운로드 URL (완료 시)",
+            "example": "https://example.com/models/generated/model.glb"
+          },
+          "errorMessage": {
+            "type": "string",
+            "nullable": true,
+            "description": "에러 메시지 (실패 시)",
+            "example": "Model generation failed"
+          }
+        }
+      },
+      "DeletedModelInfo": {
+        "type": "object",
+        "description": "삭제된 모델 정보",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "description": "모델 ID",
+            "example": 1
+          },
+          "modelName": {
+            "type": "string",
+            "description": "모델 이름",
+            "example": "My Avatar"
+          }
+        }
+      },
+      "Accessory": {
+        "type": "object",
+        "description": "아바타 액세서리",
+        "required": [
+          "socketName",
+          "relativeLocation",
+          "relativeRotation",
+          "modelUrl"
+        ],
+        "properties": {
+          "socketName": {
+            "type": "string",
+            "description": "소켓 이름",
+            "example": "hand_socket"
+          },
+          "relativeLocation": {
+            "$ref": "#/components/schemas/Vector3D"
+          },
+          "relativeRotation": {
+            "$ref": "#/components/schemas/Rotator"
+          },
+          "relativeScale": {
+            "type": "number",
+            "format": "float",
+            "description": "상대적 스케일",
+            "example": 1
+          },
+          "modelUrl": {
+            "type": "string",
+            "description": "3D 모델 URL",
+            "example": "https://example.com/models/microphone.glb"
+          }
+        }
+      },
+      "AccessoryPreset": {
+        "type": "object",
+        "description": "액세서리 프리셋",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "description": "프리셋 ID",
+            "example": 1
+          },
+          "userId": {
+            "type": "integer",
+            "description": "소유자 사용자 ID",
+            "example": 1
+          },
+          "presetName": {
+            "type": "string",
+            "description": "프리셋 이름",
+            "example": "My Preset"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true,
+            "description": "프리셋 설명",
+            "example": "My favorite accessories"
+          },
+          "accessories": {
+            "type": "array",
+            "description": "액세서리 목록",
+            "items": {
+              "$ref": "#/components/schemas/Accessory"
+            }
+          },
+          "isPublic": {
+            "type": "boolean",
+            "description": "공개 여부",
+            "example": false
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "생성 시간"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "수정 시간"
+          }
+        }
+      },
+      "ConcertSong": {
+        "type": "object",
+        "description": "콘서트 노래",
+        "required": [
+          "songNum",
+          "audioId",
+          "streamUrl",
+          "stageDirectionId"
+        ],
+        "properties": {
+          "songNum": {
+            "type": "integer",
+            "description": "곡 번호",
+            "example": 1
+          },
+          "audioId": {
+            "type": "integer",
+            "description": "오디오 ID",
+            "example": 12345
+          },
+          "streamUrl": {
+            "type": "string",
+            "description": "스트림 URL",
+            "example": "https://example.com/stream/song1.mp3"
+          },
+          "stageDirectionId": {
+            "type": "integer",
+            "description": "무대 연출 ID",
+            "example": 1
+          }
+        }
+      },
+      "ListenServer": {
+        "type": "object",
+        "description": "리슨 서버 정보",
+        "required": [
+          "localIP",
+          "port"
+        ],
+        "properties": {
+          "localIP": {
+            "type": "string",
+            "description": "로컬 IP 주소",
+            "example": "192.168.0.100"
+          },
+          "port": {
+            "type": "integer",
+            "description": "포트 번호",
+            "example": 7777
+          },
+          "publicIP": {
+            "type": "string",
+            "nullable": true,
+            "description": "공인 IP 주소",
+            "example": "203.0.113.1"
+          },
+          "publicPort": {
+            "type": "integer",
+            "nullable": true,
+            "description": "공인 포트 번호",
+            "example": 7777
+          }
+        }
+      },
+      "ConcertInfo": {
+        "type": "object",
+        "description": "콘서트 정보",
+        "properties": {
+          "roomId": {
+            "type": "string",
+            "description": "콘서트 방 ID",
+            "example": "concert_1702345678901_abc123def"
+          },
+          "studioUserId": {
+            "type": "integer",
+            "description": "스튜디오 사용자 ID",
+            "example": 1
+          },
+          "studioName": {
+            "type": "string",
+            "description": "스튜디오 이름",
+            "example": "studio@example.com"
+          },
+          "concertName": {
+            "type": "string",
+            "description": "콘서트 이름",
+            "example": "My Concert"
+          },
+          "songs": {
+            "type": "array",
+            "description": "노래 목록",
+            "items": {
+              "$ref": "#/components/schemas/ConcertSong"
+            }
+          },
+          "accessories": {
+            "type": "array",
+            "description": "액세서리 목록",
+            "items": {
+              "$ref": "#/components/schemas/Accessory"
+            }
+          },
+          "maxAudience": {
+            "type": "integer",
+            "description": "최대 관객 수",
+            "example": 100
+          },
+          "createdAt": {
+            "type": "integer",
+            "description": "생성 시간 (Unix timestamp)",
+            "example": 1702345678901
+          },
+          "listenServer": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ListenServer"
+              }
+            ],
+            "nullable": true,
+            "description": "리슨 서버 정보"
+          },
+          "isOpen": {
+            "type": "boolean",
+            "description": "개방 여부",
+            "example": true
+          },
+          "currentSong": {
+            "type": "integer",
+            "description": "현재 재생 중인 곡 번호",
+            "example": 0
+          },
+          "currentAudience": {
+            "type": "integer",
+            "description": "현재 관객 수",
+            "example": 5
+          }
+        }
+      }
+    }
+  },
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "paths": {
+    "/api/presets/save": {
+      "post": {
+        "summary": "액세서리 프리셋 저장",
+        "description": "아바타 액세서리 프리셋을 저장합니다",
+        "tags": [
+          "Accessory Presets"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "presetName",
+                  "accessories"
+                ],
+                "properties": {
+                  "presetName": {
+                    "type": "string",
+                    "example": "My Preset"
+                  },
+                  "accessories": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/Accessory"
+                    }
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "isPublic": {
+                    "type": "boolean",
+                    "default": false
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "프리셋 저장 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/BaseResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "presetName": {
+                          "type": "string",
+                          "example": "정우의 프리셋"
+                        },
+                        "description": {
+                          "type": "string",
+                          "example": "견고하고 명징하게 직조해낸 한 장의 마스터피스"
+                        },
+                        "isPublic": {
+                          "type": "boolean",
+                          "example": true
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "잘못된 요청",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "인증 실패",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "중복된 프리셋 이름",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/presets/list": {
+      "get": {
+        "summary": "프리셋 목록 조회",
+        "description": "사용자의 액세서리 프리셋 목록을 조회합니다",
+        "tags": [
+          "Accessory Presets"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "includePublic",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            },
+            "description": "공개 프리셋 포함 여부"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "프리셋 목록 조회 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/BaseResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "count": {
+                          "type": "integer"
+                        },
+                        "presets": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/AccessoryPreset"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "인증 실패",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "서버 오류",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/presets/{id}": {
+      "get": {
+        "summary": "프리셋 상세 조회",
+        "description": "특정 프리셋의 상세 정보를 조회합니다 (액세서리 데이터 포함)",
+        "tags": [
+          "Accessory Presets"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "프리셋 ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "프리셋 조회 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/BaseResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "preset": {
+                          "$ref": "#/components/schemas/AccessoryPreset"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "잘못된 요청",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "인증 실패",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "접근 권한 없음",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "프리셋을 찾을 수 없음",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "프리셋 업데이트",
+        "description": "프리셋 정보를 업데이트합니다",
+        "tags": [
+          "Accessory Presets"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "프리셋 ID"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "presetName": {
+                    "type": "string"
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "accessories": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/Accessory"
+                    }
+                  },
+                  "isPublic": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "프리셋 업데이트 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "잘못된 요청",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "인증 실패",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "접근 권한 없음",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "프리셋을 찾을 수 없음",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "중복된 프리셋 이름",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "프리셋 삭제",
+        "description": "프리셋을 삭제합니다",
+        "tags": [
+          "Accessory Presets"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "프리셋 ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "프리셋 삭제 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "잘못된 요청",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "인증 실패",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "접근 권한 없음",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "프리셋을 찾을 수 없음",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/audio/list": {
+      "get": {
+        "summary": "음원 목록 조회",
+        "description": "모든 음원 파일 목록을 조회합니다 (공용 리소스, JWT 인증 필요)",
+        "tags": [
+          "Audio"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "음원 목록 조회 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/BaseResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "count": {
+                          "type": "integer",
+                          "example": 3
+                        },
+                        "audioFiles": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/AudioFile"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "인증 실패",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "서버 오류",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/audio/stream/{id}": {
+      "get": {
+        "summary": "음원 스트리밍 URL 획득",
+        "description": "음원 스트리밍 URL을 반환합니다 (S3 환경에서는 Presigned URL, 로컬 환경에서는 내부 URL 제공)",
+        "tags": [
+          "Audio"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "음원 ID",
+            "example": 1
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "스트리밍 URL 생성 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/BaseResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "streamUrl": {
+                          "type": "string",
+                          "description": "스트리밍 URL (S3 Presigned URL 또는 로컬 URL)",
+                          "example": "https://bucket.s3.amazonaws.com/audio/file.aac?X-Amz-Signature=..."
+                        },
+                        "expiresIn": {
+                          "type": "integer",
+                          "description": "URL 유효 시간 (초, S3만 해당)",
+                          "example": 3600
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "인증 실패",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "음원을 찾을 수 없음",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "서버 오류",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/audio/file/{id}": {
+      "get": {
+        "summary": "로컬 음원 파일 직접 스트리밍",
+        "description": "로컬 스토리지에서 음원 파일을 직접 스트리밍합니다 (Range Request 지원)",
+        "tags": [
+          "Audio"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "음원 ID",
+            "example": 1
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "전체 파일 스트리밍",
+            "content": {
+              "audio/*": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "206": {
+            "description": "부분 콘텐츠 (Range Request)",
+            "headers": {
+              "Content-Range": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "바이트 범위"
+              }
+            }
+          },
+          "401": {
+            "description": "인증 실패"
+          },
+          "404": {
+            "description": "음원을 찾을 수 없음"
+          }
+        }
+      }
+    },
+    "/api/audio/upload": {
+      "post": {
+        "summary": "음원 파일 업로드",
+        "description": "음원 파일을 업로드합니다 (AAC, M4A, MP3, WAV 지원, 최대 100MB)",
+        "tags": [
+          "Audio"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "audio",
+                  "title"
+                ],
+                "properties": {
+                  "audio": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "음원 파일 (AAC, M4A, MP3, WAV)"
+                  },
+                  "title": {
+                    "type": "string",
+                    "description": "음원 제목",
+                    "example": "Sample Track"
+                  },
+                  "artist": {
+                    "type": "string",
+                    "description": "아티스트 이름 (선택)",
+                    "example": "Artist Name"
+                  },
+                  "duration": {
+                    "type": "number",
+                    "description": "재생 시간 (초, 선택)",
+                    "example": 180
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "음원 업로드 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/BaseResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "audioFile": {
+                          "$ref": "#/components/schemas/AudioFile"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "잘못된 요청 (파일 또는 제목 누락)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "인증 실패",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "서버 오류",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/audio/search/{query}": {
+      "get": {
+        "summary": "음원 검색",
+        "description": "제목 또는 아티스트로 음원을 검색합니다",
+        "tags": [
+          "Audio"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "검색 키워드 (제목 또는 아티스트)",
+            "example": "sample"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "검색 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/BaseResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "count": {
+                          "type": "integer",
+                          "example": 2
+                        },
+                        "audioFiles": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/AudioFile"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "인증 실패",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "서버 오류",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/audio/{id}": {
+      "get": {
+        "summary": "특정 음원 정보 조회",
+        "description": "음원 ID로 상세 정보를 조회합니다",
+        "tags": [
+          "Audio"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "음원 ID",
+            "example": 1
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "음원 정보 조회 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/BaseResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "audioFile": {
+                          "$ref": "#/components/schemas/AudioFile"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "인증 실패",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "음원을 찾을 수 없음",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "서버 오류",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/concert/create": {
+      "post": {
+        "summary": "콘서트 생성",
+        "description": "콘서트 세션을 생성합니다 (스튜디오 사용자 전용)",
+        "tags": [
+          "Concert"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "concertName"
+                ],
+                "properties": {
+                  "concertName": {
+                    "type": "string",
+                    "description": "콘서트 이름",
+                    "example": "My Concert"
+                  },
+                  "songs": {
+                    "type": "array",
+                    "description": "노래 목록 배열",
+                    "items": {
+                      "$ref": "#/components/schemas/ConcertSong"
+                    }
+                  },
+                  "accessories": {
+                    "type": "array",
+                    "description": "액세서리 목록 배열",
+                    "items": {
+                      "$ref": "#/components/schemas/Accessory"
+                    }
+                  },
+                  "maxAudience": {
+                    "type": "integer",
+                    "description": "최대 관객 수",
+                    "default": 100,
+                    "example": 100
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "콘서트 생성 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/BaseResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "roomId": {
+                          "type": "string",
+                          "description": "생성된 콘서트 방 ID",
+                          "example": "concert_1702345678901_abc123def"
+                        },
+                        "expiresIn": {
+                          "type": "integer",
+                          "description": "만료 시간 (초)",
+                          "example": 3600
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "잘못된 요청",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "인증 실패",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "서버 에러",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/concert/list": {
+      "get": {
+        "summary": "활성 콘서트 목록 조회",
+        "description": "현재 진행 중인 모든 콘서트 목록을 조회합니다",
+        "tags": [
+          "Concert"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "콘서트 목록 조회 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/BaseResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "count": {
+                          "type": "integer",
+                          "description": "콘서트 개수",
+                          "example": 2
+                        },
+                        "concerts": {
+                          "type": "array",
+                          "description": "콘서트 목록",
+                          "items": {
+                            "$ref": "#/components/schemas/ConcertInfo"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "인증 실패",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "서버 오류",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/concert/{roomId}/join": {
+      "post": {
+        "summary": "콘서트 참가",
+        "description": "클라이언트를 콘서트에 참가시킵니다 (리슨 서버가 클라이언트 접속 시 호출)",
+        "tags": [
+          "Concert"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "roomId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "콘서트 방 ID",
+            "example": "concert_1702345678901_abc123def"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "clientId"
+                ],
+                "properties": {
+                  "clientId": {
+                    "type": "integer",
+                    "description": "참가한 클라이언트의 사용자 ID",
+                    "example": 123
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "참가 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "잘못된 요청",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "인증 실패",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "권한 없음 (스튜디오 리슨 서버만 호출 가능)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/concert/{roomId}/leave": {
+      "post": {
+        "summary": "콘서트 퇴장",
+        "description": "클라이언트를 콘서트에서 퇴장시킵니다 (리슨 서버가 클라이언트 접속 종료 시 호출)",
+        "tags": [
+          "Concert"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "roomId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "콘서트 방 ID",
+            "example": "concert_1702345678901_abc123def"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "clientId"
+                ],
+                "properties": {
+                  "clientId": {
+                    "type": "integer",
+                    "description": "퇴장한 클라이언트의 사용자 ID",
+                    "example": 123
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "퇴장 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "잘못된 요청",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "인증 실패",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "권한 없음 (스튜디오 리슨 서버만 호출 가능)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/concert/{roomId}/info": {
+      "get": {
+        "summary": "콘서트 정보 조회",
+        "description": "특정 콘서트의 상세 정보를 조회합니다",
+        "tags": [
+          "Concert"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "roomId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "콘서트 방 ID",
+            "example": "concert_1702345678901_abc123def"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "조회 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/BaseResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "concert": {
+                          "$ref": "#/components/schemas/ConcertInfo"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "인증 실패",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "콘서트를 찾을 수 없음",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/concert/{roomId}/songs/add": {
+      "post": {
+        "summary": "콘서트에 노래 추가",
+        "description": "콘서트 플레이리스트에 노래를 추가합니다 (스튜디오만 가능)",
+        "tags": [
+          "Concert"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "roomId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "콘서트 방 ID",
+            "example": "concert_1702345678901_abc123def"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConcertSong"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "노래 추가 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/BaseResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "songs": {
+                          "type": "array",
+                          "description": "업데이트된 노래 목록",
+                          "items": {
+                            "$ref": "#/components/schemas/ConcertSong"
+                          }
+                        },
+                        "currentSong": {
+                          "allOf": [
+                            {
+                              "$ref": "#/components/schemas/ConcertSong"
+                            }
+                          ],
+                          "nullable": true,
+                          "description": "현재 재생 중인 곡"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "잘못된 요청",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "인증 실패",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "권한 없음 (스튜디오만 가능)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/concert/{roomId}/songs/{songNum}": {
+      "delete": {
+        "summary": "콘서트에서 노래 삭제",
+        "description": "콘서트 플레이리스트에서 노래를 삭제합니다 (스튜디오만 가능)",
+        "tags": [
+          "Concert"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "roomId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "콘서트 방 ID",
+            "example": "concert_1702345678901_abc123def"
+          },
+          {
+            "in": "path",
+            "name": "songNum",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "노래 번호",
+            "example": 1
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "노래 삭제 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/BaseResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "songs": {
+                          "type": "array",
+                          "description": "업데이트된 노래 목록",
+                          "items": {
+                            "$ref": "#/components/schemas/ConcertSong"
+                          }
+                        },
+                        "currentSong": {
+                          "allOf": [
+                            {
+                              "$ref": "#/components/schemas/ConcertSong"
+                            }
+                          ],
+                          "nullable": true,
+                          "description": "현재 재생 중인 곡"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "잘못된 요청",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "인증 실패",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "권한 없음 (스튜디오만 가능)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/concert/{roomId}/songs/change": {
+      "post": {
+        "summary": "현재 재생 곡 변경",
+        "description": "콘서트에서 재생할 곡을 변경합니다 (스튜디오만 가능)",
+        "tags": [
+          "Concert"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "roomId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "콘서트 방 ID",
+            "example": "concert_1702345678901_abc123def"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "songNum"
+                ],
+                "properties": {
+                  "songNum": {
+                    "type": "integer",
+                    "description": "재생할 노래 번호",
+                    "example": 2
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "곡 변경 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/BaseResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "currentSong": {
+                          "$ref": "#/components/schemas/ConcertSong"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "잘못된 요청",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "인증 실패",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "권한 없음 (스튜디오만 가능)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/concert/{roomId}/current-song": {
+      "get": {
+        "summary": "현재 재생 중인 노래 정보 조회",
+        "description": "콘서트에서 현재 재생 중인 노래 정보를 조회합니다 (참가자 전용)",
+        "tags": [
+          "Concert"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "roomId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "콘서트 방 ID",
+            "example": "concert_1702345678901_abc123def"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "현재 곡 조회 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/BaseResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "currentSong": {
+                          "allOf": [
+                            {
+                              "$ref": "#/components/schemas/ConcertSong"
+                            }
+                          ],
+                          "nullable": true
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "인증 실패",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "접근 권한 없음",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "서버 오류",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/concert/{roomId}/accessories/add": {
+      "post": {
+        "summary": "액세서리 추가",
+        "description": "콘서트에 액세서리를 추가합니다 (스튜디오만 가능)",
+        "tags": [
+          "Concert"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "roomId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "콘서트 방 ID",
+            "example": "concert_1702345678901_abc123def"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Accessory"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "액세서리 추가 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/BaseResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "accessories": {
+                          "type": "array",
+                          "description": "업데이트된 액세서리 목록",
+                          "items": {
+                            "$ref": "#/components/schemas/Accessory"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "잘못된 요청",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "인증 실패",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "권한 없음 (스튜디오만 가능)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/concert/{roomId}/accessories/{index}": {
+      "delete": {
+        "summary": "액세서리 삭제",
+        "description": "콘서트에서 액세서리를 삭제합니다 (스튜디오만 가능)",
+        "tags": [
+          "Concert"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "roomId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "콘서트 방 ID",
+            "example": "concert_1702345678901_abc123def"
+          },
+          {
+            "in": "path",
+            "name": "index",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "액세서리 인덱스",
+            "example": 0
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "액세서리 삭제 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/BaseResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "accessories": {
+                          "type": "array",
+                          "description": "업데이트된 액세서리 목록",
+                          "items": {
+                            "$ref": "#/components/schemas/Accessory"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "잘못된 요청",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "인증 실패",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "권한 없음 (스튜디오만 가능)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/concert/{roomId}/accessories": {
+      "put": {
+        "summary": "모든 액세서리 교체",
+        "description": "콘서트의 액세서리를 전체 교체합니다 (스튜디오만 가능)",
+        "tags": [
+          "Concert"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "roomId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "콘서트 방 ID",
+            "example": "concert_1702345678901_abc123def"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "accessories"
+                ],
+                "properties": {
+                  "accessories": {
+                    "type": "array",
+                    "description": "액세서리 목록 배열",
+                    "items": {
+                      "$ref": "#/components/schemas/Accessory"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "액세서리 교체 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/BaseResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "accessories": {
+                          "type": "array",
+                          "description": "업데이트된 액세서리 목록",
+                          "items": {
+                            "$ref": "#/components/schemas/Accessory"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "잘못된 요청",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "인증 실패",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "권한 없음 (스튜디오만 가능)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/concert/{roomId}/listen-server": {
+      "post": {
+        "summary": "리슨 서버 정보 등록/업데이트",
+        "description": "콘서트의 리슨 서버 정보를 등록하거나 업데이트합니다 (스튜디오만 가능)",
+        "tags": [
+          "Concert"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "roomId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "콘서트 방 ID",
+            "example": "concert_1702345678901_abc123def"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ListenServer"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "리슨 서버 정보 등록 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/BaseResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "listenServer": {
+                          "$ref": "#/components/schemas/ListenServer"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "잘못된 요청",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "인증 실패",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "권한 없음 (스튜디오만 가능)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/concert/{roomId}/toggle-open": {
+      "post": {
+        "summary": "콘서트 개방/비공개 상태 토글",
+        "description": "콘서트의 개방 여부를 변경합니다 (스튜디오만 가능)",
+        "tags": [
+          "Concert"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "roomId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "콘서트 방 ID",
+            "example": "concert_1702345678901_abc123def"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "isOpen"
+                ],
+                "properties": {
+                  "isOpen": {
+                    "type": "boolean",
+                    "description": "개방 여부 (true - 개방, false - 비공개)",
+                    "example": true
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "상태 변경 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/BaseResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "isOpen": {
+                          "type": "boolean",
+                          "example": true
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "잘못된 요청",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "인증 실패",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "권한 없음 (스튜디오만 가능)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/concert/{roomId}": {
+      "delete": {
+        "summary": "콘서트 세션 파괴",
+        "description": "콘서트 세션을 명시적으로 종료하고 모든 관련 데이터를 삭제합니다 (스튜디오만 가능)",
+        "tags": [
+          "Concert"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "roomId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "콘서트 방 ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "콘서트 세션 파괴 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/BaseResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "roomId": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "인증 실패",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "권한 없음 (스튜디오만 가능)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "콘서트를 찾을 수 없음",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/concert/dev/expire-all": {
+      "post": {
+        "summary": "모든 콘서트 세션 일괄 만료 (개발 환경 전용)",
+        "description": "Redis에 저장된 모든 콘서트 세션을 일괄 삭제합니다. 프로덕션 환경에서는 사용 불가합니다.",
+        "tags": [
+          "Concert (Development)"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "모든 콘서트 만료 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/BaseResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "expiredCount": {
+                          "type": "integer",
+                          "description": "만료된 콘서트 수"
+                        },
+                        "expiredRooms": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          },
+                          "description": "만료된 콘서트 방 ID 목록"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "인증 실패",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "프로덕션 환경에서는 사용 불가",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/models/upload-from-ai": {
+      "post": {
+        "summary": "AI 서버 모델 업로드",
+        "description": "AI 서버에서 생성된 모델을 업로드합니다 (AI 서버 전용, Job ID 검증 필요)",
+        "tags": [
+          "Models",
+          "AI Generation"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "model",
+                  "jobId",
+                  "jobSecret"
+                ],
+                "properties": {
+                  "model": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "모델 파일 (.glb)"
+                  },
+                  "thumbnail": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "썸네일 이미지 (선택)"
+                  },
+                  "jobId": {
+                    "type": "string",
+                    "description": "AI 작업 ID"
+                  },
+                  "jobSecret": {
+                    "type": "string",
+                    "description": "AI 작업 Secret"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "모델 업로드 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/BaseResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "model": {
+                          "$ref": "#/components/schemas/ModelInfo"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "잘못된 요청",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "잘못된 jobSecret",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Job을 찾을 수 없음",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Job이 이미 완료됨",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "서버 오류",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/models/generate": {
+      "post": {
+        "summary": "AI 3D 모델 생성 요청",
+        "description": "프롬프트 또는 이미지를 기반으로 AI가 3D 모델을 생성합니다. 비동기 처리되며 즉시 jobId를 반환합니다.",
+        "tags": [
+          "Models",
+          "AI Generation"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "prompt"
+                ],
+                "properties": {
+                  "prompt": {
+                    "type": "string",
+                    "description": "3D 모델 생성 프롬프트",
+                    "example": "A futuristic robot warrior"
+                  },
+                  "image": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "참고 이미지 (선택, PNG/JPG/WEBP, 최대 10MB)"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "AI 생성 요청 접수 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/BaseResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "jobId": {
+                          "type": "string",
+                          "format": "uuid",
+                          "example": "550e8400-e29b-41d4-a716-446655440000"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "잘못된 요청 (프롬프트 누락)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "인증 실패",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "서버 오류",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/models/jobs/{jobId}": {
+      "get": {
+        "summary": "AI 작업 상태 조회",
+        "description": "AI 모델 생성 작업의 현재 상태를 조회합니다.",
+        "tags": [
+          "AI Generation"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "jobId",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "작업 ID",
+            "example": "550e8400-e29b-41d4-a716-446655440000"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "작업 상태 조회 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/BaseResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/AIJobStatus"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "권한 없음 (다른 사용자의 작업)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "작업을 찾을 수 없음",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "서버 오류",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/models/list": {
+      "get": {
+        "summary": "내 모델 목록 조회",
+        "description": "로그인한 사용자가 소유한 모든 3D 모델 목록을 조회합니다.",
+        "tags": [
+          "Models"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "모델 목록 조회 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/BaseResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "count": {
+                          "type": "integer",
+                          "example": 2
+                        },
+                        "models": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/ModelInfo"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "인증 실패",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "서버 오류",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/models/{id}": {
+      "get": {
+        "summary": "특정 모델 조회",
+        "description": "모델 ID로 특정 모델의 정보를 조회합니다 (자신의 모델만)",
+        "tags": [
+          "Models"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "모델 ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "모델 조회 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/BaseResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "model": {
+                          "$ref": "#/components/schemas/ModelInfo"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "인증 실패",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "모델을 찾을 수 없음 또는 권한 없음",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "서버 오류",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "모델 정보 수정",
+        "description": "모델의 정보를 수정합니다 (자신의 모델만)",
+        "tags": [
+          "Models"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "모델 ID"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "modelName": {
+                    "type": "string"
+                  },
+                  "filePath": {
+                    "type": "string"
+                  },
+                  "fileSize": {
+                    "type": "integer"
+                  },
+                  "thumbnailPath": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "모델 수정 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/BaseResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "model": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "integer"
+                            },
+                            "modelName": {
+                              "type": "string"
+                            },
+                            "filePath": {
+                              "type": "string"
+                            },
+                            "fileSize": {
+                              "type": "integer"
+                            },
+                            "thumbnailPath": {
+                              "type": "string"
+                            },
+                            "updatedAt": {
+                              "type": "string",
+                              "format": "date-time"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "잘못된 요청",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "인증 실패",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "모델을 찾을 수 없음 또는 권한 없음",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "중복된 모델 이름",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "서버 오류",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "모델 삭제",
+        "description": "특정 모델을 DB와 파일 시스템에서 삭제합니다.",
+        "tags": [
+          "Models"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "모델 ID",
+            "example": 1
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "모델 삭제 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/BaseResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "deletedModel": {
+                          "$ref": "#/components/schemas/DeletedModelInfo"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "인증 실패",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "모델을 찾을 수 없음",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "서버 오류",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/models/upload": {
+      "post": {
+        "summary": "모델 파일 업로드",
+        "description": "3D 모델 파일(GLB)과 선택적으로 썸네일 이미지를 업로드합니다.",
+        "tags": [
+          "Models"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "model"
+                ],
+                "properties": {
+                  "model": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "3D 모델 파일 (.glb)"
+                  },
+                  "thumbnail": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "썸네일 이미지 (선택)"
+                  },
+                  "modelName": {
+                    "type": "string",
+                    "description": "모델 이름 (선택, 미입력 시 파일명 사용)",
+                    "example": "My Character"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "모델 업로드 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/BaseResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "model": {
+                          "$ref": "#/components/schemas/ModelInfo"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "잘못된 요청 (모델 파일 누락)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "인증 실패",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "중복된 모델 이름",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "서버 오류",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/models/{id}/thumbnail": {
+      "post": {
+        "summary": "썸네일 업로드/수정",
+        "description": "모델의 썸네일 이미지를 업로드하거나 수정합니다 (자신의 모델만)",
+        "tags": [
+          "Models"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "모델 ID"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "thumbnail"
+                ],
+                "properties": {
+                  "thumbnail": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "썸네일 이미지 파일"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "썸네일 업로드 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/BaseResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "model": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "integer"
+                            },
+                            "modelName": {
+                              "type": "string"
+                            },
+                            "thumbnailPath": {
+                              "type": "string"
+                            },
+                            "updatedAt": {
+                              "type": "string",
+                              "format": "date-time"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "잘못된 요청",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "인증 실패",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "모델을 찾을 수 없음 또는 권한 없음",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "서버 오류",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "썸네일 이미지 조회",
+        "description": "모델의 썸네일 이미지를 조회합니다 (자신의 모델만)",
+        "tags": [
+          "Models"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "모델 ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "썸네일 이미지",
+            "content": {
+              "image/*": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "인증 실패",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "모델 또는 썸네일을 찾을 수 없음",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "서버 오류",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/models/{id}/download": {
+      "get": {
+        "summary": "모델 파일 다운로드",
+        "description": "특정 모델의 GLB 파일을 다운로드합니다.",
+        "tags": [
+          "Models"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "모델 ID",
+            "example": 1
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "모델 파일 다운로드 성공",
+            "content": {
+              "model/gltf-binary": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "인증 실패",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "모델을 찾을 수 없음",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "서버 오류",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

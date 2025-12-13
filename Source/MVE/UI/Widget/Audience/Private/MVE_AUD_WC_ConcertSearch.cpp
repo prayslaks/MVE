@@ -43,7 +43,7 @@ void UMVE_AUD_WC_ConcertSearch::OnPollingToggleButtonClicked()
 	if (bIsPollingActive)
 	{
 		// Start polling
-		GetWorld()->GetTimerManager().SetTimer(RefreshTimerHandle, this, &UMVE_AUD_WC_ConcertSearch::RequestConcertList, 5.0f, true, 0.0f);
+		GetWorld()->GetTimerManager().SetTimer(RefreshTimerHandle, this, &UMVE_AUD_WC_ConcertSearch::GetConcertList, 5.0f, true, 0.0f);
 	}
 	else
 	{
@@ -66,59 +66,55 @@ void UMVE_AUD_WC_ConcertSearch::OnPollingToggleButtonClicked()
 	UpdatePollingButtonAppearance();
 }
 
-void UMVE_AUD_WC_ConcertSearch::RequestConcertList()
+void UMVE_AUD_WC_ConcertSearch::GetConcertList()
 {
 	FOnGetConcertListComplete OnResult;
-	OnResult.BindLambda([this](const bool bSuccess, const FGetConcertListData& ResponseData, const FString& ErrorCode)
-	{
-		// Stop processing if polling has been deactivated since the request was made
-		if (!bIsPollingActive)
-		{
-			return;
-		}
+	OnResult.BindUObject(this, &UMVE_AUD_WC_ConcertSearch::OnGetConcertListComplete);
+	UMVE_API_Helper::GetConcertList(OnResult);
+}
 
-		if (bSuccess)
+void UMVE_AUD_WC_ConcertSearch::OnGetConcertListComplete(const bool bSuccess, const FGetConcertListData& ResponseData, const FString& ErrorCode)
+{
+	// Stop processing if polling has been deactivated since the request was made
+	if (!bIsPollingActive)
+	{
+		return;
+	}
+
+	if (bSuccess)
+	{
+		if (ConcertListScrollBox)
 		{
-			if (ConcertListScrollBox)
-			{
-				ConcertListScrollBox->ClearChildren();
-			}
-			SearchResultWidgets.Empty();
-			SelectedSearchResult = nullptr;
+			ConcertListScrollBox->ClearChildren();
+		}
+		SearchResultWidgets.Empty();
+		SelectedSearchResult = nullptr;
 		
-			if (ConcertCountTextBlock)
-			{
-				const FString CountText = FString::Printf(TEXT("%02d개 콘서트 OnAir"), ResponseData.concerts.Num());
-				ConcertCountTextBlock->SetText(FText::FromString(CountText));
-			}
+		if (ConcertCountTextBlock)
+		{
+			const FString CountText = FString::Printf(TEXT("%02d개 콘서트 OnAir"), ResponseData.Concerts.Num());
+			ConcertCountTextBlock->SetText(FText::FromString(CountText));
+		}
 			
-			if (ResponseData.concerts.IsEmpty() == false)
+		if (ResponseData.Concerts.IsEmpty() == false)
+		{
+			for (const FConcertInfo& ConcertValue : ResponseData.Concerts)
 			{
-				for (const FConcertInfo& ConcertValue : ResponseData.concerts)
-				{
-					FString HostName;
-					const FString ConcertName = ConcertValue.concertName;
-					const FString RoomId = ConcertValue.roomId;
-					const int32 CurrentAudience = ConcertValue.currentAudience;
-					const int32 MaxAudience = ConcertValue.maxAudience;
-					const bool bIsOpen = ConcertValue.isOpen;
+				FString StudioName = ""; // = ConcertValue.StudioName;
+				const FString ConcertName = ConcertValue.ConcertName;
+				const FString RoomId = ConcertValue.RoomId;
+				const int32 CurrentAudience = ConcertValue.CurrentAudience;
+				const int32 MaxAudience = ConcertValue.MaxAudience;
+				const bool bIsOpen = ConcertValue.IsOpen;
 					
-					// 위젯 생성 후 추가
-					if(auto* NewWidget = CreateWidget<UMVE_AUD_WC_ConcertSearchResult>(this, ConcertSearchResultWidgetClass))
-					{
-						FMVE_AUD_ConcertSearchResultData ResultData(ConcertName, RoomId, HostName, CurrentAudience, MaxAudience, bIsOpen);
-						NewWidget->UpdateUI(ResultData);
-						NewWidget->OnConcertSearchResultDoubleClicked.AddUObject(this, &UMVE_AUD_WC_ConcertSearch::OnSearchResultDoubleClicked);
-						SearchResultWidgets.Add(NewWidget);
-						ConcertListScrollBox->AddChild(NewWidget);
-					}
-				}
-			}
-			else
-			{
-				if (ConcertCountTextBlock)
+				// 위젯 생성 후 추가
+				if(auto* NewWidget = CreateWidget<UMVE_AUD_WC_ConcertSearchResult>(this, ConcertSearchResultWidgetClass))
 				{
-					ConcertCountTextBlock->SetText(FText::FromString(TEXT("00개 콘서트 OnAir")));
+					FMVE_AUD_ConcertSearchResultData ResultData(ConcertName, RoomId, StudioName, CurrentAudience, MaxAudience, bIsOpen);
+					NewWidget->UpdateUI(ResultData);
+					NewWidget->OnConcertSearchResultDoubleClicked.AddUObject(this, &UMVE_AUD_WC_ConcertSearch::OnSearchResultDoubleClicked);
+					SearchResultWidgets.Add(NewWidget);
+					ConcertListScrollBox->AddChild(NewWidget);
 				}
 			}
 		}
@@ -128,14 +124,20 @@ void UMVE_AUD_WC_ConcertSearch::RequestConcertList()
 			{
 				ConcertCountTextBlock->SetText(FText::FromString(TEXT("00개 콘서트 OnAir")));
 			}
-					
-			if (const UMVE_GIS_API* Subsystem = UMVE_GIS_API::Get(this))
-			{
-				const FText TranslatedErrorMessage = Subsystem->GetTranslatedErrorMessage(ErrorCode);
-			}
 		}
-	});
-	UMVE_API_Helper::GetConcertList(OnResult);
+	}
+	else
+	{
+		if (ConcertCountTextBlock)
+		{
+			ConcertCountTextBlock->SetText(FText::FromString(TEXT("00개 콘서트 OnAir")));
+		}
+					
+		if (const UMVE_GIS_API* Subsystem = UMVE_GIS_API::Get(this))
+		{
+			const FText TranslatedErrorMessage = Subsystem->GetTranslatedTextFromResponseCode(ErrorCode);
+		}
+	}
 }
 
 void UMVE_AUD_WC_ConcertSearch::UpdatePollingButtonAppearance() const
@@ -154,8 +156,6 @@ void UMVE_AUD_WC_ConcertSearch::UpdatePollingButtonAppearance() const
 		PollingToggleButton->SetStyle(ButtonStyle);
 	}
 }
-
-
 
 void UMVE_AUD_WC_ConcertSearch::OnSearchResultDoubleClicked(UMVE_AUD_WC_ConcertSearchResult* ClickedWidget)
 {

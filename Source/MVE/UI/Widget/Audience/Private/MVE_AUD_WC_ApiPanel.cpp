@@ -21,10 +21,10 @@ void UMVE_AUD_WC_ApiPanel::HandleConcertDoubleClicked(const FMVE_AUD_ConcertSear
 	FOnGetConcertInfoComplete OnResult;
 	OnResult.BindLambda([this](const bool bSuccess, const FGetConcertInfoResponseData& ResponseData, const FString& ErrorCode)
 	{
-		if (ResponseData.success)
+		if (ResponseData.Success)
 		{
-			const FString LocalIP = ResponseData.concert.listenServer.localIP;
-			const int32 Port = ResponseData.concert.listenServer.port;
+			const FString LocalIP = ResponseData.Concert.ListenServer.LocalIP;
+			const int32 Port = ResponseData.Concert.ListenServer.Port;
 			PRINTLOG(TEXT("콘서트 리슨 서버 정보: %s:%d"), *LocalIP, Port);
 
 			// 리슨 서버에 접속
