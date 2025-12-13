@@ -1,0 +1,1081 @@
+{
+  "summary": {
+    "totalCodes": 173,
+    "uniqueCodes": 63,
+    "filesWithCodes": 7,
+    "totalFilesScanned": 15,
+    "generatedAt": "2025-12-12T16:59:04.308Z"
+  },
+  "statistics": [
+    {
+      "code": "SUCCESS",
+      "count": 38,
+      "locations": [
+        {
+          "file": "routes\\accessory-presets.js",
+          "line": 141
+        },
+        {
+          "file": "routes\\accessory-presets.js",
+          "line": 223
+        },
+        {
+          "file": "routes\\accessory-presets.js",
+          "line": 310
+        },
+        {
+          "file": "routes\\accessory-presets.js",
+          "line": 447
+        },
+        {
+          "file": "routes\\accessory-presets.js",
+          "line": 553
+        },
+        {
+          "file": "routes\\audio.js",
+          "line": 157
+        },
+        {
+          "file": "routes\\audio.js",
+          "line": 298
+        },
+        {
+          "file": "routes\\audio.js",
+          "line": 322
+        },
+        {
+          "file": "routes\\audio.js",
+          "line": 591
+        },
+        {
+          "file": "routes\\audio.js",
+          "line": 706
+        },
+        {
+          "file": "routes\\audio.js",
+          "line": 824
+        },
+        {
+          "file": "routes\\concert.js",
+          "line": 111
+        },
+        {
+          "file": "routes\\concert.js",
+          "line": 168
+        },
+        {
+          "file": "routes\\concert.js",
+          "line": 233
+        },
+        {
+          "file": "routes\\concert.js",
+          "line": 335
+        },
+        {
+          "file": "routes\\concert.js",
+          "line": 433
+        },
+        {
+          "file": "routes\\concert.js",
+          "line": 493
+        },
+        {
+          "file": "routes\\concert.js",
+          "line": 601
+        },
+        {
+          "file": "routes\\concert.js",
+          "line": 701
+        },
+        {
+          "file": "routes\\concert.js",
+          "line": 808
+        },
+        {
+          "file": "routes\\concert.js",
+          "line": 893
+        },
+        {
+          "file": "routes\\concert.js",
+          "line": 1001
+        },
+        {
+          "file": "routes\\concert.js",
+          "line": 1095
+        },
+        {
+          "file": "routes\\concert.js",
+          "line": 1205
+        },
+        {
+          "file": "routes\\concert.js",
+          "line": 1310
+        },
+        {
+          "file": "routes\\concert.js",
+          "line": 1418
+        },
+        {
+          "file": "routes\\concert.js",
+          "line": 1501
+        },
+        {
+          "file": "routes\\concert.js",
+          "line": 1575
+        },
+        {
+          "file": "routes\\models.js",
+          "line": 99
+        },
+        {
+          "file": "routes\\models.js",
+          "line": 387
+        },
+        {
+          "file": "routes\\models.js",
+          "line": 581
+        },
+        {
+          "file": "routes\\models.js",
+          "line": 822
+        },
+        {
+          "file": "routes\\models.js",
+          "line": 925
+        },
+        {
+          "file": "routes\\models.js",
+          "line": 1042
+        },
+        {
+          "file": "routes\\models.js",
+          "line": 1207
+        },
+        {
+          "file": "routes\\models.js",
+          "line": 1438
+        },
+        {
+          "file": "routes\\models.js",
+          "line": 1638
+        },
+        {
+          "file": "routes\\models.js",
+          "line": 2051
+        }
+      ]
+    },
+    {
+      "code": "INTERNAL_SERVER_ERROR",
+      "count": 15,
+      "locations": [
+        {
+          "file": "routes\\audio.js",
+          "line": 191
+        },
+        {
+          "file": "routes\\audio.js",
+          "line": 740
+        },
+        {
+          "file": "routes\\audio.js",
+          "line": 857
+        },
+        {
+          "file": "routes\\models.js",
+          "line": 140
+        },
+        {
+          "file": "routes\\models.js",
+          "line": 444
+        },
+        {
+          "file": "routes\\models.js",
+          "line": 738
+        },
+        {
+          "file": "routes\\models.js",
+          "line": 840
+        },
+        {
+          "file": "routes\\models.js",
+          "line": 950
+        },
+        {
+          "file": "routes\\models.js",
+          "line": 1075
+        },
+        {
+          "file": "routes\\models.js",
+          "line": 1266
+        },
+        {
+          "file": "routes\\models.js",
+          "line": 1477
+        },
+        {
+          "file": "routes\\models.js",
+          "line": 1674
+        },
+        {
+          "file": "routes\\models.js",
+          "line": 1798
+        },
+        {
+          "file": "routes\\models.js",
+          "line": 1932
+        },
+        {
+          "file": "routes\\models.js",
+          "line": 2078
+        }
+      ]
+    },
+    {
+      "code": "DATABASE_ERROR",
+      "count": 14,
+      "locations": [
+        {
+          "file": "routes\\audio.js",
+          "line": 183
+        },
+        {
+          "file": "routes\\audio.js",
+          "line": 622
+        },
+        {
+          "file": "routes\\audio.js",
+          "line": 732
+        },
+        {
+          "file": "routes\\audio.js",
+          "line": 849
+        },
+        {
+          "file": "routes\\models.js",
+          "line": 132
+        },
+        {
+          "file": "routes\\models.js",
+          "line": 436
+        },
+        {
+          "file": "routes\\models.js",
+          "line": 942
+        },
+        {
+          "file": "routes\\models.js",
+          "line": 1067
+        },
+        {
+          "file": "routes\\models.js",
+          "line": 1258
+        },
+        {
+          "file": "routes\\models.js",
+          "line": 1469
+        },
+        {
+          "file": "routes\\models.js",
+          "line": 1666
+        },
+        {
+          "file": "routes\\models.js",
+          "line": 1790
+        },
+        {
+          "file": "routes\\models.js",
+          "line": 1924
+        },
+        {
+          "file": "routes\\models.js",
+          "line": 2070
+        }
+      ]
+    },
+    {
+      "code": "PERMISSION_DENIED",
+      "count": 11,
+      "locations": [
+        {
+          "file": "routes\\concert.js",
+          "line": 323
+        },
+        {
+          "file": "routes\\concert.js",
+          "line": 423
+        },
+        {
+          "file": "routes\\concert.js",
+          "line": 589
+        },
+        {
+          "file": "routes\\concert.js",
+          "line": 689
+        },
+        {
+          "file": "routes\\concert.js",
+          "line": 796
+        },
+        {
+          "file": "routes\\concert.js",
+          "line": 984
+        },
+        {
+          "file": "routes\\concert.js",
+          "line": 1083
+        },
+        {
+          "file": "routes\\concert.js",
+          "line": 1193
+        },
+        {
+          "file": "routes\\concert.js",
+          "line": 1293
+        },
+        {
+          "file": "routes\\concert.js",
+          "line": 1406
+        },
+        {
+          "file": "routes\\concert.js",
+          "line": 1489
+        }
+      ]
+    },
+    {
+      "code": "MISSING_FIELDS",
+      "count": 7,
+      "locations": [
+        {
+          "file": "routes\\accessory-presets.js",
+          "line": 114
+        },
+        {
+          "file": "routes\\concert.js",
+          "line": 124
+        },
+        {
+          "file": "routes\\concert.js",
+          "line": 579
+        },
+        {
+          "file": "routes\\concert.js",
+          "line": 786
+        },
+        {
+          "file": "routes\\concert.js",
+          "line": 974
+        },
+        {
+          "file": "routes\\concert.js",
+          "line": 1283
+        },
+        {
+          "file": "routes\\concert.js",
+          "line": 1396
+        }
+      ]
+    },
+    {
+      "code": "MODEL_NOT_FOUND",
+      "count": 6,
+      "locations": [
+        {
+          "file": "routes\\models.js",
+          "line": 1029
+        },
+        {
+          "file": "routes\\models.js",
+          "line": 1385
+        },
+        {
+          "file": "routes\\models.js",
+          "line": 1600
+        },
+        {
+          "file": "routes\\models.js",
+          "line": 1750
+        },
+        {
+          "file": "routes\\models.js",
+          "line": 1873
+        },
+        {
+          "file": "routes\\models.js",
+          "line": 2011
+        }
+      ]
+    },
+    {
+      "code": "INVALID_ACCESSORIES",
+      "count": 4,
+      "locations": [
+        {
+          "file": "routes\\accessory-presets.js",
+          "line": 123
+        },
+        {
+          "file": "routes\\accessory-presets.js",
+          "line": 430
+        },
+        {
+          "file": "routes\\concert.js",
+          "line": 142
+        },
+        {
+          "file": "routes\\concert.js",
+          "line": 1183
+        }
+      ]
+    },
+    {
+      "code": "ACCESS_DENIED",
+      "count": 4,
+      "locations": [
+        {
+          "file": "routes\\accessory-presets.js",
+          "line": 328
+        },
+        {
+          "file": "routes\\accessory-presets.js",
+          "line": 464
+        },
+        {
+          "file": "routes\\accessory-presets.js",
+          "line": 570
+        },
+        {
+          "file": "routes\\concert.js",
+          "line": 883
+        }
+      ]
+    },
+    {
+      "code": "FILE_NOT_FOUND",
+      "count": 4,
+      "locations": [
+        {
+          "file": "routes\\audio.js",
+          "line": 313
+        },
+        {
+          "file": "routes\\audio.js",
+          "line": 407
+        },
+        {
+          "file": "routes\\models.js",
+          "line": 1766
+        },
+        {
+          "file": "routes\\models.js",
+          "line": 1901
+        }
+      ]
+    },
+    {
+      "code": "INVALID_ID",
+      "count": 3,
+      "locations": [
+        {
+          "file": "routes\\accessory-presets.js",
+          "line": 299
+        },
+        {
+          "file": "routes\\accessory-presets.js",
+          "line": 419
+        },
+        {
+          "file": "routes\\accessory-presets.js",
+          "line": 542
+        }
+      ]
+    },
+    {
+      "code": "PRESET_NOT_FOUND",
+      "count": 3,
+      "locations": [
+        {
+          "file": "routes\\accessory-presets.js",
+          "line": 320
+        },
+        {
+          "file": "routes\\accessory-presets.js",
+          "line": 456
+        },
+        {
+          "file": "routes\\accessory-presets.js",
+          "line": 562
+        }
+      ]
+    },
+    {
+      "code": "AUDIO_NOT_FOUND",
+      "count": 3,
+      "locations": [
+        {
+          "file": "routes\\audio.js",
+          "line": 273
+        },
+        {
+          "file": "routes\\audio.js",
+          "line": 396
+        },
+        {
+          "file": "routes\\audio.js",
+          "line": 814
+        }
+      ]
+    },
+    {
+      "code": "MISSING_MODEL_FILE",
+      "count": 3,
+      "locations": [
+        {
+          "file": "routes\\models.js",
+          "line": 55
+        },
+        {
+          "file": "routes\\models.js",
+          "line": 340
+        },
+        {
+          "file": "routes\\models.js",
+          "line": 1167
+        }
+      ]
+    },
+    {
+      "code": "DUPLICATE_PRESET_NAME",
+      "count": 2,
+      "locations": [
+        {
+          "file": "routes\\accessory-presets.js",
+          "line": 154
+        },
+        {
+          "file": "routes\\accessory-presets.js",
+          "line": 473
+        }
+      ]
+    },
+    {
+      "code": "LIST_FAILED",
+      "count": 2,
+      "locations": [
+        {
+          "file": "routes\\accessory-presets.js",
+          "line": 232
+        },
+        {
+          "file": "routes\\concert.js",
+          "line": 242
+        }
+      ]
+    },
+    {
+      "code": "STREAMING_ERROR",
+      "count": 2,
+      "locations": [
+        {
+          "file": "routes\\audio.js",
+          "line": 337
+        },
+        {
+          "file": "routes\\audio.js",
+          "line": 448
+        }
+      ]
+    },
+    {
+      "code": "MISSING_CLIENT_ID",
+      "count": 2,
+      "locations": [
+        {
+          "file": "routes\\concert.js",
+          "line": 313
+        },
+        {
+          "file": "routes\\concert.js",
+          "line": 413
+        }
+      ]
+    },
+    {
+      "code": "DEV_ONLY_API",
+      "count": 2,
+      "locations": [
+        {
+          "file": "routes\\concert.js",
+          "line": 1563
+        },
+        {
+          "file": "routes\\models.js",
+          "line": 45
+        }
+      ]
+    },
+    {
+      "code": "JOB_NOT_FOUND",
+      "count": 2,
+      "locations": [
+        {
+          "file": "routes\\models.js",
+          "line": 276
+        },
+        {
+          "file": "routes\\models.js",
+          "line": 806
+        }
+      ]
+    },
+    {
+      "code": "DUPLICATE_MODEL_NAME",
+      "count": 2,
+      "locations": [
+        {
+          "file": "routes\\models.js",
+          "line": 1250
+        },
+        {
+          "file": "routes\\models.js",
+          "line": 1461
+        }
+      ]
+    },
+    {
+      "code": "VALUE",
+      "count": 2,
+      "locations": [
+        {
+          "file": "working-scripts\\analyze-response-codes.js",
+          "line": 19
+        },
+        {
+          "file": "working-scripts\\analyze-response-codes.js",
+          "line": 19
+        }
+      ]
+    },
+    {
+      "code": "NO_AUTH_HEADER",
+      "count": 1,
+      "locations": [
+        {
+          "file": "middleware\\auth.js",
+          "line": 42
+        }
+      ]
+    },
+    {
+      "code": "INVALID_AUTH_FORMAT",
+      "count": 1,
+      "locations": [
+        {
+          "file": "middleware\\auth.js",
+          "line": 52
+        }
+      ]
+    },
+    {
+      "code": "NO_TOKEN",
+      "count": 1,
+      "locations": [
+        {
+          "file": "middleware\\auth.js",
+          "line": 63
+        }
+      ]
+    },
+    {
+      "code": "SERVER_CONFIG_ERROR",
+      "count": 1,
+      "locations": [
+        {
+          "file": "middleware\\auth.js",
+          "line": 73
+        }
+      ]
+    },
+    {
+      "code": "TOKEN_EXPIRED",
+      "count": 1,
+      "locations": [
+        {
+          "file": "middleware\\auth.js",
+          "line": 91
+        }
+      ]
+    },
+    {
+      "code": "INVALID_TOKEN",
+      "count": 1,
+      "locations": [
+        {
+          "file": "middleware\\auth.js",
+          "line": 101
+        }
+      ]
+    },
+    {
+      "code": "TOKEN_VERIFICATION_FAILED",
+      "count": 1,
+      "locations": [
+        {
+          "file": "middleware\\auth.js",
+          "line": 109
+        }
+      ]
+    },
+    {
+      "code": "SAVE_FAILED",
+      "count": 1,
+      "locations": [
+        {
+          "file": "routes\\accessory-presets.js",
+          "line": 161
+        }
+      ]
+    },
+    {
+      "code": "GET_FAILED",
+      "count": 1,
+      "locations": [
+        {
+          "file": "routes\\accessory-presets.js",
+          "line": 335
+        }
+      ]
+    },
+    {
+      "code": "UPDATE_FAILED",
+      "count": 1,
+      "locations": [
+        {
+          "file": "routes\\accessory-presets.js",
+          "line": 480
+        }
+      ]
+    },
+    {
+      "code": "DELETE_FAILED",
+      "count": 1,
+      "locations": [
+        {
+          "file": "routes\\accessory-presets.js",
+          "line": 577
+        }
+      ]
+    },
+    {
+      "code": "NO_FILE",
+      "count": 1,
+      "locations": [
+        {
+          "file": "routes\\audio.js",
+          "line": 528
+        }
+      ]
+    },
+    {
+      "code": "MISSING_TITLE",
+      "count": 1,
+      "locations": [
+        {
+          "file": "routes\\audio.js",
+          "line": 540
+        }
+      ]
+    },
+    {
+      "code": "UPLOAD_ERROR",
+      "count": 1,
+      "locations": [
+        {
+          "file": "routes\\audio.js",
+          "line": 630
+        }
+      ]
+    },
+    {
+      "code": "INVALID_SONGS",
+      "count": 1,
+      "locations": [
+        {
+          "file": "routes\\concert.js",
+          "line": 133
+        }
+      ]
+    },
+    {
+      "code": "CREATE_FAILED",
+      "count": 1,
+      "locations": [
+        {
+          "file": "routes\\concert.js",
+          "line": 177
+        }
+      ]
+    },
+    {
+      "code": "JOIN_FAILED",
+      "count": 1,
+      "locations": [
+        {
+          "file": "routes\\concert.js",
+          "line": 342
+        }
+      ]
+    },
+    {
+      "code": "LEAVE_FAILED",
+      "count": 1,
+      "locations": [
+        {
+          "file": "routes\\concert.js",
+          "line": 438
+        }
+      ]
+    },
+    {
+      "code": "CONCERT_NOT_FOUND",
+      "count": 1,
+      "locations": [
+        {
+          "file": "routes\\concert.js",
+          "line": 501
+        }
+      ]
+    },
+    {
+      "code": "ADD_SONG_FAILED",
+      "count": 1,
+      "locations": [
+        {
+          "file": "routes\\concert.js",
+          "line": 610
+        }
+      ]
+    },
+    {
+      "code": "REMOVE_SONG_FAILED",
+      "count": 1,
+      "locations": [
+        {
+          "file": "routes\\concert.js",
+          "line": 710
+        }
+      ]
+    },
+    {
+      "code": "CHANGE_SONG_FAILED",
+      "count": 1,
+      "locations": [
+        {
+          "file": "routes\\concert.js",
+          "line": 816
+        }
+      ]
+    },
+    {
+      "code": "GET_CURRENT_SONG_FAILED",
+      "count": 1,
+      "locations": [
+        {
+          "file": "routes\\concert.js",
+          "line": 901
+        }
+      ]
+    },
+    {
+      "code": "ADD_ACCESSORY_FAILED",
+      "count": 1,
+      "locations": [
+        {
+          "file": "routes\\concert.js",
+          "line": 1009
+        }
+      ]
+    },
+    {
+      "code": "REMOVE_ACCESSORY_FAILED",
+      "count": 1,
+      "locations": [
+        {
+          "file": "routes\\concert.js",
+          "line": 1103
+        }
+      ]
+    },
+    {
+      "code": "UPDATE_ACCESSORIES_FAILED",
+      "count": 1,
+      "locations": [
+        {
+          "file": "routes\\concert.js",
+          "line": 1213
+        }
+      ]
+    },
+    {
+      "code": "UPDATE_LISTEN_SERVER_FAILED",
+      "count": 1,
+      "locations": [
+        {
+          "file": "routes\\concert.js",
+          "line": 1318
+        }
+      ]
+    },
+    {
+      "code": "TOGGLE_OPEN_FAILED",
+      "count": 1,
+      "locations": [
+        {
+          "file": "routes\\concert.js",
+          "line": 1426
+        }
+      ]
+    },
+    {
+      "code": "DESTROY_FAILED",
+      "count": 1,
+      "locations": [
+        {
+          "file": "routes\\concert.js",
+          "line": 1510
+        }
+      ]
+    },
+    {
+      "code": "EXPIRE_ALL_FAILED",
+      "count": 1,
+      "locations": [
+        {
+          "file": "routes\\concert.js",
+          "line": 1584
+        }
+      ]
+    },
+    {
+      "code": "MISSING_JOB_CREDENTIALS",
+      "count": 1,
+      "locations": [
+        {
+          "file": "routes\\models.js",
+          "line": 253
+        }
+      ]
+    },
+    {
+      "code": "INVALID_JOB_SECRET",
+      "count": 1,
+      "locations": [
+        {
+          "file": "routes\\models.js",
+          "line": 298
+        }
+      ]
+    },
+    {
+      "code": "JOB_ALREADY_COMPLETED",
+      "count": 1,
+      "locations": [
+        {
+          "file": "routes\\models.js",
+          "line": 318
+        }
+      ]
+    },
+    {
+      "code": "INVALID_PROMPT",
+      "count": 1,
+      "locations": [
+        {
+          "file": "routes\\models.js",
+          "line": 549
+        }
+      ]
+    },
+    {
+      "code": "FORBIDDEN",
+      "count": 1,
+      "locations": [
+        {
+          "file": "routes\\models.js",
+          "line": 815
+        }
+      ]
+    },
+    {
+      "code": "NO_UPDATE_FIELDS",
+      "count": 1,
+      "locations": [
+        {
+          "file": "routes\\models.js",
+          "line": 1415
+        }
+      ]
+    },
+    {
+      "code": "MISSING_THUMBNAIL_FILE",
+      "count": 1,
+      "locations": [
+        {
+          "file": "routes\\models.js",
+          "line": 1577
+        }
+      ]
+    },
+    {
+      "code": "THUMBNAIL_NOT_FOUND",
+      "count": 1,
+      "locations": [
+        {
+          "file": "routes\\models.js",
+          "line": 1886
+        }
+      ]
+    },
+    {
+      "code": "REDIS_UNAVAILABLE",
+      "count": 1,
+      "locations": [
+        {
+          "file": "server.js",
+          "line": 39
+        }
+      ]
+    },
+    {
+      "code": "HEALTH_CHECK_OK",
+      "count": 1,
+      "locations": [
+        {
+          "file": "server.js",
+          "line": 49
+        }
+      ]
+    },
+    {
+      "code": "HEALTH_CHECK_FAILED",
+      "count": 1,
+      "locations": [
+        {
+          "file": "server.js",
+          "line": 59
+        }
+      ]
+    },
+    {
+      "code": "...",
+      "count": 1,
+      "locations": [
+        {
+          "file": "working-scripts\\analyze-response-codes.js",
+          "line": 5
+        }
+      ]
+    }
+  ]
+}

@@ -65,7 +65,12 @@ private:
 	UPROPERTY()
 	TObjectPtr<UMVE_AUD_WC_ConcertSearchResult> SelectedSearchResult;
 
-	void RequestConcertList();
+	UFUNCTION()
+	void GetConcertList();
+	
+	void OnGetConcertListComplete(const bool bSuccess, const FGetConcertListData& ResponseData, const FString& ErrorCode);
+	
+	UFUNCTION()
 	void UpdatePollingButtonAppearance() const;
 
 	FTimerHandle RefreshTimerHandle;
