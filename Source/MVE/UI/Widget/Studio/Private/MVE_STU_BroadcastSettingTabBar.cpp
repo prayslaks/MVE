@@ -196,13 +196,14 @@ void UMVE_STU_BroadcastSettingTabBar::OnUserSettingButtonClicked()
     
 	if (UUIManagerSubsystem* UIManager = GetGameInstance()->GetSubsystem<UUIManagerSubsystem>())
 	{
+		FDropdownContext DropdownContext;
+		DropdownContext.AnchorPosition = EDropdownAnchorPosition::TopRight;
+		DropdownContext.ButtonSize = ButtonSize;
+		DropdownContext.StringData = TEXT("UserEmail");
+		DropdownContext.ButtonPosition = ButtonTopRight;
+		
 		// 우상단 앵커로 드롭다운 표시
-		UIManager->ShowUserDropdown(
-			ButtonTopRight,                         // 버튼 오른쪽 상단
-			ButtonSize,                             // 버튼 크기
-			TEXT("UserEmail"),                     // 유저 이름
-			EDropdownAnchorPosition::TopRight       // 우상단 앵커
-		);
+		UIManager->ShowDropdown(EDropdownType::UserSetting, DropdownContext);
 	}
 }
 

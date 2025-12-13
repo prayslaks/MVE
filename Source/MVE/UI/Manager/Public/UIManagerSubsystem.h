@@ -32,6 +32,9 @@ public:
 	UPROPERTY(Config, EditDefaultsOnly, Category = "DataTable")
 	TSoftObjectPtr<UDataTable> PersistentWidgetClassesTableAsset;
 
+	UPROPERTY(Config, EditDefaultsOnly, Category = "DataTable")
+	TSoftObjectPtr<UDataTable> DropdownClassesTableAsset;
+	
 	void InitScreenClasses();
 
 	// 모달 배경 위젯
@@ -156,10 +159,9 @@ private:
 	 */
 
 public:
-	// 드롭다운 표시
-	UFUNCTION(BlueprintCallable)
-	void ShowUserDropdown(const FVector2D& ButtonPosition, const FVector2D& ButtonSize, const FString& UserName, EDropdownAnchorPosition AnchorPosition = EDropdownAnchorPosition::TopLeft);
-
+	UFUNCTION(BlueprintCallable, Category = "Dropdown")
+	void ShowDropdown(EDropdownType DropdownType, const FDropdownContext& Context);
+	
 	// 드롭다운 닫기
 	UFUNCTION(BlueprintCallable)
 	void CloseDropdown();
@@ -167,12 +169,18 @@ public:
 	
 
 protected:
+	UPROPERTY()
+	TMap<EDropdownType, TSubclassOf<UMVE_WidgetClass_Dropdown>> DropdownClassMap;
+	
 	UPROPERTY(Config)
 	TSubclassOf<UMVE_WidgetClass_Dropdown_UserSetting> UserDropdownWidgetClass;
 
 	UPROPERTY(Config)
 	TSubclassOf<UMVE_WidgetClass_DropdownOverlay> DropdownOverlayClass;
 
+	// 드롭다운 타입별 초기화
+	void InitializeDropdown(EDropdownType Type, UMVE_WidgetClass_Dropdown* Dropdown, const FDropdownContext& Context);
+	
 private:
 	// 현재 열려있는 드롭다운
 	UPROPERTY()

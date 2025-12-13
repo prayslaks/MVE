@@ -149,6 +149,25 @@ void UUIManagerSubsystem::InitScreenClasses()
 			PRINTLOG(TEXT("Loaded %d persistent widget classes"), PersistentWidgetClasses.Num());
 		}
 	}
+
+	// Dropdown Widget 클래스 설정
+	if (!DropdownClassesTableAsset.IsNull())
+	{
+		UDataTable* DDT = DropdownClassesTableAsset.LoadSynchronous();
+		if (DDT)
+		{
+			for (auto& It : DDT->GetRowMap())
+			{
+				const FDropdownClassInfo* Row = DDT->FindRow<FDropdownClassInfo>(It.Key, TEXT("UUIManagerSubsystem::InitScreenClasses"), true);
+				if (!Row) continue;
+
+				if (Row->DropdownType == EDropdownType::None) continue;
+				if (!Row->WidgetClass) continue;
+
+				DropdownClassMap.Add(Row->DropdownType, Row->WidgetClass);
+			}
+		}
+	}
 }
 
 void UUIManagerSubsystem::ShowScreen(EUIScreen ScreenType)
@@ -563,15 +582,29 @@ void UUIManagerSubsystem::UpdatePersistentWidgets(EUIScreen NewScreen)
 	}
 }
 
-void UUIManagerSubsystem::ShowUserDropdown(const FVector2D& ButtonPosition, const FVector2D& ButtonSize, const FString& UserName, EDropdownAnchorPosition AnchorPosition)
+void UUIManagerSubsystem::ShowDropdown(EDropdownType DropdownType, const FDropdownContext& Context)
 {
-	// 기존 드롭다운이 있으면 닫기
+	// 추가 로그
+	PRINTLOG(TEXT("ButtonPosition: X=%f, Y=%f"), Context.ButtonPosition.X, Context.ButtonPosition.Y);
+	PRINTLOG(TEXT("ButtonSize: X=%f, Y=%f"), Context.ButtonSize.X, Context.ButtonSize.Y);
+	PRINTLOG(TEXT("AnchorPosition: %d"), (int32)Context.AnchorPosition);
+
+	
+	// 기존 드롭다운 닫기
 	CloseDropdown();
 
-	PRINTLOG(TEXT("ShowUserDropdown - Position: %s, Size: %s, UserName: %s, Anchor: %d"), 
-		*ButtonPosition.ToString(), *ButtonSize.ToString(), *UserName, (int32)AnchorPosition);
-    
-	// 1. 먼저 투명 오버레이 생성 (ZOrder 99)
+	PRINTLOG(TEXT("ShowDropdown - Type: %d, Position: %s, Size: %s"), 
+		(int32)DropdownType, *Context.ButtonPosition.ToString(), *Context.ButtonSize.ToString());
+
+	// 드롭다운 클래스 찾기
+	TSubclassOf<UMVE_WidgetClass_Dropdown>* DropdownClass = DropdownClassMap.Find(DropdownType);
+	if (!DropdownClass || !*DropdownClass)
+	{
+		PRINTLOG(TEXT("Dropdown class not found for type: %d"), (int32)DropdownType);
+		return;
+	}
+
+	// 1. 투명 오버레이 생성 (ZOrder 99)
 	if (DropdownOverlayClass)
 	{
 		DropdownOverlay = CreateWidget<UMVE_WidgetClass_DropdownOverlay>(CachedPlayerController, DropdownOverlayClass);
@@ -579,36 +612,30 @@ void UUIManagerSubsystem::ShowUserDropdown(const FVector2D& ButtonPosition, cons
 		{
 			DropdownOverlay->AddToViewport(99);
 			DropdownOverlay->OnOverlayClickedEvent.AddDynamic(this, &UUIManagerSubsystem::OnOverlayClicked);
+			PRINTLOG(TEXT("Dropdown overlay created"));
 		}
 	}
-    
+
 	// 2. 드롭다운 위젯 생성
-	if (UserDropdownWidgetClass)
+	CurrentDropdown = CreateWidget<UMVE_WidgetClass_Dropdown>(CachedPlayerController, *DropdownClass);
+	if (!CurrentDropdown)
 	{
-		UMVE_WidgetClass_Dropdown_UserSetting* UserSettingDropdown = 
-			CreateWidget<UMVE_WidgetClass_Dropdown_UserSetting>(CachedPlayerController, UserDropdownWidgetClass);
-        
-		if (UserSettingDropdown)
-		{
-			PRINTLOG(TEXT("UserSettingDropdown widget created successfully"));
-			CurrentDropdown = UserSettingDropdown;
-
-			UserSettingDropdown->SetUserName(UserName);
-			UserSettingDropdown->AddToViewport(100); // 오버레이보다 높은 ZOrder
-			PRINTLOG(TEXT("UserSettingDropdown Added to Viewport with ZOrder 100"));
-
-			// 앵커 위치와 함께 드롭다운 위치 설정
-			UserSettingDropdown->SetDropdownPosition(ButtonPosition, ButtonSize.Y, AnchorPosition);
-		}
-		else
-		{
-			PRINTLOG(TEXT("Failed to create UserSettingDropdown widget!"));
-		}
+		PRINTLOG(TEXT("Failed to create dropdown widget!"));
+		CloseDropdown(); // 오버레이만 생성됐으면 정리
+		return;
 	}
-	else
-	{
-		PRINTLOG(TEXT("UserDropdownWidgetClass is not set!"));
-	}
+
+	PRINTLOG(TEXT("Dropdown widget created: %s"), *CurrentDropdown->GetClass()->GetName());
+
+	// 3. 타입별 초기화
+	InitializeDropdown(DropdownType, CurrentDropdown, Context);
+
+	// 4. Viewport 추가
+	CurrentDropdown->AddToViewport(100); // 오버레이보다 높은 ZOrder
+	PRINTLOG(TEXT("Dropdown added to viewport with ZOrder 100"));
+
+	// 5. 드롭다운 위치 설정
+	CurrentDropdown->SetDropdownPosition(Context.ButtonPosition, Context.ButtonSize.Y, Context.AnchorPosition);
 }
 
 void UUIManagerSubsystem::CloseDropdown()
@@ -626,6 +653,41 @@ void UUIManagerSubsystem::CloseDropdown()
 		DropdownOverlay->OnOverlayClickedEvent.RemoveDynamic(this, &UUIManagerSubsystem::OnOverlayClicked);
 		DropdownOverlay->RemoveFromParent();
 		DropdownOverlay = nullptr;
+	}
+}
+
+void UUIManagerSubsystem::InitializeDropdown(EDropdownType Type, UMVE_WidgetClass_Dropdown* Dropdown,
+	const FDropdownContext& Context)
+{
+	if (!Dropdown)
+	{
+		return;
+	}
+
+	switch (Type)
+	{
+	case EDropdownType::UserSetting:
+		{
+			if (UMVE_WidgetClass_Dropdown_UserSetting* UserDropdown = Cast<UMVE_WidgetClass_Dropdown_UserSetting>(Dropdown))
+			{
+				UserDropdown->SetUserName(Context.StringData);
+				PRINTLOG(TEXT("Initialized UserSetting dropdown with UserName: %s"), *Context.StringData);
+			}
+		}
+		break;
+
+	case EDropdownType::BannedWordItem:
+		{
+			// 필터링 리스트 아이템 드롭다운
+			// 필요한 데이터: Context.IndexData (아이템 인덱스)
+			// 별도 초기화가 필요하면 여기서 구현
+			PRINTLOG(TEXT("Initialized FilterableListItem dropdown with Index: %d"), Context.IndexData);
+		}
+		break;
+
+	default:
+		PRINTLOG(TEXT("Unknown dropdown type: %d"), (int32)Type);
+		break;
 	}
 }
 
