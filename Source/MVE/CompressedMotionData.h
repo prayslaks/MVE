@@ -308,3 +308,8 @@ struct TStructOpsTypeTraits<FCompressedMotionFrame> : public TStructOpsTypeTrait
 		WithNetSerializer = true
 	};
 };
+
+// 이게 Smallest Three 기법 이다.
+
+//  TODO 이후에 osc 직접 연결 (코드를 통한) 랑 메세지 바인딩 까지 해놓기
+ 
