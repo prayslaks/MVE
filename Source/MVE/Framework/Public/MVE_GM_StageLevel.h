@@ -22,6 +22,7 @@ public:
 	TSubclassOf<APawn> ClientCharacterClass;
 
 	void LoadCharacterClasses();
+	
 
 protected:
 	virtual void BeginPlay() override;
@@ -40,4 +41,16 @@ protected:
 	 * 호스트인지 확인하는 헬퍼 함수
 	 */
 	bool IsHostController(AController* Controller) const;
+
+	void CreateStudioSession();
+
+	UPROPERTY(EditDefaultsOnly)
+	TSubclassOf<UUserWidget> HostWidgetClass;
+
+private:
+	UPROPERTY()
+	TObjectPtr<UUserWidget> HostWidget;
+
+	UFUNCTION()
+	void HandleCreateConcertComplete(bool bSuccess, const FConcertCreationData& CreationData, const FString& ErrorCode);
 };

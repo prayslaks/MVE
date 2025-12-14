@@ -1,12 +1,14 @@
 
 #include "../Public/MVE_GM_StageLevel.h"
-
 #include "MVE.h"
 #include "MVE_PC_StageLevel.h"
 #include "UObject/ConstructorHelpers.h"
 #include "GameFramework/PlayerController.h"
 #include "GameFramework/PlayerStart.h"
 #include "EngineUtils.h"
+#include "HeadMountedDisplayTypes.h"
+#include "MVE_API_Helper.h"
+#include "Blueprint/UserWidget.h"
 
 AMVE_GM_StageLevel::AMVE_GM_StageLevel()
 {
@@ -63,6 +65,7 @@ void AMVE_GM_StageLevel::BeginPlay()
 	Super::BeginPlay();
 	
 	LoadCharacterClasses();
+	CreateStudioSession();
 }
 
 UClass* AMVE_GM_StageLevel::GetDefaultPawnClassForController_Implementation(AController* InController)
@@ -142,4 +145,42 @@ bool AMVE_GM_StageLevel::IsHostController(AController* Controller) const
 	}
 
 	return false;
+}
+
+void AMVE_GM_StageLevel::CreateStudioSession()
+{
+	if (!HasAuthority()) return;
+
+	/*
+	// Host Widget 생성
+	UUserWidget* Host = CreateWidget<UUserWidget>(this, HostWidgetClass);
+	if (!Host) return;
+	
+	HostWidget = Host;
+	HostWidget->AddToViewport();
+
+	// Input Mode 설정
+	APlayerController* PC = GetWorld()->GetFirstPlayerController();
+	if (!PC) return;
+
+	FInputModeGameAndUI InputMode;
+	InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+	PC->SetInputMode(InputMode);
+	PC->bShowMouseCursor = true;
+
+	// API 이용해서 세션 생성
+	FString ConcertName = FString("Name");
+	TArray<FAccessory> Accessories;
+	TArray<FConcertSong> ConcertSongs;
+
+	FOnCreateConcertComplete OnCreateConcertComplete;
+	OnCreateConcertComplete.BindUObject(this, &AMVE_GM_StageLevel::HandleCreateConcertComplete);
+	UMVE_API_Helper::CreateConcert(ConcertName, ConcertSongs, Accessories, 10, OnCreateConcertComplete);
+	*/
+}
+
+void AMVE_GM_StageLevel::HandleCreateConcertComplete(bool bSuccess, const FConcertCreationData& CreationData,
+	const FString& ErrorCode)
+{
+	
 }

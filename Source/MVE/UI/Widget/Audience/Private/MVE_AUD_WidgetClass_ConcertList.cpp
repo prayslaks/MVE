@@ -24,7 +24,7 @@ void UMVE_AUD_WidgetClass_ConcertList::NativeConstruct()
 		if (UMVE_GIS_SessionManager* SessionManager = GI->GetSubsystem<UMVE_GIS_SessionManager>())
 		{
 			// 델리게이트 바인딩
-			SessionManager->OnSessionsFound.AddUObject(this, &UMVE_AUD_WidgetClass_ConcertList::OnSessionsFoundCallback);
+			//SessionManager->OnSessionsFound.AddUObject(this, &UMVE_AUD_WidgetClass_ConcertList::OnSessionsFoundCallback);
 
 			// 세션 목록 조회 시작
 			RefreshSessionList();

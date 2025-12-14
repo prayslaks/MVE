@@ -5,6 +5,7 @@
 #include "UI/Widget/Audience/Public/MVE_AUD_WC_ConcertSearchResult.h"
 #include "MVE_AUD_WC_ConcertSearch.generated.h"
 
+struct FGetConcertListData;
 class UScrollBox;
 class UButton;
 class UTextBlock;

@@ -43,7 +43,7 @@ void UMVE_AUD_WidgetClass_JoinRoomConfirmPopup::OnConfirmButtonClicked()
 		if (UMVE_GIS_SessionManager* SessionManager = GI->GetSubsystem<UMVE_GIS_SessionManager>())
 		{
 			PRINTLOG(TEXT("Joining session: %s"), *CurrentRoomInfo.RoomID);
-			SessionManager->JoinSession(CurrentRoomInfo.RoomID);
+			//SessionManager->JoinSession(CurrentRoomInfo.RoomID);
 		}
 	}
 
