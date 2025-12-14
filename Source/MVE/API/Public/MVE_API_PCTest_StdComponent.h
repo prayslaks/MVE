@@ -7,7 +7,7 @@
 #include "MVE_API_PCTest_StdComponent.generated.h"
 
 class UglTFRuntimeAsset;
-class AMVE_Speaker;
+class AMVE_StageLevel_Speaker;
 class USoundWave;
 
 UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
@@ -22,7 +22,7 @@ protected:
 	virtual void BeginPlay() override;
 
 	UPROPERTY()
-	TArray<TObjectPtr<AMVE_Speaker>> FoundSpeakers;
+	TArray<TObjectPtr<AMVE_StageLevel_Speaker>> FoundSpeakers;
 
 public:
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;

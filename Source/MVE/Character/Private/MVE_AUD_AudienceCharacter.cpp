@@ -185,4 +185,3 @@ void AMVE_AUD_AudienceCharacter::OnCustomizationMeshLoaded(AActor* LoadedActor, 
 	PRINTLOG(TEXT("   Attached to socket: %s"), *SocketName.ToString());
 	PRINTLOG(TEXT("   Transform: %s"), *RelativeTransform.ToString());
 }
-
