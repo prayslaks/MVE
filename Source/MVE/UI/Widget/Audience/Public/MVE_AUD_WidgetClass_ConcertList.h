@@ -13,38 +13,32 @@ UCLASS(Config=Game)
 class MVE_API UMVE_AUD_WidgetClass_ConcertList : public UUserWidget
 {
 	GENERATED_BODY()
-
-private:
-	UPROPERTY(Config, EditDefaultsOnly, Category = "DataTable")
-	TSoftObjectPtr<UDataTable> TempRoomSessionTableAsset;
-
 protected:
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UTileView> RoomTileView;
 
 public:
 	/**
-	 * 방 목록 업데이트
+	 * 콘서트 목록 업데이트
 	 */
 	UFUNCTION(BlueprintCallable)
-	void UpdateRoomList(const TArray<FRoomInfo>& Rooms);
+	void UpdateConcertList(const TArray<FConcertInfo>& Concerts);
 
 	/**
-	 * 방 목록 초기화
+	 * 콘서트 목록 초기화
 	 */
 	UFUNCTION(BlueprintCallable)
-	void ClearRoomList();
+	void ClearConcertList();
 
-	// 방 선택 이벤트
-	DECLARE_MULTICAST_DELEGATE_OneParam(FOnRoomSelected, URoomInfoData*);
-	FOnRoomSelected OnRoomSelected;
-
-public:
 	/**
 	 * 세션 목록 새로고침
 	 */
 	UFUNCTION(BlueprintCallable)
 	void RefreshSessionList();
+
+	// 콘서트 선택 이벤트
+	DECLARE_MULTICAST_DELEGATE_OneParam(FOnConcertSelected, class UConcertInfoData*);
+	FOnConcertSelected OnConcertSelected;
 
 protected:
 	virtual void NativeConstruct() override;
@@ -55,17 +49,17 @@ private:
 	 * SessionManager의 OnSessionsFound 콜백
 	 */
 	UFUNCTION()
-	void OnSessionsFoundCallback(bool bSuccess, const TArray<FRoomInfo>& Sessions);
+	void OnSessionsFoundCallback(bool bSuccess, int32 NumSessions);
 
 	/**
-	 * ListView 항목 선택 이벤트
+	 * TileView 항목 클릭 이벤트
 	 */
 	UFUNCTION()
-	void OnRoomItemSelected(UObject* SelectedItem);
-
+	void OnConcertItemClicked(UObject* ClickedItem);
+	
 	/**
-	 * ListView 항목 클릭 이벤트
+	 * SessionManager 참조
 	 */
-	UFUNCTION()
-	void OnRoomItemClicked(UObject* ClickedItem);
+	UPROPERTY()
+	TObjectPtr<class UMVE_GIS_SessionManager> SessionManager;
 };

@@ -19,7 +19,7 @@ class MVE_API UMVE_GIS_SessionManager : public UGameInstanceSubsystem
 {
 	GENERATED_BODY()
 public:
-    // FConcertInfo 하나로 통일!
+    
     UFUNCTION(BlueprintCallable, Category = "MVE|Session")
     void CreateSession(const FConcertInfo& ConcertInfo);
     

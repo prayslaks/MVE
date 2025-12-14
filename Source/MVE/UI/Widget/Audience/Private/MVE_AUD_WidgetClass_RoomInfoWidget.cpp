@@ -13,11 +13,11 @@ void UMVE_AUD_WidgetClass_RoomInfoWidget::NativeConstruct()
 {
 	Super::NativeConstruct();
 
-	if (RoomButton)
+	if (ConcertRoomButton)
 	{
-		RoomButton.Get()->OnClicked.AddDynamic(this, &UMVE_AUD_WidgetClass_RoomInfoWidget::OnRoomButtonClicked);
-		RoomButton.Get()->OnHovered.AddDynamic(this, &UMVE_AUD_WidgetClass_RoomInfoWidget::OnButtonHovered);
-		RoomButton.Get()->OnUnhovered.AddDynamic(this, &UMVE_AUD_WidgetClass_RoomInfoWidget::OnButtonUnhovered);
+		ConcertRoomButton.Get()->OnClicked.AddDynamic(this, &UMVE_AUD_WidgetClass_RoomInfoWidget::OnConcertRoomButtonClicked);
+		ConcertRoomButton.Get()->OnHovered.AddDynamic(this, &UMVE_AUD_WidgetClass_RoomInfoWidget::OnButtonHovered);
+		ConcertRoomButton.Get()->OnUnhovered.AddDynamic(this, &UMVE_AUD_WidgetClass_RoomInfoWidget::OnButtonUnhovered);
 	}
 }
 
@@ -31,19 +31,16 @@ void UMVE_AUD_WidgetClass_RoomInfoWidget::NativeOnListItemObjectSet(UObject* Lis
 	IUserObjectListEntry::NativeOnListItemObjectSet(ListItemObject);
 
 	// ListView가 자동으로 호출! 데이터 객체를 받아옴
-	URoomInfoData* RoomData = Cast<URoomInfoData>(ListItemObject);
+	ConcertData = Cast<UConcertInfoData>(ListItemObject);
 
-	if (!RoomData)
+	if (!ConcertData)
 	{
-		PRINTLOG(TEXT("ListItemObject is not URoomInfoData!"));
+		PRINTLOG(TEXT("ListItemObject is not UConcertInfoData!"));
 		return;
 	}
 
-	// 데이터 캐싱
-	CachedRoomData = RoomData;
-
 	// UI 업데이트
-	UpdateUI(RoomData);
+	UpdateUI(ConcertData);
 }
 
 void UMVE_AUD_WidgetClass_RoomInfoWidget::NativeOnItemSelectionChanged(bool bIsSelected)
@@ -63,80 +60,84 @@ void UMVE_AUD_WidgetClass_RoomInfoWidget::NativeOnItemSelectionChanged(bool bIsS
 	}
 }
 
-void UMVE_AUD_WidgetClass_RoomInfoWidget::UpdateUI(URoomInfoData* RoomData)
+void UMVE_AUD_WidgetClass_RoomInfoWidget::UpdateUI(UConcertInfoData* RoomData)
 {
 	if (!RoomData)
 	{
 		return;
 	}
 
-	PRINTLOG(TEXT("Updating room UI: %s"), *RoomData->RoomInfo.RoomTitle);
+	PRINTLOG(TEXT("Updating room UI: %s"), *RoomData->ConcertInfo.ConcertName);
 
-	// 방 ID
-	if (RoomIDText)
+	// 방송자 ID
+	if (ConcertNameText)
 	{
-		RoomIDText->SetText(FText::FromString(FString::Printf(TEXT("%s"), *RoomData->RoomInfo.RoomID)));
+		ConcertNameText->SetText(FText::FromString(FString::Printf(TEXT("%s"), *RoomData->ConcertInfo.ConcertName)));
 	}
 
 	// 방 제목
-	if (RoomTitleText)
+	if (StudioNameText)
 	{
-		RoomTitleText->SetText(FText::FromString(RoomData->RoomInfo.RoomTitle));
+		StudioNameText->SetText(FText::FromString(RoomData->ConcertInfo.RoomId));
 	}
 
 	// 방송 시간
 	if (BroadcastTimeText)
 	{
-		FString TimeStr = RoomData->RoomInfo.BroadcastTime.ToString(TEXT("%H:%M"));
+		//FString TimeStr = RoomData->RoomInfo.BroadcastTime.ToString(TEXT("%H:%M"));
+		FString TimeStr = TEXT("1분 전");
 		BroadcastTimeText->SetText(FText::FromString(TimeStr));
 	}
 
 	// 시청자 수
 	if (ViewerCountText)
 	{
-		ViewerCountText->SetText(FText::FromString(FString::Printf(TEXT("%d"), RoomData->RoomInfo.ViewerCount)));
+		ViewerCountText->SetText(FText::FromString(FString::Printf(TEXT("%d"), RoomData->ConcertInfo.CurrentAudience)));
 	}
 
 	// 썸네일
+	/*
 	if (ThumbnailImage)
 	{
+		
 		if (RoomData->RoomInfo.Thumbnail)
 			ThumbnailImage->SetBrushFromTexture(RoomData->RoomInfo.Thumbnail);
 		else
 			ThumbnailImage->SetBrushTintColor(FColor::Black);
 	}
+	*/
 
 	// 라이브 인디케이터
 	if (LiveIndicator)
 	{
-		LiveIndicator->SetVisibility(RoomData->RoomInfo.bIsLive ? ESlateVisibility::Visible : ESlateVisibility::Collapsed);
+		LiveIndicator->SetVisibility(RoomData->ConcertInfo.IsOpen ? ESlateVisibility::Visible : ESlateVisibility::Collapsed);
 	}
 
 	// 추천 배지
 	if (FeaturedBadge)
 	{
-		FeaturedBadge->SetVisibility(RoomData->RoomInfo.bIsFeatured ? ESlateVisibility::Visible : ESlateVisibility::Collapsed);
+		//FeaturedBadge->SetVisibility(RoomData->RoomInfo.bIsFeatured ? ESlateVisibility::Visible : ESlateVisibility::Collapsed);
 	}
 
 	// 신규 배지
 	if (NewBadge)
 	{
-		NewBadge->SetVisibility(RoomData->RoomInfo.bIsNew ? ESlateVisibility::Visible : ESlateVisibility::Collapsed);
+		//NewBadge->SetVisibility(RoomData->RoomInfo.bIsNew ? ESlateVisibility::Visible : ESlateVisibility::Collapsed);
 	}
 
 	// 커스텀 색상 적용
 	if (RoomBorder)
 	{
-		RoomBorder->SetBrushColor(RoomData->RoomInfo.RoomColor);
+		//RoomBorder->SetBrushColor(RoomData->RoomInfo.RoomColor);
 	}
 }
 
-void UMVE_AUD_WidgetClass_RoomInfoWidget::OnRoomButtonClicked()
+void UMVE_AUD_WidgetClass_RoomInfoWidget::OnConcertRoomButtonClicked()
 {
-	if (CachedRoomData)
+	if (ConcertData)
 	{
-		PRINTLOG(TEXT("Room button clicked: %s"), *CachedRoomData->RoomInfo.RoomTitle);
-		OnRoomClicked.Broadcast(CachedRoomData);
+		PRINTLOG(TEXT("Room button clicked: %s"), *ConcertData->ConcertInfo.ConcertName);
+		OnConcertRoomClicked.Broadcast(ConcertData);
 
 		// 참가 확인 팝업 띄우기
 		if (UUIManagerSubsystem* UIManager = UUIManagerSubsystem::Get(this))
@@ -146,7 +147,7 @@ void UMVE_AUD_WidgetClass_RoomInfoWidget::OnRoomButtonClicked()
 			
 			if (JoinPopup)
 			{
-				const FRoomInfo Info = FRoomInfo(CachedRoomData->GetRoomInfo());
+				const FConcertInfo Info = ConcertData->GetConcertInfo();
 				JoinPopup->SetRoomInfo(Info);
 			}
 		}

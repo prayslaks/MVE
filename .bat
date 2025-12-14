@@ -1,0 +1,1 @@
+"E:\Program Files (x86)\UE_5.6\Engine\Binaries\Win64\UnrealEditor.exe" "E:\UnrealProject\MVE\MVE.uproject" -game -log -ResX=600 -ResY=400 -WinX=10 -WinY=100

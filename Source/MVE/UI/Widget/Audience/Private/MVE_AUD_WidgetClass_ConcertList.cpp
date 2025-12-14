@@ -12,19 +12,18 @@ void UMVE_AUD_WidgetClass_ConcertList::NativeConstruct()
 	if (RoomTileView)
 	{
 		// 이벤트 바인딩
-		//RoomTileView->OnItemSelectionChanged().AddUObject(this, &UMVE_AUD_WidgetClass_ConcertList::OnRoomItemSelected);
-		RoomTileView->OnItemClicked().AddUObject(this, &UMVE_AUD_WidgetClass_ConcertList::OnRoomItemClicked);
-
-		PRINTLOG(TEXT("ListView initialized."));
+		RoomTileView->OnItemClicked().AddUObject(this, &UMVE_AUD_WidgetClass_ConcertList::OnConcertItemClicked);
+		PRINTLOG(TEXT("TileView initialized."));
 	}
 
 	// SessionManager 델리게이트 바인딩 및 세션 찾기
 	if (UGameInstance* GI = GetGameInstance())
 	{
-		if (UMVE_GIS_SessionManager* SessionManager = GI->GetSubsystem<UMVE_GIS_SessionManager>())
+		SessionManager = GI->GetSubsystem<UMVE_GIS_SessionManager>();
+		if (SessionManager)
 		{
-			// 델리게이트 바인딩
-			//SessionManager->OnSessionsFound.AddUObject(this, &UMVE_AUD_WidgetClass_ConcertList::OnSessionsFoundCallback);
+			//델리게이트 바인딩
+			SessionManager->OnSessionsFound.AddDynamic(this, &UMVE_AUD_WidgetClass_ConcertList::OnSessionsFoundCallback);
 
 			// 세션 목록 조회 시작
 			RefreshSessionList();
@@ -41,18 +40,15 @@ void UMVE_AUD_WidgetClass_ConcertList::NativeConstruct()
 void UMVE_AUD_WidgetClass_ConcertList::NativeDestruct()
 {
 	// 델리게이트 언바인딩
-	if (UGameInstance* GI = GetGameInstance())
+	if (SessionManager)
 	{
-		if (UMVE_GIS_SessionManager* SessionManager = GI->GetSubsystem<UMVE_GIS_SessionManager>())
-		{
-			SessionManager->OnSessionsFound.RemoveAll(this);
-		}
+		SessionManager->OnSessionsFound.RemoveAll(this);
 	}
 
 	Super::NativeDestruct();
 }
 
-void UMVE_AUD_WidgetClass_ConcertList::UpdateRoomList(const TArray<FRoomInfo>& Rooms)
+void UMVE_AUD_WidgetClass_ConcertList::UpdateConcertList(const TArray<FConcertInfo>& Concerts)
 {
 	if (!RoomTileView)
 	{
@@ -61,23 +57,25 @@ void UMVE_AUD_WidgetClass_ConcertList::UpdateRoomList(const TArray<FRoomInfo>& R
 	}
 
 	// 기존 데이터 초기화
-	ClearRoomList();
+	ClearConcertList();
 
-	// FRoomInfo → URoomInfoData 변환하여 ListView에 추가
-	for (const FRoomInfo& RoomInfo : Rooms)
+	// FConcertInfo → UConcertInfoData 변환하여 TileView에 추가
+	for (const FConcertInfo& ConcertInfo : Concerts)
 	{
 		// UObject 래퍼 생성
-		URoomInfoData* RoomData = NewObject<URoomInfoData>(this);
+		UConcertInfoData* ConcertData = NewObject<UConcertInfoData>(this);
         
-		// 구조체 데이터를 통째로 복사
-		RoomData->SetRoomInfo(RoomInfo);
+		// 구조체 데이터 설정
+		ConcertData->SetConcertInfo(ConcertInfo);
 
 		// TileView에 추가
-		RoomTileView->AddItem(RoomData);
+		RoomTileView->AddItem(ConcertData);
 	}
+
+	PRINTLOG(TEXT("Concert list updated: %d concerts"), Concerts.Num());
 }
 
-void UMVE_AUD_WidgetClass_ConcertList::ClearRoomList()
+void UMVE_AUD_WidgetClass_ConcertList::ClearConcertList()
 {
 	if (RoomTileView)
 	{
@@ -85,55 +83,51 @@ void UMVE_AUD_WidgetClass_ConcertList::ClearRoomList()
 	}
 }
 
-void UMVE_AUD_WidgetClass_ConcertList::OnRoomItemSelected(UObject* SelectedItem)
+void UMVE_AUD_WidgetClass_ConcertList::RefreshSessionList()
 {
-	// 선택 이벤트. 지금은 안 씀
-	URoomInfoData* RoomData = Cast<URoomInfoData>(SelectedItem);
-    
-	if (RoomData)
+	if (SessionManager)
 	{
-		PRINTLOG(TEXT("Room selected: %s"), *RoomData->RoomInfo.RoomTitle);
-		OnRoomSelected.Broadcast(RoomData);
+		PRINTLOG(TEXT("Refreshing session list..."));
+		SessionManager->FindSessions();
 	}
 }
 
-void UMVE_AUD_WidgetClass_ConcertList::OnRoomItemClicked(UObject* ClickedItem)
+void UMVE_AUD_WidgetClass_ConcertList::OnSessionsFoundCallback(bool bSuccess, int32 NumSessions)
 {
-	URoomInfoData* RoomData = Cast<URoomInfoData>(ClickedItem);
-	if (!RoomData)
+	if (!SessionManager)
 	{
-		PRINTLOG(TEXT("ClickedItem is not URoomInfoData!"));
+		PRINTLOG(TEXT("SessionManager is nullptr in callback!"));
 		return;
 	}
 
-	const FRoomInfo& RoomInfo = RoomData->GetRoomInfo();
-	PRINTLOG(TEXT("Room clicked: %s (ID: %s)"),
-			 *RoomInfo.RoomTitle, *RoomInfo.RoomID);
-
-}
-
-void UMVE_AUD_WidgetClass_ConcertList::RefreshSessionList()
-{
-	if (UGameInstance* GI = GetGameInstance())
-	{
-		if (UMVE_GIS_SessionManager* SessionManager = GI->GetSubsystem<UMVE_GIS_SessionManager>())
-		{
-			PRINTLOG(TEXT("Refreshing session list..."));
-			SessionManager->FindSessions();
-		}
-	}
-}
-
-void UMVE_AUD_WidgetClass_ConcertList::OnSessionsFoundCallback(bool bSuccess, const TArray<FRoomInfo>& Sessions)
-{
 	if (bSuccess)
 	{
-		PRINTLOG(TEXT("Sessions found: %d"), Sessions.Num());
-		UpdateRoomList(Sessions);
+		PRINTLOG(TEXT("Sessions found: %d"), NumSessions);
+        
+		// SessionManager에서 콘서트 목록 가져오기
+		const TArray<FConcertInfo>& ConcertList = SessionManager->GetConcertList();
+		UpdateConcertList(ConcertList);
 	}
 	else
 	{
 		PRINTLOG(TEXT("Failed to find sessions!"));
-		ClearRoomList();
+		ClearConcertList();
 	}
+}
+
+void UMVE_AUD_WidgetClass_ConcertList::OnConcertItemClicked(UObject* ClickedItem)
+{
+	UConcertInfoData* ConcertData = Cast<UConcertInfoData>(ClickedItem);
+	if (!ConcertData)
+	{
+		PRINTLOG(TEXT("ClickedItem is not UConcertInfoData!"));
+		return;
+	}
+
+	const FConcertInfo& ConcertInfo = ConcertData->GetConcertInfo();
+	PRINTLOG(TEXT("Concert clicked: %s (RoomId: %s)"),
+		   *ConcertInfo.ConcertName, *ConcertInfo.RoomId);
+
+	// 선택 이벤트 브로드캐스트
+	//OnConcertSelected.Broadcast(ConcertData);
 }

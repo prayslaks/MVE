@@ -2,6 +2,7 @@
 #include "../Public/MVE_STD_WidgetClass_FinalCheckSettings.h"
 
 #include "MVE_API_Helper.h"
+#include "MVE_AUD_WidgetClass_ConcertRoom.h"
 #include "MVE_GIS_SessionManager.h"
 #include "UIManagerSubsystem.h"
 #include "Components/Button.h"

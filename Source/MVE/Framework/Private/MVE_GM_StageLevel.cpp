@@ -8,6 +8,7 @@
 #include "EngineUtils.h"
 #include "HeadMountedDisplayTypes.h"
 #include "MVE_API_Helper.h"
+#include "MVE_GIS_SessionManager.h"
 #include "Blueprint/UserWidget.h"
 
 AMVE_GM_StageLevel::AMVE_GM_StageLevel()
@@ -20,6 +21,54 @@ AMVE_GM_StageLevel::AMVE_GM_StageLevel()
 	
 	HostCharacterClass = nullptr;
 	ClientCharacterClass = nullptr;
+}
+
+void AMVE_GM_StageLevel::BeginPlay()
+{
+	Super::BeginPlay();
+	
+	if (UWorld* World = GetWorld())
+	{
+		HostController = World->GetFirstPlayerController();
+		PRINTLOG(TEXT("Host controller registered: %s"), 
+			HostController ? *HostController->GetName() : TEXT("nullptr"));
+	}
+	
+	LoadCharacterClasses();
+}
+
+void AMVE_GM_StageLevel::PostLogin(APlayerController* NewPlayer)
+{
+	Super::PostLogin(NewPlayer);
+
+	// 첫 번째 플레이어가 호스트
+	if (!HostController && NewPlayer)
+	{
+		HostController = NewPlayer;
+		PRINTLOG(TEXT("Host joined: %s"), *NewPlayer->GetName());
+	}
+	else if (NewPlayer)
+	{
+		PRINTLOG(TEXT("Client joined: %s"), *NewPlayer->GetName());
+	}
+}
+
+void AMVE_GM_StageLevel::Logout(AController* Exiting)
+{
+	if (Exiting == HostController)
+	{
+		PRINTLOG(TEXT("🔴 Host is leaving! Shutting down session..."));
+        
+		if (UGameInstance* GI = GetGameInstance())
+		{
+			if (UMVE_GIS_SessionManager* SessionManager = GI->GetSubsystem<UMVE_GIS_SessionManager>())
+			{
+				SessionManager->DestroySession();
+			}
+		}
+	}
+	
+	Super::Logout(Exiting);
 }
 
 // 기본 캐릭터 클래스 설정 TODO 나중에 유령 파일 고쳐지면 주석 처리하세용
@@ -58,14 +107,6 @@ void AMVE_GM_StageLevel::LoadCharacterClasses()
 			PRINTLOG(TEXT("Client Character 로드 실패!"));
 		}
 	}
-}
-
-void AMVE_GM_StageLevel::BeginPlay()
-{
-	Super::BeginPlay();
-	
-	LoadCharacterClasses();
-	CreateStudioSession();
 }
 
 UClass* AMVE_GM_StageLevel::GetDefaultPawnClassForController_Implementation(AController* InController)
@@ -145,42 +186,4 @@ bool AMVE_GM_StageLevel::IsHostController(AController* Controller) const
 	}
 
 	return false;
-}
-
-void AMVE_GM_StageLevel::CreateStudioSession()
-{
-	if (!HasAuthority()) return;
-
-	/*
-	// Host Widget 생성
-	UUserWidget* Host = CreateWidget<UUserWidget>(this, HostWidgetClass);
-	if (!Host) return;
-	
-	HostWidget = Host;
-	HostWidget->AddToViewport();
-
-	// Input Mode 설정
-	APlayerController* PC = GetWorld()->GetFirstPlayerController();
-	if (!PC) return;
-
-	FInputModeGameAndUI InputMode;
-	InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
-	PC->SetInputMode(InputMode);
-	PC->bShowMouseCursor = true;
-
-	// API 이용해서 세션 생성
-	FString ConcertName = FString("Name");
-	TArray<FAccessory> Accessories;
-	TArray<FConcertSong> ConcertSongs;
-
-	FOnCreateConcertComplete OnCreateConcertComplete;
-	OnCreateConcertComplete.BindUObject(this, &AMVE_GM_StageLevel::HandleCreateConcertComplete);
-	UMVE_API_Helper::CreateConcert(ConcertName, ConcertSongs, Accessories, 10, OnCreateConcertComplete);
-	*/
-}
-
-void AMVE_GM_StageLevel::HandleCreateConcertComplete(bool bSuccess, const FConcertCreationData& CreationData,
-	const FString& ErrorCode)
-{
-	
 }
