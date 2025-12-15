@@ -4,6 +4,7 @@
 #include "Animation/AnimInstance.h"
 #include "MVE_StageLevel_AudAnimInstance.generated.h"
 
+enum class EAudienceControlMode : uint8;
 class AMVE_StageLevel_AudCharacter;
 
 UCLASS()
@@ -30,4 +31,11 @@ protected:
 	// 애님 블루프린트의 블렌드 스페이스 활성화
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Aim Offset")
 	bool bAimEnabled;
+	
+	// 캐릭터 모드에 따라 다른 애니메이션 포즈 선택
+	UPROPERTY(EditAnywhere,BlueprintReadOnly, Category = "Character");
+	EAudienceControlMode AudienceControlMode;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Character")
+	bool bIsExecuting;
 };

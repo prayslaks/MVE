@@ -255,18 +255,18 @@ void AMVE_StageLevel_AudCharacter::OnInputActionAimCompleted(const FInputActionV
 void AMVE_StageLevel_AudCharacter::OnInputActionExecuteStarted(const FInputActionValue& Value)
 {
 	// 연속 입력 방지
-	if (bExecuteOnce)
+	if (bIsExecuting)
 	{
 		return;
 	}
 	FTimerDelegate TimerDelegate;
 	TimerDelegate.BindWeakLambda(this, [this]()
 	{
-		bExecuteOnce = false;
+		bIsExecuting = false;
 		PRINTNETLOG(this, TEXT("실행 입력 액션 타이머 종료!"))
 	});
 	GetWorldTimerManager().SetTimer(ExecuteTimerHandle, TimerDelegate, 1.0, false);
-	bExecuteOnce = true;
+	bIsExecuting = true;
 	
 	// 현재 모드에 따라서 다른 도구, 애니메이션, 사운드 사용
 	switch (CurrentControlMode)

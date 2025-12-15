@@ -47,15 +47,21 @@ public:
 	
 	UFUNCTION()
 	void SetControlMode(const EAudienceControlMode NewMode);
-	
-	UPROPERTY()
-	bool bAimEnabled;
+	UFUNCTION()
+	FORCEINLINE EAudienceControlMode GetControlMode() const { return CurrentControlMode; }
 	
 	UFUNCTION()
 	UAudioComponent* GetAudioComponent() const { return AudioComponent; }
 	
 	UFUNCTION()
 	UMVE_StageLevel_AudCharacterShooterComponent* GetShooterComponent() const { return ShooterComponent; }
+	
+	UFUNCTION()
+	FORCEINLINE bool GetAimEnabled() const { return bAimEnabled; }
+	
+	UFUNCTION()
+	FORCEINLINE bool GetIsExecuting() const { return bIsExecuting; }
+	
 protected:
 	// IA_Look : 화면 전환
 	UFUNCTION()
@@ -107,7 +113,10 @@ private:
 	
 	FTimerHandle ExecuteTimerHandle;
 	UPROPERTY(VisibleAnywhere, Category = "MVE|Control") 
-	bool bExecuteOnce;
+	bool bIsExecuting;
+	
+	UPROPERTY()
+	bool bAimEnabled;
 	
 	UPROPERTY(VisibleAnywhere, Category = "MVE|Control") 
 	bool bLockLookAround;
