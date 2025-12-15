@@ -6,6 +6,7 @@
 #include "Blueprint/UserWidget.h"
 #include "MVE_STD_WC_AudioPanel.generated.h"
 
+class UMVE_STU_WidgetController_Audio;
 class UglTFRuntimeAsset;
 class UMVE_STD_WC_AudioPlayer;
 class UMVE_STD_WC_AudioSearch;
@@ -19,24 +20,19 @@ class MVE_API UMVE_STD_WC_AudioPanel : public UUserWidget
 	
 public:
 	virtual void NativeConstruct() override;
+	virtual void NativeDestruct() override;
 
 protected:
-	UFUNCTION()
-	void HandleAudioSearchResultSelected(const FMVE_STD_AudioSearchResultData& AudioData);
-
-	void LoadAudioFromPresignedUrlAndSetPlayer(const FMVE_STD_AudioSearchResultData& AudioData);
-
-public:	
+	/** AudioSearch 위젯 */
 	UPROPERTY(meta=(BindWidget), BlueprintReadOnly)
 	TObjectPtr<UMVE_STD_WC_AudioSearch> AudioSearch;
-	
+    
+	/** AudioPlayer 위젯 */
 	UPROPERTY(meta=(BindWidget), BlueprintReadOnly)
 	TObjectPtr<UMVE_STD_WC_AudioPlayer> AudioPlayer;
-	
-private:
-	UFUNCTION()
-	void HandlePlayClicked();
 
-	UFUNCTION()
-	void HandleStopClicked();
+private:
+	/** Audio 관련 모든 로직을 담당하는 Controller */
+	UPROPERTY()
+	TObjectPtr<UMVE_STU_WidgetController_Audio> AudioController;
 };

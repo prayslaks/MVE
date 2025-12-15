@@ -1,12 +1,8 @@
-﻿// Fill out your copyright notice in the Description page of Project Settings.
-
-
-#include "UI/Widget/Studio/Public/MVE_STD_WC_AudioSearch.h"
-
+﻿
+#include "../Public/MVE_STD_WC_AudioSearch.h"
 #include "MVE.h"
 #include "MVE_API_Helper.h"
 #include "MVE_GIS_API.h"
-#include "MVE_STD_WC_AudioPanel.h"
 #include "Components/Button.h"
 #include "Components/ScrollBox.h"
 #include "UI/Widget/Studio/Public/MVE_STD_WC_AudioSearchResult.h"

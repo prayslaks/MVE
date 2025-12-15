@@ -3,6 +3,7 @@
 #include "UObject/ConstructorHelpers.h"
 #include "Blueprint/UserWidget.h"
 #include "MVE.h"
+#include "UIManagerSubsystem.h"
 #include "StageLevel/Actor/Public/MVE_StageLevel_AudCharacter.h"
 #include "StageLevel/Default/Public/MVE_PC_StageLevel_AudienceComponent.h"
 #include "StageLevel/Default/Public/MVE_PC_StageLevel_StudioComponent.h"
@@ -115,23 +116,19 @@ void AMVE_PC_StageLevel::CreateWidgets()
 	
 	if (IsHost())
 	{
-		if (HostStandardMenuWidget)
+		if (UUIManagerSubsystem* UIManager = UUIManagerSubsystem::Get(this))
 		{
-			HostStandardMenuWidget->RemoveFromParent();
-			HostStandardMenuWidget = nullptr;
-		}
-		if (HostStandardMenuWidgetClass)
-		{
-			HostStandardMenuWidget = CreateWidget<UUserWidget>(this, HostStandardMenuWidgetClass);	
-		}
-		if (HostStandardMenuWidget)
-		{
-			HostStandardMenuWidget->AddToViewport();
-			PRINTNETLOG(this, TEXT("%s 위젯을 표시합니다."), *HostStandardMenuWidgetClass->GetName());
+			UIManager->ShowScreen(EUIScreen::Studio_OnLive);
 		}
 	}
 	else
 	{
+		if (UUIManagerSubsystem* UIManager = UUIManagerSubsystem::Get(this))
+		{
+			UIManager->ShowScreen(EUIScreen::AudienceConcertRoom);
+		}
+
+		
 		if (AudRadialMenuWidget)
 		{
 			AudRadialMenuWidget->RemoveFromParent();
@@ -147,6 +144,7 @@ void AMVE_PC_StageLevel::CreateWidgets()
 			AudRadialMenuWidget->SetVisibility(ESlateVisibility::Collapsed);
 			PRINTNETLOG(this, TEXT("%s 위젯을 생성했지만, 숨겨진 상태입니다."), *AudRadialMenuWidgetClass->GetName());
 		}
+		
 	}
 }
 

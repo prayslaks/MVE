@@ -1,15 +1,14 @@
-﻿// Fill out your copyright notice in the Description page of Project Settings.
-
-#include "UI/Widget/Studio/Public/MVE_STD_WC_AudioPlayer.h"
+﻿
+#include "../Public/MVE_STD_WC_AudioPlayer.h"
 #include "MVE_STD_WC_AudioSearchResult.h"
 #include "MVE.h"
-#include "Components/AudioComponent.h"
 #include "Components/Button.h"
 #include "Components/Image.h"
 #include "Components/Slider.h"
 #include "Components/TextBlock.h"
 #include "Sound/SoundWave.h"
 #include "Internationalization/Text.h"
+
 void UMVE_STD_WC_AudioPlayer::SetAudioData(const FMVE_STD_AudioSearchResultData& AudioData) const
 {
 	if (TitleTextBlock)

@@ -56,4 +56,8 @@ protected:
 	
 	// 호스트인지 확인하는 헬퍼 함수
 	bool IsHostController(AController* Controller) const;
+
+private:
+	UPROPERTY()
+	TObjectPtr<APlayerController> HostController;
 };
