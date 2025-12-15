@@ -31,7 +31,6 @@ public:
 
 /**
  * !!! Deprecated !!!
- * ListView에 전달할 방 정보 데이터 객체
  */
 UCLASS(BlueprintType)
 class MVE_API URoomInfoData : public UObject

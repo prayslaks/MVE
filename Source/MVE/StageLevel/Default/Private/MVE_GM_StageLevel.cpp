@@ -6,6 +6,7 @@
 #include "GameFramework/PlayerStart.h"
 #include "EngineUtils.h"
 #include "MVE_GIS_SessionManager.h"
+#include "MVE_StageLevel_ChatManager.h"
 #include "GameFramework/GameStateBase.h"
 #include "GameFramework/PlayerState.h"
 #include "StageLevel/Default/Public/MVE_PC_StageLevel_StudioComponent.h"
@@ -68,6 +69,11 @@ AMVE_GM_StageLevel::AMVE_GM_StageLevel()
 void AMVE_GM_StageLevel::BeginPlay()
 {
 	Super::BeginPlay();
+
+	if (HasAuthority())
+	{
+		SpawnChatManager();
+	}
 }
 
 UClass* AMVE_GM_StageLevel::GetDefaultPawnClassForController_Implementation(AController* InController)
@@ -274,5 +280,23 @@ void AMVE_GM_StageLevel::SendStopCommandToAllClients()
 				}
 			}
 		}
+	}
+}
+
+void AMVE_GM_StageLevel::SpawnChatManager()
+{
+	FActorSpawnParameters SpawnParameters;
+	SpawnParameters.Owner = this;
+	SpawnParameters.Instigator = GetInstigator();
+
+	ChatManager = GetWorld()->SpawnActor<AMVE_StageLevel_ChatManager>(
+		AMVE_StageLevel_ChatManager::StaticClass(),
+		FVector::ZeroVector,
+		FRotator::ZeroRotator,
+		SpawnParameters);
+
+	if (ChatManager)
+	{
+		PRINTLOG_CHAT(TEXT("ChatManager spawned"));
 	}
 }

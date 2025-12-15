@@ -2,10 +2,13 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "MVE_API_ResponseData.h"
 #include "GameFramework/PlayerController.h"
 #include "MVE_PC_StageLevel.generated.h"
 
+class UMVE_StageLevel_WidgetController_Chat;
 class UMVE_WC_StageLevel_AudRadialMenu;
+class UMVE_WC_Chat;
 
 UCLASS()
 class MVE_API AMVE_PC_StageLevel : public APlayerController
@@ -52,6 +55,7 @@ private:
 	// 마우스 커서를 뷰포트 중앙으로 이동시킵니다.
 	void CenterMouseCursor();
 
+
 public:
 	// 관객(Audience) 역할을 수행하는 플레이어의 상호작용을 처리하는 컴포넌트입니다.
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "MVE|Component")
@@ -61,6 +65,13 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "MVE|Component")
 	TObjectPtr<class UMVE_PC_StageLevel_StudioComponent> StdComponent;
 
+	void SetUserInfo(bool bSuccess, const FProfileResponseData& Data, const FString& ErrorCode);
+	
+	FString GetUserEmail() { return UserEmail; }
+	FString GetUserName() { return UserName; }
+
+	
+
 public:
 	/** 캐릭터에 부착된 오디오 컴포넌트를 가져옵니다. */
 	UFUNCTION(BlueprintCallable, Category = "MVE|Component")
@@ -69,4 +80,25 @@ public:
 	/** 캐릭터에 부착된 슈터 컴포넌트를 가져옵니다. */
 	UFUNCTION(BlueprintCallable, Category = "MVE|Component")
 	class UMVE_StageLevel_AudCharacterShooterComponent* GetShooterComponent() const;
+
+public:
+	/** 채팅 메시지 전송 (Server RPC) */
+	UFUNCTION(Server, Reliable, WithValidation)
+	void ServerSendChatMessage(const FString& MessageContent, const FGuid& ClientMessageID);
+
+	/** 서버에 PlayerState 이름 설정 (Server RPC) */
+	UFUNCTION(Server, Reliable)
+	void ServerSetPlayerName(const FString& InPlayerName);
+
+private:
+	void SetupChatUI(UMVE_WC_Chat* InWidget);
+
+	UPROPERTY()
+	TObjectPtr<UMVE_StageLevel_WidgetController_Chat> ChatController;
+
+	UPROPERTY()
+	TObjectPtr<UMVE_WC_Chat> ChatWidget;
+	
+	FString UserEmail;
+	FString UserName;
 };

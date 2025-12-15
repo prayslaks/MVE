@@ -6,6 +6,7 @@
 
 DECLARE_LOG_CATEGORY_EXTERN(LogMVE, Log, All);
 DECLARE_LOG_CATEGORY_EXTERN(SessionLogMVE, Log, All);
+DECLARE_LOG_CATEGORY_EXTERN(ChattingLogMVE, Log, All);
 
 // Helper function to get the network mode as a string from a UObject context
 FORCEINLINE FString GetNetModeString(const UObject* WorldContextObject)
@@ -49,6 +50,10 @@ UE_LOG(LogMVE, Warning, TEXT("%s : %s"), *CALLINFO, *FString::Printf(fmt, ##__VA
 
 #define SESSIONPRINTLOG(fmt, ...) \
 UE_LOG(SessionLogMVE, Warning, TEXT("%s : %s"), *CALLINFO, *FString::Printf(fmt, ##__VA_ARGS__))
+
+#define PRINTLOG_CHAT(fmt, ...) \
+UE_LOG(ChattingLogMVE, Warning, TEXT("%s : %s"), *CALLINFO, *FString::Printf(fmt, ##__VA_ARGS__))
+
 
 // 넷모드 정보를 포함한 로그 포매팅 (PRINTNETLOG)
 // 사용법: PRINTNETLOG(this, TEXT("로그 메시지"));
