@@ -4,14 +4,14 @@
 #include "CoreMinimal.h"
 #include "MVE_STD_WC_AudioSearchResult.h"
 #include "UObject/Object.h"
-#include "MVE_STU_WidgetController_Audio.generated.h"
+#include "MVE_STU_WidgetController_StudioConcert.generated.h"
 
 class UMVE_STD_WC_AudioPlayer;
 class UMVE_STD_WC_AudioSearch;
 struct FMVE_STD_AudioSearchResultData;
 
 UCLASS()
-class MVE_API UMVE_STU_WidgetController_Audio : public UObject
+class MVE_API UMVE_STU_WidgetController_StudioConcert : public UObject
 {
 	GENERATED_BODY()
 

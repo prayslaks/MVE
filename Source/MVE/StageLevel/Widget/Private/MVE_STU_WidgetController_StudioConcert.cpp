@@ -1,13 +1,12 @@
 
-#include "../Public/MVE_STU_WidgetController_Audio.h"
-
+#include "../Public/MVE_STU_WidgetController_StudioConcert.h"
 #include "MVE.h"
 #include "MVE_API_Helper.h"
-#include "MVE_STD_WC_AudioPlayer.h"
-#include "MVE_STD_WC_AudioSearch.h"
+#include "../Public/MVE_STD_WC_AudioPlayer.h"
 #include "StageLevel/Default/Public/MVE_GM_StageLevel.h"
 
-void UMVE_STU_WidgetController_Audio::Initialize(UMVE_STD_WC_AudioPlayer* InPlayerWidget)
+
+void UMVE_STU_WidgetController_StudioConcert::Initialize(UMVE_STD_WC_AudioPlayer* InPlayerWidget)
 {
     PlayerWidget = InPlayerWidget;
     
@@ -17,7 +16,7 @@ void UMVE_STU_WidgetController_Audio::Initialize(UMVE_STD_WC_AudioPlayer* InPlay
     }
 }
 
-void UMVE_STU_WidgetController_Audio::OnTrackSelected(const FMVE_STD_AudioSearchResultData& AudioData)
+void UMVE_STU_WidgetController_StudioConcert::OnTrackSelected(const FMVE_STD_AudioSearchResultData& AudioData)
 {
     PRINTNETLOG(this, TEXT("Track selected: %s"), *AudioData.Title);
     
@@ -31,19 +30,19 @@ void UMVE_STU_WidgetController_Audio::OnTrackSelected(const FMVE_STD_AudioSearch
     LoadPresignedUrlAndBroadcast(AudioData);
 }
 
-void UMVE_STU_WidgetController_Audio::OnPlayRequested()
+void UMVE_STU_WidgetController_StudioConcert::OnPlayRequested()
 {
     PRINTNETLOG(this, TEXT("Play requested for track: %s"), *CurrentTrackData.Title);
     SendPlayCommandToClients();
 }
 
-void UMVE_STU_WidgetController_Audio::OnStopRequested()
+void UMVE_STU_WidgetController_StudioConcert::OnStopRequested()
 {
     PRINTNETLOG(this, TEXT("Stop requested"));
     SendStopCommandToClients();
 }
 
-void UMVE_STU_WidgetController_Audio::LoadPresignedUrlAndBroadcast(const FMVE_STD_AudioSearchResultData& AudioData)
+void UMVE_STU_WidgetController_StudioConcert::LoadPresignedUrlAndBroadcast(const FMVE_STD_AudioSearchResultData& AudioData)
 {
     PRINTNETLOG(this, TEXT("Requesting Presigned URL for Title: %s"), *AudioData.Title);
     
@@ -77,7 +76,7 @@ void UMVE_STU_WidgetController_Audio::LoadPresignedUrlAndBroadcast(const FMVE_ST
     UMVE_API_Helper::StreamAudio(AudioData.Id, OnResult);
 }
 
-void UMVE_STU_WidgetController_Audio::SendPlayCommandToClients()
+void UMVE_STU_WidgetController_StudioConcert::SendPlayCommandToClients()
 {
     PRINTNETLOG(this, TEXT("Sending play command to all clients"));
     
@@ -94,7 +93,7 @@ void UMVE_STU_WidgetController_Audio::SendPlayCommandToClients()
     }
 }
 
-void UMVE_STU_WidgetController_Audio::SendStopCommandToClients()
+void UMVE_STU_WidgetController_StudioConcert::SendStopCommandToClients()
 {
     PRINTNETLOG(this, TEXT("Sending stop command to all clients"));
     
@@ -111,7 +110,7 @@ void UMVE_STU_WidgetController_Audio::SendStopCommandToClients()
     }
 }
 
-void UMVE_STU_WidgetController_Audio::SetupPlayerUI(const FMVE_STD_AudioSearchResultData& AudioData)
+void UMVE_STU_WidgetController_StudioConcert::SetupPlayerUI(const FMVE_STD_AudioSearchResultData& AudioData)
 {
     if (!PlayerWidget)
     {
@@ -124,10 +123,10 @@ void UMVE_STU_WidgetController_Audio::SetupPlayerUI(const FMVE_STD_AudioSearchRe
     
     // 델리게이트 초기화 및 재등록
     PlayerWidget->OnPlayClicked.Clear();
-    PlayerWidget->OnPlayClicked.AddDynamic(this, &UMVE_STU_WidgetController_Audio::OnPlayRequested);
+    PlayerWidget->OnPlayClicked.AddDynamic(this, &UMVE_STU_WidgetController_StudioConcert::OnPlayRequested);
     
     PlayerWidget->OnStopClicked.Clear();
-    PlayerWidget->OnStopClicked.AddDynamic(this, &UMVE_STU_WidgetController_Audio::OnStopRequested);
+    PlayerWidget->OnStopClicked.AddDynamic(this, &UMVE_STU_WidgetController_StudioConcert::OnStopRequested);
     
     // UI 초기화
     PlayerWidget->ResetPlaybackUI();

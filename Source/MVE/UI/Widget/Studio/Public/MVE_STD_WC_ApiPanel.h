@@ -7,7 +7,7 @@
 #include "MVE_STD_WC_ApiPanel.generated.h"
 
 class UMVE_STD_WC_ConcertPanel;
-class UMVE_STD_WC_AudioPanel;
+class UMVE_STU_WC_ConcertStudioPanel;
 
 UCLASS()
 class MVE_API UMVE_STD_WC_ApiPanel : public UUserWidget
@@ -16,7 +16,7 @@ class MVE_API UMVE_STD_WC_ApiPanel : public UUserWidget
 	
 public:
 	UPROPERTY(meta=(BindWidget), BlueprintReadOnly)
-	TObjectPtr<UMVE_STD_WC_AudioPanel> AudioPanel;
+	TObjectPtr<UMVE_STU_WC_ConcertStudioPanel> AudioPanel;
 	
 	UPROPERTY(meta=(BindWidget), BlueprintReadOnly)
 	TObjectPtr<UMVE_STD_WC_ConcertPanel> ConcertPanel;

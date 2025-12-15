@@ -4,9 +4,9 @@
 
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
-#include "MVE_STD_WC_AudioPanel.generated.h"
+#include "MVE_STU_WC_ConcertStudioPanel.generated.h"
 
-class UMVE_STU_WidgetController_Audio;
+class UMVE_STU_WidgetController_StudioConcert;
 class UglTFRuntimeAsset;
 class UMVE_STD_WC_AudioPlayer;
 class UMVE_STD_WC_AudioSearch;
@@ -14,7 +14,7 @@ struct FMVE_STD_AudioSearchResultData; // Forward declare
 class USoundWave; // Forward declare
 
 UCLASS()
-class MVE_API UMVE_STD_WC_AudioPanel : public UUserWidget
+class MVE_API UMVE_STU_WC_ConcertStudioPanel : public UUserWidget
 {
 	GENERATED_BODY()
 	
@@ -34,5 +34,5 @@ protected:
 private:
 	/** Audio 관련 모든 로직을 담당하는 Controller */
 	UPROPERTY()
-	TObjectPtr<UMVE_STU_WidgetController_Audio> AudioController;
+	TObjectPtr<UMVE_STU_WidgetController_StudioConcert> AudioController;
 };

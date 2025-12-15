@@ -1,15 +1,15 @@
-﻿#include "../Public/MVE_STD_WC_AudioPanel.h"
+﻿#include "../Public/MVE_STU_WC_ConcertStudioPanel.h"
 #include "MVE.h"
 #include "../Public/MVE_STD_WC_AudioPlayer.h"
 #include "../Public/MVE_STD_WC_AudioSearch.h"
-#include "StageLevel/Widget/Public/MVE_STU_WidgetController_Audio.h"
+#include "StageLevel/Widget/Public/MVE_STU_WidgetController_StudioConcert.h"
 
-void UMVE_STD_WC_AudioPanel::NativeConstruct()
+void UMVE_STU_WC_ConcertStudioPanel::NativeConstruct()
 {
 	Super::NativeConstruct();
 
 	// Controller 생성 및 초기화
-	AudioController = NewObject<UMVE_STU_WidgetController_Audio>(this);
+	AudioController = NewObject<UMVE_STU_WidgetController_StudioConcert>(this);
 	if (AudioController)
 	{
 		AudioController->Initialize(AudioPlayer);
@@ -25,7 +25,7 @@ void UMVE_STD_WC_AudioPanel::NativeConstruct()
 	if (AudioSearch)
 	{
 		AudioSearch->OnAudioSearchResultSelected.AddDynamic(
-			AudioController, &UMVE_STU_WidgetController_Audio::OnTrackSelected);
+			AudioController, &UMVE_STU_WidgetController_StudioConcert::OnTrackSelected);
 		PRINTNETLOG(this, TEXT("AudioSearch events connected to Controller"));
 	}
 	else
@@ -34,7 +34,7 @@ void UMVE_STD_WC_AudioPanel::NativeConstruct()
 	}
 }
 
-void UMVE_STD_WC_AudioPanel::NativeDestruct()
+void UMVE_STU_WC_ConcertStudioPanel::NativeDestruct()
 {
 	PRINTNETLOG(this, TEXT("AudioPanel destroyed"));
     
