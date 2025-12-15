@@ -40,7 +40,13 @@ public:
     
     UFUNCTION(BlueprintCallable, BlueprintPure, Category = "MVE|Session")
     bool GetConcertInfoAtIndex(int32 Index, FConcertInfo& OutConcertInfo) const;
+    
+    UFUNCTION(BlueprintCallable, BlueprintPure, Category = "MVE|Session")
+    FString GetCurrentSessionName();
 
+    UFUNCTION(BlueprintCallable, BlueprintPure, Category = "MVE|Session")
+    FString GetCurrentRoomID();
+    
     UPROPERTY(BlueprintAssignable, Category = "MVE|Session")
     FOnSessionCreated OnSessionCreated;
     

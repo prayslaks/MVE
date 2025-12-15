@@ -188,6 +188,17 @@ bool UMVE_GIS_SessionManager::GetConcertInfoAtIndex(int32 Index, FConcertInfo& O
 	return true;
 }
 
+FString UMVE_GIS_SessionManager::GetCurrentSessionName()
+{
+	return PendingConcertInfo.ConcertName;
+}
+
+FString UMVE_GIS_SessionManager::GetCurrentRoomID()
+{
+	return CurrentRoomId;
+}
+
+
 // ========================================
 // 방송 시작/종료
 // ========================================
