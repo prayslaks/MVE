@@ -5,6 +5,8 @@
 #include "GameFramework/GameModeBase.h"
 #include "MVE_GM_StageLevel.generated.h"
 
+class AMVE_StageLevel_ChatManager;
+
 UCLASS()
 class MVE_API AMVE_GM_StageLevel : public AGameModeBase
 {
@@ -43,6 +45,8 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "MVE|Audio")
 	void SendStopCommandToAllClients();
 
+	
+
 protected:
 	
 	virtual void OnPostLogin(AController* NewPlayer) override;
@@ -61,4 +65,11 @@ protected:
 private:
 	UPROPERTY()
 	TObjectPtr<APlayerController> HostController;
+
+	// ChatManager 스폰
+	void SpawnChatManager();
+
+	// ChatManager
+	UPROPERTY()
+	TObjectPtr<AMVE_StageLevel_ChatManager> ChatManager;
 };

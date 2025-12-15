@@ -3,6 +3,7 @@
 #include "UObject/ConstructorHelpers.h"
 #include "Blueprint/UserWidget.h"
 #include "MVE.h"
+#include "MVE_StageLevel_WidgetController_Chat.h"
 #include "UIManagerSubsystem.h"
 #include "StageLevel/Actor/Public/MVE_StageLevel_AudCharacter.h"
 #include "StageLevel/Default/Public/MVE_PC_StageLevel_AudienceComponent.h"
@@ -34,6 +35,23 @@ UMVE_StageLevel_AudCharacterShooterComponent* AMVE_PC_StageLevel::GetShooterComp
 		return AudCharacter->GetShooterComponent();
 	}
 	return nullptr;
+}
+
+void AMVE_PC_StageLevel::SetupChatUI()
+{
+	// 1. 컨트롤러 생성
+	ChatController = NewObject<UMVE_StageLevel_WidgetController_Chat>(this);
+	ChatController->Initialize(GetWorld(), true); // 자동으로 ChatManager 찾기
+    
+	// 2. 위젯 생성
+	TSubclassOf<UMVE_WC_Chat> WidgetClass = ...; // BP 클래스 로드
+	ChatWidget = CreateWidget<UMVE_WC_Chat>(this, WidgetClass);
+    
+	if (ChatWidget)
+	{
+		ChatWidget->SetController(ChatController);
+		ChatWidget->AddToViewport();
+	}
 }
 
 void AMVE_PC_StageLevel::BeginPlay()
