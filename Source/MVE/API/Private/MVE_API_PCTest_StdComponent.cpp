@@ -1,12 +1,11 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "API/Public/MVE_API_PCTest_StdComponent.h"
-#include "API/Public/MVE_Speaker.h"
 #include "glTFRuntimeFunctionLibrary.h"
 #include "glTFRuntimeAudioFunctionLibrary.h"
 #include "MVE.h"
 #include "Kismet/GameplayStatics.h"
-#include "Components/AudioComponent.h"
+#include "StageLevel/Actor/Public/MVE_StageLevel_Speaker.h"
 
 UMVE_API_PCTest_StdComponent::UMVE_API_PCTest_StdComponent()
 {
@@ -20,12 +19,12 @@ void UMVE_API_PCTest_StdComponent::BeginPlay()
 	Super::BeginPlay();
 	PRINTNETLOG(this, TEXT("UMVE_API_PCTest_StdComponent BeginPlay 완료"));
 
-	// Find all speaker actors in the level. This runs on server and all clients.
+	// 스테이지 레벨에 존재하는 모든 스피커에 접근한다
 	TArray<AActor*> SpeakerActors;
-	UGameplayStatics::GetAllActorsOfClass(GetWorld(), AMVE_Speaker::StaticClass(), SpeakerActors);
+	UGameplayStatics::GetAllActorsOfClass(GetWorld(), AMVE_StageLevel_Speaker::StaticClass(), SpeakerActors);
 	for (AActor* SpeakerActor : SpeakerActors)
 	{
-		if (AMVE_Speaker* Speaker = Cast<AMVE_Speaker>(SpeakerActor))
+		if (AMVE_StageLevel_Speaker* Speaker = Cast<AMVE_StageLevel_Speaker>(SpeakerActor))
 		{
 			FoundSpeakers.Add(Speaker);
 		}
@@ -38,7 +37,7 @@ void UMVE_API_PCTest_StdComponent::TickComponent(float DeltaTime, ELevelTick Tic
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 }
 
-// --- Audio Sync RPCs Implementation ---
+// 오디오 싱크 RPC 구현
 
 void UMVE_API_PCTest_StdComponent::Client_PrepareAudio_Implementation(const FString& PresignedUrl)
 {
@@ -58,8 +57,8 @@ void UMVE_API_PCTest_StdComponent::Client_PrepareAudio_Implementation(const FStr
 
 void UMVE_API_PCTest_StdComponent::OnAudioLoadedFromUrl(UglTFRuntimeAsset* Asset)
 {
-	// This callback now runs on every machine after its individual download is complete.
-	if (!Asset)
+	// 모든 시스템에서 개별 다운로드가 종료되었을 때 이 콜백이 호출된다
+	if (Asset == nullptr)
 	{
 		PRINTNETLOG(this, TEXT("[SpeakerManager] ERROR: Failed to load asset from URL on Role: %s."), *UEnum::GetValueAsString(GetOwner()->GetLocalRole()));
 		return;
@@ -67,16 +66,16 @@ void UMVE_API_PCTest_StdComponent::OnAudioLoadedFromUrl(UglTFRuntimeAsset* Asset
 
 	PRINTNETLOG(this, TEXT("[SpeakerManager] 각 클라이언트의 다운로드 완료. OnAudioLoadedFromUrl 호출됨."));
 
-	const EglTFRuntimeAudioDecoder Decoder{};
+	constexpr EglTFRuntimeAudioDecoder Decoder {};
 	const FglTFRuntimeAudioConfig Config{};
-	USoundWave* LoadedSoundWave = UglTFRuntimeAudioFunctionLibrary::LoadSoundFromBlob(Asset, Decoder, Config);
 
-	if (LoadedSoundWave)
+	// 런타임 변환에 성공했다면
+	if (USoundWave* LoadedSoundWave = UglTFRuntimeAudioFunctionLibrary::LoadSoundFromBlob(Asset, Decoder, Config))
 	{
 		PRINTNETLOG(this, TEXT("[SpeakerManager] Successfully loaded sound on Role: %s. Setting on %d speakers."), *UEnum::GetValueAsString(GetOwner()->GetLocalRole()), FoundSpeakers.Num());
 		// Set the loaded sound on all speakers found by this machine.
 		int32 SpeakerCount = 0;
-		for (AMVE_Speaker* Speaker : FoundSpeakers)
+		for (const AMVE_StageLevel_Speaker* Speaker : FoundSpeakers)
 		{
 			if (Speaker && Speaker->GetAudioComponent())
 			{
@@ -96,7 +95,7 @@ void UMVE_API_PCTest_StdComponent::Client_PlayPreparedAudio_Implementation()
 {
 	PRINTNETLOG(this, TEXT("[SpeakerManager] Client_PlayPreparedAudio received on Role: %s. Playing on %d speakers. Play 명령 전파 확인."), *UEnum::GetValueAsString(GetOwner()->GetLocalRole()), FoundSpeakers.Num());
 	int32 SpeakerCount = 0;
-	for (AMVE_Speaker* Speaker : FoundSpeakers)
+	for (AMVE_StageLevel_Speaker* Speaker : FoundSpeakers)
 	{
 		if (Speaker && Speaker->GetAudioComponent())
 		{
@@ -112,7 +111,7 @@ void UMVE_API_PCTest_StdComponent::Client_StopPreparedAudio_Implementation()
 {
 	PRINTNETLOG(this, TEXT("[SpeakerManager] Client_StopPreparedAudio received on Role: %s. Stopping %d speakers."), *UEnum::GetValueAsString(GetOwner()->GetLocalRole()), FoundSpeakers.Num());
 	int32 SpeakerCount = 0;
-	for (AMVE_Speaker* Speaker : FoundSpeakers)
+	for (AMVE_StageLevel_Speaker* Speaker : FoundSpeakers)
 	{
 		if (Speaker && Speaker->GetAudioComponent())
 		{
