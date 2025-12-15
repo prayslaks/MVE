@@ -5,8 +5,10 @@
 #include "Components/TimelineComponent.h"
 #include "MVE_StageLevel_AudCharacter.generated.h"
 
-class UInputMappingContext;
+class AMVE_StageLevel_AudObject;
+class AMVE_StageLevel_AudCamera;
 struct FInputActionValue;
+class UInputMappingContext;
 class UInputAction;
 class UCameraComponent;
 class USpringArmComponent;
@@ -67,6 +69,10 @@ protected:
 	UFUNCTION()
 	void OnInputActionAimCompleted(const FInputActionValue& Value);
 	
+	// IA_Execute : 실행 개시
+	UFUNCTION()
+	void OnInputActionExecuteStarted(const FInputActionValue& Value);
+	
 	// IA_SwitchAudienceMode : 래디얼 메뉴 표시
 	UFUNCTION()
 	void OnInputActionSwitchAudienceModeStarted();
@@ -78,42 +84,61 @@ protected:
 	UFUNCTION()
 	void UpdateCameraTimeline(float Alpha) const;
 private:
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "MVE|Components", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<USpringArmComponent> SpringArm;
 	
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "MVE|Components", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UCameraComponent> Camera;
 	
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "MVE|Components", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UAudioComponent> AudioComponent;
 	
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "MVE|Components", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UMVE_StageLevel_AudCharacterShooterComponent> ShooterComponent;
 	
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "MVE|Components", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UTimelineComponent> CameraTimeline;
 	
-	UPROPERTY(EditAnywhere, Category = "Timeline", meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(EditAnywhere, Category = "MVE|Components", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UCurveFloat> CameraTransitionCurve;
 	
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Control", meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "MVE|Control", meta = (AllowPrivateAccess = "true"))
 	EAudienceControlMode CurrentControlMode;
 	
-	UPROPERTY(EditAnywhere, Category = "Control", meta = (AllowPrivateAccess = "true"))           
+	FTimerHandle ExecuteTimerHandle;
+	UPROPERTY(VisibleAnywhere, Category = "MVE|Control") 
+	bool bExecuteOnce;
+	
+	UPROPERTY(VisibleAnywhere, Category = "MVE|Control") 
+	bool bLockLookAround;
+	
+	UPROPERTY(EditAnywhere, Category = "MVE|Control", meta = (AllowPrivateAccess = "true"))           
 	TObjectPtr<UInputMappingContext> IMC_AudCharacter;
 	                                                                                              
-	UPROPERTY(EditAnywhere, Category = "Control", meta = (AllowPrivateAccess = "true"))           
+	UPROPERTY(EditAnywhere, Category = "MVE|Control", meta = (AllowPrivateAccess = "true"))           
 	TObjectPtr<UInputAction> IA_Move;
 	                                                                                              
-	UPROPERTY(EditAnywhere, Category = "Control", meta = (AllowPrivateAccess = "true"))           
+	UPROPERTY(EditAnywhere, Category = "MVE|Control", meta = (AllowPrivateAccess = "true"))           
 	TObjectPtr<UInputAction> IA_Jump;
 	                                                                                              
-	UPROPERTY(EditAnywhere, Category = "Control", meta = (AllowPrivateAccess = "true"))           
+	UPROPERTY(EditAnywhere, Category = "MVE|Control", meta = (AllowPrivateAccess = "true"))           
 	TObjectPtr<UInputAction> IA_SwitchAudienceMode;
 	                                                                                              
-	UPROPERTY(EditAnywhere, Category = "Control", meta = (AllowPrivateAccess = "true"))           
+	UPROPERTY(EditAnywhere, Category = "MVE|Control", meta = (AllowPrivateAccess = "true"))           
 	TObjectPtr<UInputAction> IA_Aim;
+	
+	UPROPERTY(EditAnywhere, Category = "MVE|Control", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UInputAction> IA_Execute;
 	                                                                                              
-	UPROPERTY(EditAnywhere, Category = "Control", meta = (AllowPrivateAccess = "true"))      
+	UPROPERTY(EditAnywhere, Category = "MVE|Control", meta = (AllowPrivateAccess = "true"))      
 	TObjectPtr<UInputAction> IA_Look;
+	
+	UPROPERTY(VisibleAnywhere, Category = "MVE|Objects", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<AMVE_StageLevel_AudObject> CurrentAudObject;
+	
+	UPROPERTY(VisibleAnywhere, Category = "MVE|Objects", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UChildActorComponent> AudCameraChildActorComp;
+	
+	UPROPERTY(EditAnywhere, Category = "MVE|Objects", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UAnimMontage> AudThrowAnimMontage;
 };

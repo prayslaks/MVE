@@ -11,6 +11,7 @@
 #include "StageLevel/Actor/Public/MVE_StageLevel_AudCharacterShooterComponent.h"
 #include "StageLevel/Default/Public/MVE_PC_StageLevel.h"
 #include "Curves/CurveFloat.h"
+#include "StageLevel/Actor/Public/MVE_StageLevel_AudCamera.h"
 
 AMVE_StageLevel_AudCharacter::AMVE_StageLevel_AudCharacter()
 {
@@ -35,6 +36,10 @@ AMVE_StageLevel_AudCharacter::AMVE_StageLevel_AudCharacter()
 	
 	// 카메라 전환 타임라인
 	CameraTimeline = CreateDefaultSubobject<UTimelineComponent>(TEXT("CameraTimeline"));
+	
+	// 오디언스 카메라 차일드 액터 컴포넌트
+	AudCameraChildActorComp = CreateDefaultSubobject<UChildActorComponent>(TEXT("AudCameraChildActorComp"));
+	AudCameraChildActorComp->SetupAttachment(GetMesh(), TEXT("HandGrip_R"));
 	
 	// 기본적으로 컨트롤러의 회전값이 캐릭터에 영향을 주지 않고 카메라만 독립적으로 회전하도록 설정
 	bUseControllerRotationYaw = false;
@@ -88,6 +93,7 @@ void AMVE_StageLevel_AudCharacter::SetupPlayerInputComponent(UInputComponent* Pl
 		EnhancedInputComponent->BindAction(IA_Look, ETriggerEvent::Triggered, this, &AMVE_StageLevel_AudCharacter::OnInputActionLookTriggered);	
 		EnhancedInputComponent->BindAction(IA_Aim, ETriggerEvent::Started, this, &AMVE_StageLevel_AudCharacter::OnInputActionAimStarted);
 		EnhancedInputComponent->BindAction(IA_Aim, ETriggerEvent::Completed, this, &AMVE_StageLevel_AudCharacter::OnInputActionAimCompleted);
+		EnhancedInputComponent->BindAction(IA_Execute, ETriggerEvent::Started, this, &AMVE_StageLevel_AudCharacter::OnInputActionExecuteStarted);
 		EnhancedInputComponent->BindAction(IA_SwitchAudienceMode, ETriggerEvent::Started, this, &AMVE_StageLevel_AudCharacter::OnInputActionSwitchAudienceModeStarted);
 		EnhancedInputComponent->BindAction(IA_SwitchAudienceMode, ETriggerEvent::Completed, this, &AMVE_StageLevel_AudCharacter::OnInputActionSwitchAudienceModeCompleted);
 	}
@@ -95,18 +101,55 @@ void AMVE_StageLevel_AudCharacter::SetupPlayerInputComponent(UInputComponent* Pl
 
 void AMVE_StageLevel_AudCharacter::SetControlMode(const EAudienceControlMode NewMode)
 {
+	// 새로운 모드 설정
 	CurrentControlMode = NewMode;
-	switch (CurrentControlMode)
+	
+	// 오디언스 오브젝트 세팅 람다 함수
+	const auto SetAudObject = [this](AActor* Actor, const FString& Message)
 	{
-	case EAudienceControlMode::WidgetSelection:
+		if (const auto TargetAudObject = Cast<AMVE_StageLevel_AudObject>(Actor))
+		{
+			PRINTNETLOG(this, TEXT("%s"), *Message)
+			
+			// 비가시화
+			if (CurrentAudObject && CurrentAudObject != TargetAudObject)
+			{
+				CurrentAudObject->SetIsVisible(false);
+				CurrentAudObject = TargetAudObject;
+			}
+			
+			// 가시화
+			if (TargetAudObject)
+			{
+				CurrentAudObject = TargetAudObject;
+				CurrentAudObject->SetIsVisible(true);
+			}
+		}
+		else
+		{
+			PRINTNETLOG(this, TEXT("%s"), *Message)
+			
+			// 비가시화
+			if (CurrentAudObject)
+			{
+				CurrentAudObject->SetIsVisible(false);
+				CurrentAudObject = nullptr;
+			}
+		}
+	};
+	
+	// 카메라 모드 람다 함수
+	const auto CameraMode1 = [this]()
+	{
 		// 위젯 선택 중에는 캐릭터가 카메라를 따라 회전하지 않는다
 		// 카메라 포지션 컨트롤도 존재하지 않는다
 		bUseControllerRotationYaw = false;
-		break;
-	case EAudienceControlMode::Aiming:
-	case EAudienceControlMode::Photo:
-	case EAudienceControlMode::Cheer:
-	case EAudienceControlMode::WaveLightStick:
+		
+		// 화면 회전 잠금 설정
+		bLockLookAround = true;
+	};
+	const auto CameraMode2 = [this]()
+	{
 		// 이 모드들에서는 캐릭터가 컨트롤러의 Yaw 회전값을 따라야 한다
 		// 목표를 보기에 적절한 위치로 카메라 포지션을 컨트롤한다 
 		bUseControllerRotationYaw = true;
@@ -114,9 +157,12 @@ void AMVE_StageLevel_AudCharacter::SetControlMode(const EAudienceControlMode New
 		{
 			CameraTimeline->Play();
 		}
-		break;
-	case EAudienceControlMode::Default:
-	default:
+		
+		// 화면 회전 잠금 해제
+		bLockLookAround = false;
+	};
+	const auto CameraMode3 = [this]()
+	{
 		// 기본 상태에서는 캐릭터가 카메라를 따라 회전하지 않는다
 		// 주변을 둘러보기 좋도록 카메라 포지션을 컨트롤한다
 		bUseControllerRotationYaw = false;
@@ -124,7 +170,54 @@ void AMVE_StageLevel_AudCharacter::SetControlMode(const EAudienceControlMode New
 		{
 			CameraTimeline->Reverse();
 		}
-		break;
+		
+		// 화면 회전 잠금 해제
+		bLockLookAround = false;
+	};
+	
+	switch (CurrentControlMode)
+	{
+	case EAudienceControlMode::WidgetSelection:
+		{
+			CameraMode1();
+			break;
+		}
+	case EAudienceControlMode::Aiming:
+		{
+			SetAudObject(nullptr, TEXT("오디언스 오브젝트 해제!"));
+			CameraMode2();
+			break;
+		}
+	case EAudienceControlMode::Photo:
+		{
+			SetAudObject(AudCameraChildActorComp->GetChildActor(), TEXT("오디언스 카메라 준비 완료!"));
+			CameraMode2();
+			break;
+		}
+	case EAudienceControlMode::Cheer:
+		{
+			SetAudObject(nullptr, TEXT("오디언스 오브젝트 해제!"));
+			CameraMode2();
+			break;
+		}
+	case EAudienceControlMode::WaveLightStick:
+		{
+			SetAudObject(nullptr, TEXT("오디언스 오브젝트 해제!"));
+			CameraMode2();
+			break;
+		}
+	case EAudienceControlMode::Default:
+		{
+			SetAudObject(nullptr, TEXT("오디언스 오브젝트 해제!"));
+			CameraMode3();
+			break;
+		}
+	default:
+		{
+			SetAudObject(nullptr, TEXT("오디언스 오브젝트 해제!"));
+			CameraMode3();
+			break;
+		}
 	}
 	PRINTNETLOG(this, TEXT("현재 모드 %s"), *StaticEnum<EAudienceControlMode>()->GetNameStringByValue(static_cast<int64>(CurrentControlMode)));
 }
@@ -159,6 +252,47 @@ void AMVE_StageLevel_AudCharacter::OnInputActionAimCompleted(const FInputActionV
 	}
 }
 
+void AMVE_StageLevel_AudCharacter::OnInputActionExecuteStarted(const FInputActionValue& Value)
+{
+	// 연속 입력 방지
+	if (bExecuteOnce)
+	{
+		return;
+	}
+	FTimerDelegate TimerDelegate;
+	TimerDelegate.BindWeakLambda(this, [this]()
+	{
+		bExecuteOnce = false;
+		PRINTNETLOG(this, TEXT("실행 입력 액션 타이머 종료!"))
+	});
+	GetWorldTimerManager().SetTimer(ExecuteTimerHandle, TimerDelegate, 1.0, false);
+	bExecuteOnce = true;
+	
+	// 현재 모드에 따라서 다른 도구, 애니메이션, 사운드 사용
+	switch (CurrentControlMode)
+	{
+	case EAudienceControlMode::WidgetSelection:
+		break;
+	case EAudienceControlMode::Aiming:
+		PlayAnimMontage(AudThrowAnimMontage);
+	case EAudienceControlMode::Photo:
+		if (const auto AudCamera = Cast<AMVE_StageLevel_AudCamera>(AudCameraChildActorComp->GetChildActor()))
+		{
+			PRINTNETLOG(this, TEXT("카메라 플래시 입력 액션!"))
+			AudCamera->TriggerFlash();
+		}
+		break;
+	case EAudienceControlMode::Cheer:
+	case EAudienceControlMode::WaveLightStick:
+		break;
+	case EAudienceControlMode::Default:
+	default:
+		// 기본 상태에서는 캐릭터가 카메라를 따라 회전하지 않는다
+		// 주변을 둘러보기 좋도록 카메라 포지션을 컨트롤한다
+		break;
+	}
+}
+
 void AMVE_StageLevel_AudCharacter::OnInputActionLookTriggered(const FInputActionValue& Value)
 {
 	if (Controller == nullptr)
@@ -166,29 +300,15 @@ void AMVE_StageLevel_AudCharacter::OnInputActionLookTriggered(const FInputAction
 		return;
 	}
 	
+	if (bLockLookAround)
+	{
+		return;
+	}
+	
 	// Value에서 Vector2D 형태로 값을 추출
 	const FVector2D LookAxisVector = Value.Get<FVector2D>();
-	
-	switch (CurrentControlMode)
-	{
-	case EAudienceControlMode::Default:
-	case EAudienceControlMode::Aiming:
-	case EAudienceControlMode::Photo:
-		AddControllerYawInput(LookAxisVector.X);
-		AddControllerPitchInput(LookAxisVector.Y);
-		break;
-	case EAudienceControlMode::Cheer:
-	case EAudienceControlMode::WaveLightStick:
-		AddControllerYawInput(LookAxisVector.X);
-		AddControllerPitchInput(LookAxisVector.Y);
-		break;
-	case EAudienceControlMode::WidgetSelection:
-		// 위젯 선택 모드에서는 카메라 회전을 막습니다.
-		break;
-	default:
-		// 처리되지 않은 다른 모드들
-		break;
-	}
+	AddControllerYawInput(LookAxisVector.X);
+	AddControllerPitchInput(LookAxisVector.Y);
 }
 
 void AMVE_StageLevel_AudCharacter::OnInputActionSwitchAudienceModeStarted()
