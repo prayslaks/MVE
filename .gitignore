@@ -76,3 +76,5 @@ Config/SteamVRBindings
 Platforms/HoloLens/Config/HoloLensEngine.ini
 .vsconfig
 MultiplayTest.bat
+
+.bat

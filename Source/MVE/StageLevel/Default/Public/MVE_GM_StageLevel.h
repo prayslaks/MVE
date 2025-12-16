@@ -5,6 +5,8 @@
 #include "GameFramework/GameModeBase.h"
 #include "MVE_GM_StageLevel.generated.h"
 
+class AMVE_StageLevel_ChatManager;
+
 UCLASS()
 class MVE_API AMVE_GM_StageLevel : public AGameModeBase
 {
@@ -36,11 +38,14 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "MVE|Audio")
 	void SendPlayCommandToAllClients();
 
+
 	/**
 	 * 모든 클라이언트에게 오디오 재생 중지를 요청합니다.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "MVE|Audio")
 	void SendStopCommandToAllClients();
+
+	
 
 protected:
 	
@@ -56,4 +61,15 @@ protected:
 	
 	// 호스트인지 확인하는 헬퍼 함수
 	bool IsHostController(AController* Controller) const;
+
+private:
+	UPROPERTY()
+	TObjectPtr<APlayerController> HostController;
+
+	// ChatManager 스폰
+	void SpawnChatManager();
+
+	// ChatManager
+	UPROPERTY()
+	TObjectPtr<AMVE_StageLevel_ChatManager> ChatManager;
 };

@@ -116,7 +116,8 @@ enum class EUIPopup : uint8
 	None,
 	JoinRoomConfirm,
 	LogoutConfirm,
-	ModalBackground
+	ModalBackground,
+	AudienceRadialWidget
 };
 
 USTRUCT(BlueprintType)

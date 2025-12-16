@@ -106,7 +106,15 @@ void UMVE_AUD_WidgetClass_ConcertList::OnSessionsFoundCallback(bool bSuccess, in
         
 		// SessionManager에서 콘서트 목록 가져오기
 		const TArray<FConcertInfo>& ConcertList = SessionManager->GetConcertList();
-		UpdateConcertList(ConcertList);
+		TArray<FConcertInfo> OnAirConcertList;
+		for (auto Info : ConcertList)
+		{
+			if (Info.IsOpen)
+			{
+				OnAirConcertList.Add(Info);
+			}
+		}
+		UpdateConcertList(OnAirConcertList);
 	}
 	else
 	{

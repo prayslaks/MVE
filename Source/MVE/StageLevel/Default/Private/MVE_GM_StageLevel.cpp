@@ -5,6 +5,8 @@
 #include "GameFramework/PlayerController.h"
 #include "GameFramework/PlayerStart.h"
 #include "EngineUtils.h"
+#include "MVE_GIS_SessionManager.h"
+#include "MVE_StageLevel_ChatManager.h"
 #include "GameFramework/GameStateBase.h"
 #include "GameFramework/PlayerState.h"
 #include "StageLevel/Default/Public/MVE_PC_StageLevel_StudioComponent.h"
@@ -67,6 +69,11 @@ AMVE_GM_StageLevel::AMVE_GM_StageLevel()
 void AMVE_GM_StageLevel::BeginPlay()
 {
 	Super::BeginPlay();
+
+	if (HasAuthority())
+	{
+		SpawnChatManager();
+	}
 }
 
 UClass* AMVE_GM_StageLevel::GetDefaultPawnClassForController_Implementation(AController* InController)
@@ -93,13 +100,30 @@ void AMVE_GM_StageLevel::OnPostLogin(AController* NewPlayer)
 	}
 	else
 	{
+		HostController = Cast<APlayerController>(NewPlayer);
 		PRINTNETLOG(this, TEXT("새로운 플레이어는 클라이언트입니다."));
 	}
 }
 
 void AMVE_GM_StageLevel::Logout(AController* Exiting)
 {
-	
+	PRINTLOG(TEXT("Player logging out: %s"), *Exiting->GetName());
+    
+	// 떠나는 플레이어가 호스트인지 확인
+	if (Exiting == HostController)
+	{
+		PRINTLOG(TEXT("Host is leaving! Destroying session..."));
+        
+		// SessionManager를 통해 세션 종료
+		if (UGameInstance* GI = GetGameInstance())
+		{
+			if (UMVE_GIS_SessionManager* SessionManager = GI->GetSubsystem<UMVE_GIS_SessionManager>())
+			{
+				// 세션 종료 (모든 클라이언트 킥 + Redis 정리)
+				SessionManager->DestroySession();
+			}
+		}
+	}
 	
 	Super::Logout(Exiting);
 }
@@ -256,5 +280,23 @@ void AMVE_GM_StageLevel::SendStopCommandToAllClients()
 				}
 			}
 		}
+	}
+}
+
+void AMVE_GM_StageLevel::SpawnChatManager()
+{
+	FActorSpawnParameters SpawnParameters;
+	SpawnParameters.Owner = this;
+	SpawnParameters.Instigator = GetInstigator();
+
+	ChatManager = GetWorld()->SpawnActor<AMVE_StageLevel_ChatManager>(
+		AMVE_StageLevel_ChatManager::StaticClass(),
+		FVector::ZeroVector,
+		FRotator::ZeroRotator,
+		SpawnParameters);
+
+	if (ChatManager)
+	{
+		PRINTLOG(TEXT("CHatManager spawned"));
 	}
 }

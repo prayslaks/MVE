@@ -3,6 +3,11 @@
 #include "UObject/ConstructorHelpers.h"
 #include "Blueprint/UserWidget.h"
 #include "MVE.h"
+#include "MVE_AUD_WC_InteractionPanel.h"
+#include "MVE_StageLevel_WidgetController_Chat.h"
+#include "MVE_STU_WC_ConcertStudioPanel.h"
+#include "MVE_WC_Chat.h"
+#include "UIManagerSubsystem.h"
 #include "StageLevel/Actor/Public/MVE_StageLevel_AudCharacter.h"
 #include "StageLevel/Default/Public/MVE_PC_StageLevel_AudienceComponent.h"
 #include "StageLevel/Default/Public/MVE_PC_StageLevel_StudioComponent.h"
@@ -33,6 +38,21 @@ UMVE_StageLevel_AudCharacterShooterComponent* AMVE_PC_StageLevel::GetShooterComp
 		return AudCharacter->GetShooterComponent();
 	}
 	return nullptr;
+}
+
+void AMVE_PC_StageLevel::SetupChatUI(UMVE_WC_Chat* InWidget)
+{
+	// 1. 컨트롤러 생성
+	ChatController = NewObject<UMVE_StageLevel_WidgetController_Chat>(this);
+	ChatController->Initialize(true); // 자동으로 ChatManager 찾기
+    
+	// 2. 위젯에 컨트롤러 설정
+	ChatWidget = InWidget;
+    
+	if (ChatWidget)
+	{
+		ChatWidget->SetController(ChatController);
+	}
 }
 
 void AMVE_PC_StageLevel::BeginPlay()
@@ -115,23 +135,25 @@ void AMVE_PC_StageLevel::CreateWidgets()
 	
 	if (IsHost())
 	{
-		if (HostStandardMenuWidget)
+		if (UUIManagerSubsystem* UIManager = UUIManagerSubsystem::Get(this))
 		{
-			HostStandardMenuWidget->RemoveFromParent();
-			HostStandardMenuWidget = nullptr;
-		}
-		if (HostStandardMenuWidgetClass)
-		{
-			HostStandardMenuWidget = CreateWidget<UUserWidget>(this, HostStandardMenuWidgetClass);	
-		}
-		if (HostStandardMenuWidget)
-		{
-			HostStandardMenuWidget->AddToViewport();
-			PRINTNETLOG(this, TEXT("%s 위젯을 표시합니다."), *HostStandardMenuWidgetClass->GetName());
+			UIManager->ShowScreen(EUIScreen::Studio_OnLive);
+			UUserWidget* Widget = UIManager->GetCurrentWidget();
+			UMVE_STU_WC_ConcertStudioPanel* StudioWidget = Cast<UMVE_STU_WC_ConcertStudioPanel>(Widget); 
+			SetupChatUI(StudioWidget->ChatWidget);
 		}
 	}
 	else
 	{
+		if (UUIManagerSubsystem* UIManager = UUIManagerSubsystem::Get(this))
+		{
+			UIManager->ShowScreen(EUIScreen::AudienceConcertRoom);
+			UUserWidget* Widget = UIManager->GetCurrentWidget();
+			UMVE_AUD_WC_InteractionPanel* AudienceWidget = Cast<UMVE_AUD_WC_InteractionPanel>(Widget); 
+			SetupChatUI(AudienceWidget->ChatWidget);
+		}
+
+		
 		if (AudRadialMenuWidget)
 		{
 			AudRadialMenuWidget->RemoveFromParent();
@@ -147,6 +169,7 @@ void AMVE_PC_StageLevel::CreateWidgets()
 			AudRadialMenuWidget->SetVisibility(ESlateVisibility::Collapsed);
 			PRINTNETLOG(this, TEXT("%s 위젯을 생성했지만, 숨겨진 상태입니다."), *AudRadialMenuWidgetClass->GetName());
 		}
+		
 	}
 }
 

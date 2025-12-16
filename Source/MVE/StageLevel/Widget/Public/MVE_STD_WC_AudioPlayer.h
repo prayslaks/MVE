@@ -6,7 +6,7 @@
 #include "Blueprint/UserWidget.h"
 #include "MVE_STD_WC_AudioPlayer.generated.h"
 
-class UMVE_STD_WC_AudioPanel;
+class UMVE_STU_WC_ConcertStudioPanel;
 struct FMVE_STD_AudioSearchResultData;
 class UImage;
 class UButton;
