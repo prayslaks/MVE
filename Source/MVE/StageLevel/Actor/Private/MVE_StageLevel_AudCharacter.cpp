@@ -12,6 +12,7 @@
 #include "StageLevel/Actor/Public/MVE_StageLevel_AudCharacterShooterComponent.h"
 #include "StageLevel/Default/Public/MVE_PC_StageLevel.h"
 #include "Curves/CurveFloat.h"
+#include "Kismet/GameplayStatics.h"
 #include "Net/UnrealNetwork.h"
 #include "StageLevel/Actor/Public/MVE_StageLevel_AudCamera.h"
 
@@ -122,7 +123,7 @@ void AMVE_StageLevel_AudCharacter::GetLifetimeReplicatedProps(TArray<class FLife
 	DOREPLIFETIME(AMVE_StageLevel_AudCharacter, CurrentControlMode);
 }
 
-#pragma region 조준 입력 변수 할당 & 리플리케이션 처리
+#pragma region 조준 여부 변수 할당 & 리플리케이션 처리
 
 void AMVE_StageLevel_AudCharacter::OnInputActionAimStarted(const FInputActionValue& Value)
 {
@@ -349,6 +350,135 @@ void AMVE_StageLevel_AudCharacter::OnRep_ControlMode()
 
 #pragma endregion 
 
+#pragma region 액션 실행 여부 변수 할당 & 리플리케이션 처리
+
+void AMVE_StageLevel_AudCharacter::Server_SetIsExecuting_Implementation(const bool Value)
+{
+	bIsExecuting = Value;
+}
+
+void AMVE_StageLevel_AudCharacter::Server_ActiveExecuteTimer_Implementation(const float& Time)
+{
+	// 연속 입력 방지
+	if (bIsExecuting)
+	{
+		return;
+	}
+	
+	bIsExecuting = true;
+	FTimerDelegate TimerDelegate;
+	TimerDelegate.BindWeakLambda(this, [this]()
+	{
+		bIsExecuting = false;
+		PRINTNETLOG(this, TEXT("실행 입력 액션 타이머 종료!"))
+	});
+	GetWorldTimerManager().SetTimer(ExecuteTimerHandle, TimerDelegate, Time, false);
+}
+
+void AMVE_StageLevel_AudCharacter::OnRep_IsExecuting() const
+{
+	PRINTNETLOG(this, TEXT("서버를 통해 리플리케이티드!"));
+}
+
+void AMVE_StageLevel_AudCharacter::RequestSetIsExecuting(const bool Value)
+{
+	// 네트워크 대역폭 관리
+	if (bIsExecuting == Value)
+	{
+		return;
+	}
+	
+	// 서버를 거쳐서 리플리케이션을 통해 최종 업데이트
+	Server_SetIsExecuting(Value);
+}
+
+#pragma endregion
+
+#pragma region 사진 액션 관련 함수 & RPC 구현
+
+AMVE_StageLevel_AudCamera* AMVE_StageLevel_AudCharacter::GetAudCamera() const
+{
+	return Cast<AMVE_StageLevel_AudCamera>(AudCameraChildActorComp->GetChildActor());
+}
+
+void AMVE_StageLevel_AudCharacter::Server_ExecutePhoto_Implementation()
+{
+	// 조준 상태가 아니면 사진 입력 액션을 발동할 수 없다
+	if (GetIsAiming() == false)
+	{	
+		return;
+	}
+	
+	// 서버가 모든 클라이언트에 사진 액션 실행 요청
+	Multicast_ExecutePhoto();
+}
+
+void AMVE_StageLevel_AudCharacter::Multicast_ExecutePhoto_Implementation()
+{
+	PRINTNETLOG(this, TEXT("카메라 멀티캐스트!"));
+	
+	// 카메라에 접근해서 이펙트 실행
+	GetAudCamera()->TakePhoto();	
+}
+
+#pragma endregion
+
+#pragma region 던지기 액션 관련 함수 & RPC 구현
+
+void AMVE_StageLevel_AudCharacter::Server_ExecuteThrow_Implementation()
+{
+	// 조준 상태가 아니면 던지기 입력 액션을 발동할 수 없다
+	if (GetIsAiming() == false)
+	{	
+		return;
+	}
+	
+	// 서버가 모든 클라이언트에 애님 몽타주 재생 요청
+	Multicast_ExecuteThrow();	
+}
+
+void AMVE_StageLevel_AudCharacter::Multicast_ExecuteThrow_Implementation()
+{
+	// 애니메이션 몽타주 재생
+	PlayAnimMontage(AudThrowAnimMontage);	
+}
+
+#pragma endregion
+
+#pragma region 환호 액션 관련 함수 & RPC 구현
+
+void AMVE_StageLevel_AudCharacter::Server_ExecuteCheerUp_Implementation()
+{
+	// 조건 확인
+	
+	Multicast_ExecuteCheerUp();
+}
+
+void AMVE_StageLevel_AudCharacter::Multicast_ExecuteCheerUp_Implementation()
+{
+	PlayAnimMontage(AudCheerUpAnimMontage);
+	UGameplayStatics::PlaySoundAtLocation(GetWorld(), AudCheerUpSound, GetActorLocation());
+}
+
+#pragma endregion 
+
+#pragma region 응원 액션 관련 함수 & RPC 구현
+
+void AMVE_StageLevel_AudCharacter::Server_ExecuteSwingLightStick_Implementation()
+{
+	// 조건 확인
+	
+	Multicast_ExecuteSwingLightStick();
+}
+
+void AMVE_StageLevel_AudCharacter::Multicast_ExecuteSwingLightStick_Implementation()
+{
+	PlayAnimMontage(AudWaveLightStickAnimMontage);
+	UGameplayStatics::PlaySoundAtLocation(GetWorld(), AudWaveLightStickSound, GetActorLocation());
+}
+
+#pragma endregion
+
 void AMVE_StageLevel_AudCharacter::OnInputActionExecuteStarted(const FInputActionValue& Value)
 {
 	// 연속 입력 방지
@@ -356,63 +486,54 @@ void AMVE_StageLevel_AudCharacter::OnInputActionExecuteStarted(const FInputActio
 	{
 		return;
 	}
-
-	const auto ExecuteExpireTimer = [this]()
-	{
-		FTimerDelegate TimerDelegate;
-		TimerDelegate.BindWeakLambda(this, [this]()
-		{
-			bIsExecuting = false;
-			PRINTNETLOG(this, TEXT("실행 입력 액션 타이머 종료!"))
-		});
-		GetWorldTimerManager().SetTimer(ExecuteTimerHandle, TimerDelegate, 1.0, false);
-		bIsExecuting = true;	
-	};
+	
+	// 실행 완료 후 재입력 딜레이
+	constexpr float Delay = 0.25f;
 	
 	// 현재 모드에 따라서 다른 도구, 애니메이션, 사운드 사용
 	switch (CurrentControlMode)
 	{
 	case EAudienceControlMode::WidgetSelection:
-		break;
+		{
+			PRINTNETLOG(this, TEXT("오디언스 인터렉션 모드 선택 중..."))
+			break;
+		}
 	case EAudienceControlMode::Throw:
 		{
-			// 조준 상태가 아니면 던지기 입력 액션을 발동할 수 없다
-			if (GetAimEnabled() == false)
-			{	
-				break;
-			}
 			PRINTNETLOG(this, TEXT("던지기 입력 액션!"))
-			PlayAnimMontage(AudThrowAnimMontage);
+			const float Length = AudThrowAnimMontage->GetPlayLength();
+			Server_ActiveExecuteTimer(Length + Delay);
+			Server_ExecuteThrow();
 			break;
 		}
 	case EAudienceControlMode::Photo:
-		if (const auto AudCamera = Cast<AMVE_StageLevel_AudCamera>(AudCameraChildActorComp->GetChildActor()))
 		{
-			// 조준 상태가 아니면 던지기 입력 액션을 발동할 수 없다
-			if (GetAimEnabled() == false)
-			{	
-				break;
-			}
 			PRINTNETLOG(this, TEXT("카메라 입력 액션!"))
-			BindingPC->AudComponent->Server_TakePhoto();
-			ExecuteExpireTimer();
+			Server_ActiveExecuteTimer(1.0f);
+			Server_ExecutePhoto();
 			break;
 		}
 	case EAudienceControlMode::Cheer:
 		{
 			PRINTNETLOG(this, TEXT("환호 입력 액션!"));
+			const float Length = AudCheerUpAnimMontage->GetPlayLength();
+			Server_ActiveExecuteTimer(Length + Delay);
+			Server_ExecuteCheerUp();
 			break;
 		}
 	case EAudienceControlMode::WaveLightStick:
 		{
 			PRINTNETLOG(this, TEXT("응원 입력 액션"));
+			const float Length = AudWaveLightStickAnimMontage->GetPlayLength();
+			Server_ActiveExecuteTimer(Length + Delay);
+			Server_ExecuteSwingLightStick();
 			break;
 		}
 	case EAudienceControlMode::Default:
 	default:
-		// 기본 상태에서는 캐릭터가 카메라를 따라 회전하지 않는다
-		// 주변을 둘러보기 좋도록 카메라 포지션을 컨트롤한다
-		break;
+		{
+			break;
+		}
 	}
 }
 
@@ -433,7 +554,6 @@ void AMVE_StageLevel_AudCharacter::OnInputActionLookTriggered(const FInputAction
 	AddControllerYawInput(LookAxisVector.X);
 	AddControllerPitchInput(LookAxisVector.Y);
 }
-
 
 void AMVE_StageLevel_AudCharacter::UpdateCameraTimeline(const float Alpha) const
 {
@@ -457,7 +577,5 @@ void AMVE_StageLevel_AudCharacter::Server_SetUseControllerRotationYaw_Implementa
 	bUseControllerRotationYaw = Value;
 }
 
-AMVE_StageLevel_AudCamera* AMVE_StageLevel_AudCharacter::GetAudCamera() const
-{
-	return Cast<AMVE_StageLevel_AudCamera>(AudCameraChildActorComp->GetChildActor());
-}
+
+

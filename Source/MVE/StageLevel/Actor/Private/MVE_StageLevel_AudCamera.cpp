@@ -49,13 +49,7 @@ void AMVE_StageLevel_AudCamera::BeginPlay()
 	}
 }
 
-void AMVE_StageLevel_AudCamera::OnFlashUpdate(const float Value) const
-{
-	// 커브 값에 따라 스포트라이트 밝기 조절
-	SpotLightComp->SetIntensity(Value * FlashIntensityMultiplier);
-}
-
-void AMVE_StageLevel_AudCamera::Multicast_TakePhoto_Implementation()
+void AMVE_StageLevel_AudCamera::TakePhoto() const
 {
 	PRINTNETLOG(this, TEXT("사진 촬영 효과 실행!"));
 	
@@ -70,4 +64,10 @@ void AMVE_StageLevel_AudCamera::Multicast_TakePhoto_Implementation()
 	{
 		AudioComp->Play();
 	}	
+}
+
+void AMVE_StageLevel_AudCamera::OnFlashUpdate(const float Value) const
+{
+	// 커브 값에 따라 스포트라이트 밝기 조절
+	SpotLightComp->SetIntensity(Value * FlashIntensityMultiplier);
 }

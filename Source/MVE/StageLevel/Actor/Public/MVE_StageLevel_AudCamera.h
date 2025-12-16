@@ -21,8 +21,9 @@ public:
 	
 	virtual void BeginPlay() override;
 
-	UFUNCTION(NetMulticast, Reliable, Category = "MVE|TakePhoto")
-	void Multicast_TakePhoto();
+	UFUNCTION(Category = "MVE|TakePhoto")
+	void TakePhoto() const;
+
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "MVE|Components")
 	TObjectPtr<USpotLightComponent> SpotLightComp;

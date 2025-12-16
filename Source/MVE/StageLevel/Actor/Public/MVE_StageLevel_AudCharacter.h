@@ -86,20 +86,67 @@ public:
 	EAudienceControlMode GetControlMode() const { return CurrentControlMode; }
 	
 	UFUNCTION()
-	FORCEINLINE bool GetAimEnabled() const { return bIsAiming; }
+	FORCEINLINE bool GetIsAiming() const { return bIsAiming; }
 	
 	UFUNCTION()
 	FORCEINLINE bool GetIsExecuting() const { return bIsExecuting; }
 	
 	UFUNCTION()
-	FORCEINLINE void SetIsExecuting(const bool Value) { bIsExecuting = Value; }
-	
-	UFUNCTION()
 	AMVE_StageLevel_AudCamera* GetAudCamera() const;
 	
+#pragma region 던지기 액션 관련 함수 & RPC 선언
 	
+	UFUNCTION(Server, Reliable)
+	void Server_ExecuteThrow();
 	
-protected:
+	UFUNCTION(NetMulticast, Reliable)
+	void Multicast_ExecuteThrow();
+	
+#pragma endregion
+	
+#pragma region 사진 액션 관련 함수 & RPC 선언
+	
+	UFUNCTION(Server, Reliable)
+	void Server_ExecutePhoto();
+	
+	UFUNCTION(NetMulticast, Reliable)
+	void Multicast_ExecutePhoto();
+	
+#pragma endregion
+	
+#pragma region 환호 액션 관련 함수 & RPC 선언
+	
+	UFUNCTION(Server, Reliable)
+	void Server_ExecuteCheerUp();
+	
+	UFUNCTION(NetMulticast, Reliable)
+	void Multicast_ExecuteCheerUp();
+	
+#pragma endregion
+	
+#pragma region 응원 액션 관련 함수 & RPC 선언
+	
+	UFUNCTION(Server, Reliable)
+	void Server_ExecuteSwingLightStick();
+	
+	UFUNCTION(NetMulticast, Reliable)
+	void Multicast_ExecuteSwingLightStick();
+	
+#pragma endregion
+
+private:
+	// 플레이어 컨트롤러
+	UPROPERTY(VisibleAnywhere, Category = "MVE|Control", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<AMVE_PC_StageLevel> BindingPC;
+	
+	// 오디언스 상호작용 관련 필드
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "MVE|Components", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UAudioComponent> AudioComponent;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "MVE|Components", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UMVE_StageLevel_AudCharacterShooterComponent> ShooterComponent;
+	
+#pragma region 사용자 입력 액션 콜백
+	
 	// IA_Look : 화면 전환
 	UFUNCTION()
 	void OnInputActionLookTriggered(const FInputActionValue& Value);
@@ -126,33 +173,8 @@ protected:
 	// 카메라 전환 타임라인의 업데이트
 	UFUNCTION()
 	void UpdateCameraTimeline(float Alpha) const;
-
-private:
-	// 플레이어 컨트롤러
-	UPROPERTY(VisibleAnywhere, Category = "MVE|Control", meta = (AllowPrivateAccess = "true"))
-	TObjectPtr<AMVE_PC_StageLevel> BindingPC;
 	
-	// 카메라 관련 필드
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "MVE|Components", meta = (AllowPrivateAccess = "true"))
-	TObjectPtr<USpringArmComponent> SpringArm;
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "MVE|Components", meta = (AllowPrivateAccess = "true"))
-	TObjectPtr<UCameraComponent> Camera;
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "MVE|Components", meta = (AllowPrivateAccess = "true"))
-	TObjectPtr<UTimelineComponent> CameraTimeline;
-	UPROPERTY(EditAnywhere, Category = "MVE|Control", meta = (AllowPrivateAccess = "true"))
-	TObjectPtr<UCurveFloat> CameraTransitionCurve;
-	UPROPERTY(VisibleAnywhere, Category = "MVE|Control") 
-	bool bLockCamera;
-	
-	// 오디언스 상호작용 관련 필드
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "MVE|Components", meta = (AllowPrivateAccess = "true"))
-	TObjectPtr<UAudioComponent> AudioComponent;
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "MVE|Components", meta = (AllowPrivateAccess = "true"))
-	TObjectPtr<UMVE_StageLevel_AudCharacterShooterComponent> ShooterComponent;
-	
-	FTimerHandle ExecuteTimerHandle;
-	UPROPERTY(VisibleAnywhere, Category = "MVE|Control", Replicated)
-	bool bIsExecuting;
+#pragma endregion 
 	
 #pragma region 조준 입력 변수 할당 & 리플리케이션 처리
 	
@@ -180,10 +202,29 @@ private:
 	
 #pragma endregion
 	
+#pragma region 액션 실행 변수 할당 & 리플리케이션 처리
+	
+	FTimerHandle ExecuteTimerHandle;
+	UPROPERTY(VisibleAnywhere, Category = "MVE|Control", ReplicatedUsing=OnRep_IsExecuting)
+	bool bIsExecuting;
+	UFUNCTION(Server, Reliable)
+	void Server_ActiveExecuteTimer(const float& Time);
+	
+	
+	UFUNCTION(Server, Reliable)
+	void Server_SetIsExecuting(const bool Value);
+	UFUNCTION()
+	void OnRep_IsExecuting() const;
+	UFUNCTION()
+	void RequestSetIsExecuting(const bool Value);
+	
+#pragma endregion 
+	
 	UFUNCTION(Server, Reliable, Category = "MVE|Control")
 	void Server_SetUseControllerRotationYaw(const bool Value);
 	
-	// 입력 매핑 컨텍스트와 입력 액션
+#pragma region  입력 매핑 컨텍스트와 입력 액션
+	
 	UPROPERTY(EditAnywhere, Category = "MVE|Control", meta = (AllowPrivateAccess = "true"))           
 	TObjectPtr<UInputMappingContext> IMC_AudCharacter;
 	UPROPERTY(EditAnywhere, Category = "MVE|Control", meta = (AllowPrivateAccess = "true"))           
@@ -198,7 +239,23 @@ private:
 	TObjectPtr<UInputAction> IA_Execute;
 	UPROPERTY(EditAnywhere, Category = "MVE|Control", meta = (AllowPrivateAccess = "true"))      
 	TObjectPtr<UInputAction> IA_Look;
+	
+#pragma endregion 
 
+#pragma region 상호작용 모드 별 카메라 컨트롤 관련
+	
+	// 카메라 관련 필드
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "MVE|Components", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<USpringArmComponent> SpringArm;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "MVE|Components", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UCameraComponent> Camera;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "MVE|Components", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UTimelineComponent> CameraTimeline;
+	UPROPERTY(EditAnywhere, Category = "MVE|Control", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UCurveFloat> CameraTransitionCurve;
+	UPROPERTY(VisibleAnywhere, Category = "MVE|Control") 
+	bool bLockCamera;
+	
 	// 상호작용 모드 별 카메라 위치 보간 기준
 	UPROPERTY(VisibleAnywhere, Category = "MVE|Control", meta = (AllowPrivateAccess = "true"))
 	FMVE_StageLevel_AudCharacterCameraPosition CameraInterpStartPosition;
@@ -217,12 +274,32 @@ private:
 	UPROPERTY(VisibleAnywhere, Category = "MVE|Control", meta = (AllowPrivateAccess = "true"))
 	FMVE_StageLevel_AudCharacterCameraPosition WaveLightStickActionCameraPosition;
 	
+#pragma endregion
+	
+	
+	
 	// 상호작용 오브젝트 제어
 	UPROPERTY(VisibleAnywhere, Category = "MVE|Objects", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<AMVE_StageLevel_AudObject> CurrentAudObject;
 	UPROPERTY(VisibleAnywhere, Category = "MVE|Objects", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UChildActorComponent> AudCameraChildActorComp;
+	UPROPERTY(VisibleAnywhere, Category = "MVE|Objects", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UChildActorComponent> AudLightStickChildActorComp;
 	
-	UPROPERTY(EditAnywhere, Category = "MVE|Objects", meta = (AllowPrivateAccess = "true"))
+	
+	
+#pragma region 상호작용 애니메이션 & VFX & SFX
+	
+	UPROPERTY(EditAnywhere, Category = "MVE|Interactions", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UAnimMontage> AudThrowAnimMontage;
+	UPROPERTY(EditAnywhere, Category = "MVE|Interactions", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UAnimMontage> AudCheerUpAnimMontage;
+	UPROPERTY(EditAnywhere, Category = "MVE|Interactions", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UAnimMontage> AudWaveLightStickAnimMontage;
+	UPROPERTY(EditAnywhere, Category = "MVE|Interactions", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<USoundBase> AudCheerUpSound;
+	UPROPERTY(EditAnywhere, Category = "MVE|Interactions", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<USoundBase> AudWaveLightStickSound;
+	
+#pragma endregion
 };

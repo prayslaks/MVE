@@ -44,15 +44,6 @@ void UMVE_PC_StageLevel_AudienceComponent::Server_WaveLightStick_Implementation(
 	}
 }
 
-void UMVE_PC_StageLevel_AudienceComponent::Server_TakePhoto_Implementation()
-{
-	if (GetOwner() && GetOwner()->HasAuthority())
-	{
-		PRINTNETLOG(this, TEXT("사진 찍기 요청을 모든 클라이언트에게 전파."));
-		GetBindingPC()->GetBindingAudCharacter()->GetAudCamera()->Multicast_TakePhoto();
-	}
-}
-
 void UMVE_PC_StageLevel_AudienceComponent::Server_CheerUp_Implementation(const FVector& Location)
 {
 	if (GetOwner() && GetOwner()->HasAuthority())

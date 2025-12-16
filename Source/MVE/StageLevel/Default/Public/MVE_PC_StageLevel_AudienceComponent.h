@@ -46,10 +46,6 @@ public:
 	UFUNCTION(Server, Reliable)
 	void Server_WaveLightStick(const FVector& Location);
 
-	// 포토 기능과 관련된 ServerRPC
-	UFUNCTION(Server, Reliable)
-	void Server_TakePhoto();
-
 	// 환호 기능과 관련된 ServerRPC
 	UFUNCTION(Server, Reliable)
 	void Server_CheerUp(const FVector& Location);
