@@ -74,7 +74,7 @@ public:
 	class UMVE_StageLevel_AudCharacterShooterComponent* GetShooterComponent() const;
 	
 private:
-	void SetupChatUI();
+	void SetupChatUI(UMVE_WC_Chat* InWidget);
 
 	UPROPERTY()
 	TObjectPtr<UMVE_StageLevel_WidgetController_Chat> ChatController;

@@ -3,7 +3,10 @@
 #include "UObject/ConstructorHelpers.h"
 #include "Blueprint/UserWidget.h"
 #include "MVE.h"
+#include "MVE_AUD_WC_InteractionPanel.h"
 #include "MVE_StageLevel_WidgetController_Chat.h"
+#include "MVE_STU_WC_ConcertStudioPanel.h"
+#include "MVE_WC_Chat.h"
 #include "UIManagerSubsystem.h"
 #include "StageLevel/Actor/Public/MVE_StageLevel_AudCharacter.h"
 #include "StageLevel/Default/Public/MVE_PC_StageLevel_AudienceComponent.h"
@@ -37,20 +40,18 @@ UMVE_StageLevel_AudCharacterShooterComponent* AMVE_PC_StageLevel::GetShooterComp
 	return nullptr;
 }
 
-void AMVE_PC_StageLevel::SetupChatUI()
+void AMVE_PC_StageLevel::SetupChatUI(UMVE_WC_Chat* InWidget)
 {
 	// 1. 컨트롤러 생성
 	ChatController = NewObject<UMVE_StageLevel_WidgetController_Chat>(this);
-	ChatController->Initialize(GetWorld(), true); // 자동으로 ChatManager 찾기
+	ChatController->Initialize(true); // 자동으로 ChatManager 찾기
     
-	// 2. 위젯 생성
-	TSubclassOf<UMVE_WC_Chat> WidgetClass = ...; // BP 클래스 로드
-	ChatWidget = CreateWidget<UMVE_WC_Chat>(this, WidgetClass);
+	// 2. 위젯에 컨트롤러 설정
+	ChatWidget = InWidget;
     
 	if (ChatWidget)
 	{
 		ChatWidget->SetController(ChatController);
-		ChatWidget->AddToViewport();
 	}
 }
 
@@ -137,6 +138,9 @@ void AMVE_PC_StageLevel::CreateWidgets()
 		if (UUIManagerSubsystem* UIManager = UUIManagerSubsystem::Get(this))
 		{
 			UIManager->ShowScreen(EUIScreen::Studio_OnLive);
+			UUserWidget* Widget = UIManager->GetCurrentWidget();
+			UMVE_STU_WC_ConcertStudioPanel* StudioWidget = Cast<UMVE_STU_WC_ConcertStudioPanel>(Widget); 
+			SetupChatUI(StudioWidget->ChatWidget);
 		}
 	}
 	else
@@ -144,6 +148,9 @@ void AMVE_PC_StageLevel::CreateWidgets()
 		if (UUIManagerSubsystem* UIManager = UUIManagerSubsystem::Get(this))
 		{
 			UIManager->ShowScreen(EUIScreen::AudienceConcertRoom);
+			UUserWidget* Widget = UIManager->GetCurrentWidget();
+			UMVE_AUD_WC_InteractionPanel* AudienceWidget = Cast<UMVE_AUD_WC_InteractionPanel>(Widget); 
+			SetupChatUI(AudienceWidget->ChatWidget);
 		}
 
 		
