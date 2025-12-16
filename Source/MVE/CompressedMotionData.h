@@ -4,7 +4,7 @@
 #include "CompressedMotionData.generated.h"
 
 // 16비트 압축 벡터 (6 bytes)
-USTRUCT()
+USTRUCT(BlueprintType)
 struct FCompressedVector
 {
 	GENERATED_BODY()
@@ -55,7 +55,7 @@ struct TStructOpsTypeTraits<FCompressedVector> : public TStructOpsTypeTraitsBase
 };
 
 // 압축된 Quaternion (7 bytes) - Smallest Three
-USTRUCT()
+USTRUCT(BlueprintType)
 struct FCompressedQuat
 {
 	GENERATED_BODY()
@@ -205,7 +205,7 @@ struct TStructOpsTypeTraits<FCompressedQuat> : public TStructOpsTypeTraitsBase2<
 };
 
 // 압축된 본 트랜스폼 (14 bytes)
-USTRUCT()
+USTRUCT(BlueprintType)
 struct FCompressedBoneTransform
 {
 	GENERATED_BODY()
@@ -259,7 +259,7 @@ struct TStructOpsTypeTraits<FCompressedBoneTransform> : public TStructOpsTypeTra
 };
 
 // 프레임 단위 압축 데이터 (배열)
-USTRUCT()
+USTRUCT(BlueprintType)
 struct FCompressedMotionFrame
 {
 	GENERATED_BODY()
@@ -311,5 +311,5 @@ struct TStructOpsTypeTraits<FCompressedMotionFrame> : public TStructOpsTypeTrait
 
 // 이게 Smallest Three 기법 이다.
 
-//  TODO 이후에 osc 직접 연결 (코드를 통한) 랑 메세지 바인딩 까지 해놓기
+//  TODO 이후에 osc 직접 연결 (코드를 통한) 랑 메세지 바인딩 까지 해놓기 오늘 테스트
  

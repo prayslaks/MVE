@@ -1,6 +1,7 @@
 ﻿#include "MocapDataComponent.h"
 #include "Receive/OscDispatcher.h"
 #include "Common/OscFunctionLibrary.h"
+#include "Misc/CompressedGrowableBuffer.h"
 
 UMocapDataComponent::UMocapDataComponent()
 {
@@ -97,10 +98,8 @@ void UMocapDataComponent::ProcessControlData(const TArray<FOscDataElemStruct>& D
 		return;
 	}
 
-	// Index
 	int32 ControlIndex = UOscFunctionLibrary::AsInt(Data[0]);
 
-	// Float Array
 	TArray<float> Values;
 	Values.Reserve(7);
 
@@ -117,14 +116,11 @@ void UMocapDataComponent::ProcessControlData(const TArray<FOscDataElemStruct>& D
 		return;
 	}
 
-	// 구성
 	FVector Location(Values[0], Values[1], Values[2]);
 	FQuat Rotation(Values[3], Values[4], Values[5], Values[6]);
 
-	// 압축 모드
 	if (bUseCompression)
 	{
-		// 프레임 시작
 		if (!bFrameStarted)
 		{
 			bFrameStarted = true;
@@ -132,14 +128,12 @@ void UMocapDataComponent::ProcessControlData(const TArray<FOscDataElemStruct>& D
 			CurrentFrameBones.Reset();
 		}
 
-		// 본 데이터 추가
 		FBoneData BoneData;
 		BoneData.Index = ControlIndex;
 		BoneData.Location = Location;
 		BoneData.Rotation = Rotation;
 		CurrentFrameBones.Add(BoneData);
 
-		// 프레임 완성 체크
 		if (CurrentFrameBones.Num() >= 50)
 		{
 			ProcessCompressedFrame();
@@ -170,21 +164,17 @@ void UMocapDataComponent::ProcessCompressedFrame()
 		return;
 	}
 
-	// 프레임 생성
 	CurrentCompressedFrame.Bones.Reset();
 	CurrentCompressedFrame.Timestamp = GetWorld()->GetTimeSeconds();
 	CurrentCompressedFrame.bDeltaCompressed = bUseDeltaCompression;
 
-	// 원본 크기 계산
-	int32 OriginalSize = CurrentFrameBones.Num() * (4 + 4 + 4 + 4 + 4 + 4 + 4);
+	int32 OriginalSize = CurrentFrameBones.Num() * 32;
 
-	// 본 데이터 압축
 	for (const FBoneData& BoneData : CurrentFrameBones)
 	{
-		// 255개 본까지만 지원
 		if (BoneData.Index >= 256)
 		{
-			continue; 
+			continue;
 		}
 
 		FCompressedBoneTransform CompressedBone(
@@ -193,7 +183,6 @@ void UMocapDataComponent::ProcessCompressedFrame()
 			BoneData.Rotation
 		);
 
-		// 델타 압축
 		if (bUseDeltaCompression)
 		{
 			if (ShouldSendBone(CompressedBone.BoneIndex, CompressedBone))
@@ -208,17 +197,13 @@ void UMocapDataComponent::ProcessCompressedFrame()
 		}
 	}
 
-	// 압축 크기 계산
-	int32 CompressedSize = 4 + 1 + 1 + (CurrentCompressedFrame.Bones.Num() * 14); // Timestamp(4) + bDelta(1) + Count(1) + Bones(14*N)
+	int32 CompressedSize = 6 + (CurrentCompressedFrame.Bones.Num() * 14);
 
-	// 통계 갱신
 	LastFrameBoneCount = CurrentCompressedFrame.Bones.Num();
 	CompressionRatio = OriginalSize > 0 ? ((float)CompressedSize / (float)OriginalSize) : 1.0f;
 
-	// 델리게이트 브로드캐스트
 	OnCompressedFrameReceived.Broadcast(CurrentCompressedFrame);
 
-	// 디버깅 로그
 	static int32 FrameCount = 0;
 	if (FrameCount++ % 30 == 0)
 	{
@@ -241,7 +226,6 @@ bool UMocapDataComponent::ShouldSendBone(uint8 BoneIndex, const FCompressedBoneT
 		return true;
 	}
 	
-	// 위치 델타 체크
 	FVector OldLoc = CachedBone->Location.Decompress();
 	FVector NewLoc = NewTransform.Location.Decompress();
 	float LocDelta = FVector::DistSquared(OldLoc, NewLoc);
@@ -251,7 +235,6 @@ bool UMocapDataComponent::ShouldSendBone(uint8 BoneIndex, const FCompressedBoneT
 		return true;
 	}
 	
-	// 회전 델타 체크
 	FQuat OldRot = CachedBone->Rotation.Decompress();
 	FQuat NewRot = NewTransform.Rotation.Decompress();
 	float RotDelta = FQuat::Error(OldRot, NewRot);
@@ -283,10 +266,4 @@ void UMocapDataComponent::ProcessFaceMorphData(const TArray<FOscDataElemStruct>&
 	}
 
 	OnFaceMorphDataReceived.Broadcast(MorphTargets);
-
-	static int32 LogCount = 0;
-	if (LogCount++ < 5)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("[MocapData Face #%d] 모프 타겟: %d개"), LogCount, MorphTargets.Num());
-	}
 }

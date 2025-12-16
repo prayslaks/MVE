@@ -7,13 +7,13 @@
 #include "CompressedMotionData.h"
 #include "MocapDataComponent.generated.h"
 
-// 압축 OFF
+// 일반 데이터
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnControlDataReceived, int32, ControlIndex, FTransform, ControlTransform);
 
-// 압축 ON
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnCompressedFrameReceived, const FCompressedMotionFrame&, CompressedFrame);
+// 압축 프레임
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnCompressedFrameReceived, FCompressedMotionFrame, CompressedFrame);
 
-// 페이스
+// 페이스 데이터 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnFaceMorphDataReceived, const TArray<float>&, MorphTargets);
 
 UCLASS(ClassGroup=(Mocap), meta=(BlueprintSpawnableComponent))
@@ -38,7 +38,7 @@ public:
 
 	UPROPERTY(BlueprintAssignable, Category = "Mocap")
 	FOnFaceMorphDataReceived OnFaceMorphDataReceived;
-
+	
 	// OSC 설정
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mocap")
 	int32 ReceivePort = 39570;

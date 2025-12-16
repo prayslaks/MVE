@@ -59,10 +59,10 @@ void AAvatarPreviewActor::CreateRenderTarget()
 	{
 		RenderTarget = NewObject<UTextureRenderTarget2D>(this);
 		
-		// ⭐ 명시적으로 포맷 설정 (검은색 투명 문제 해결의 핵심!)
+		// 명시적으로 포맷 설정 (검은색 투명 문제 해결의 핵심!)
 		RenderTarget->RenderTargetFormat = RTF_RGBA8;
 		
-		// ⭐ 배경색 설정: 검은색이지만 완전 불투명 (Alpha=1.0)
+		// 배경색 설정: 검은색이지만 완전 불투명 (Alpha=1.0)
 		RenderTarget->ClearColor = FLinearColor(0.0f, 0.0f, 0.0f, 1.0f);
 		
 		// 해상도 설정

@@ -9,6 +9,7 @@ class UScrollBox;
 class UButton;
 class UTextBlock;
 class UImage;
+struct FGetConcertListData;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnConcertDoubleClicked, const FMVE_AUD_ConcertSearchResultData&, ConcertData);
 

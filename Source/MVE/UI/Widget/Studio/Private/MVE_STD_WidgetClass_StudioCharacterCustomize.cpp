@@ -131,6 +131,79 @@ void UMVE_STD_WidgetClass_StudioCharacterCustomize::InitializePreview()
 	PRINTLOG(TEXT("Preview initialized successfully"));
 }
 
+UTexture2D* UMVE_STD_WidgetClass_StudioCharacterCustomize::CapturePreviewThumbnail()
+{
+	if (!PreviewActor || !PreviewActor->RenderTarget)
+	{
+		PRINTLOG(TEXT("FileNameText PreviewActor or RenderTarget is null"));
+		return nullptr;
+	}
+
+	UTextureRenderTarget2D* RT = PreviewActor->RenderTarget;
+	
+	// RenderTarget을 읽기 위한 준비
+	FTextureRenderTargetResource* RTResource = RT->GameThread_GetRenderTargetResource();
+	if (!RTResource)
+	{
+		PRINTLOG(TEXT("FileNameText RenderTarget Resource is null"));
+		return nullptr;
+	}
+
+	// 썸네일 크기 (작게)
+	const int32 ThumbnailSize = 256;
+	
+	// RenderTarget의 픽셀 데이터 읽기
+	TArray<FColor> SurfaceData;
+	FIntRect Rect(0, 0, RT->SizeX, RT->SizeY);
+	
+	if (!RTResource->ReadPixels(SurfaceData, FReadSurfaceDataFlags(), Rect))
+	{
+		PRINTLOG(TEXT("FileNameText Failed to read RenderTarget pixels"));
+		return nullptr;
+	}
+
+	// Texture2D 생성
+	UTexture2D* Thumbnail = UTexture2D::CreateTransient(ThumbnailSize, ThumbnailSize, PF_B8G8R8A8);
+	if (!Thumbnail)
+	{
+		PRINTLOG(TEXT("FileNameText Failed to create Texture2D"));
+		return nullptr;
+	}
+
+	// 리샘플링 (1024x1024 → 256x256)
+	TArray<FColor> ResizedData;
+	ResizedData.SetNum(ThumbnailSize * ThumbnailSize);
+	
+	float ScaleX = (float)RT->SizeX / ThumbnailSize;
+	float ScaleY = (float)RT->SizeY / ThumbnailSize;
+	
+	for (int32 Y = 0; Y < ThumbnailSize; Y++)
+	{
+		for (int32 X = 0; X < ThumbnailSize; X++)
+		{
+			int32 SrcX = FMath::Clamp((int32)(X * ScaleX), 0, RT->SizeX - 1);
+			int32 SrcY = FMath::Clamp((int32)(Y * ScaleY), 0, RT->SizeY - 1);
+			int32 SrcIndex = SrcY * RT->SizeX + SrcX;
+			int32 DstIndex = Y * ThumbnailSize + X;
+			
+			if (SurfaceData.IsValidIndex(SrcIndex))
+			{
+				ResizedData[DstIndex] = SurfaceData[SrcIndex];
+			}
+		}
+	}
+
+	// Texture2D에 데이터 복사
+	void* TextureData = Thumbnail->GetPlatformData()->Mips[0].BulkData.Lock(LOCK_READ_WRITE);
+	FMemory::Memcpy(TextureData, ResizedData.GetData(), ResizedData.Num() * sizeof(FColor));
+	Thumbnail->GetPlatformData()->Mips[0].BulkData.Unlock();
+	Thumbnail->UpdateResource();
+
+	PRINTLOG(TEXT("FileNameText Thumbnail created: %dx%d"), ThumbnailSize, ThumbnailSize);
+	
+	return Thumbnail;
+}
+
 void UMVE_STD_WidgetClass_StudioCharacterCustomize::SetRenderTarget(UTextureRenderTarget2D* InRenderTarget)
 {
 	if (PreviewImage && InRenderTarget)
@@ -160,13 +233,13 @@ void UMVE_STD_WidgetClass_StudioCharacterCustomize::UpdateCameraPosition()
 
 	// 타겟 위치 (메쉬 중심)
 	FVector TargetLocation = PreviewActor->TargetActor->GetActorLocation();
-	TargetLocation.Z += 50.0f; // 약간 위로
+	TargetLocation.Z += 30.0f; // 약간 위로
 
 	// 구면 좌표계로 카메라 위치 계산
 	FRotator Rotation = FRotator(CurrentPitch, CurrentYaw, 0.0f);
 	FVector Direction = Rotation.Vector();
 	FVector CameraLocation = TargetLocation - Direction * CurrentDistance;
-
+	
 	// Scene Capture 위치/회전 업데이트
 	PreviewActor->SetActorLocation(CameraLocation);
 	PreviewActor->SetActorRotation((TargetLocation - CameraLocation).Rotation());
@@ -193,7 +266,7 @@ FReply UMVE_STD_WidgetClass_StudioCharacterCustomize::NativeOnMouseButtonDown
 				bIsDragging = true;
 				LastMousePosition = InMouseEvent.GetScreenSpacePosition();
 				PRINTLOG(TEXT("Preview rotation started (Right Click)"));
-				return FReply::Handled().CaptureMouse(TakeWidget());
+				return FReply::Handled();
 			}
 		}
 	}
@@ -212,7 +285,7 @@ FReply UMVE_STD_WidgetClass_StudioCharacterCustomize::NativeOnMouseButtonUp
 		{
 			bIsDragging = false;
 			PRINTLOG(TEXT("Preview rotation ended"));
-			return FReply::Handled().ReleaseMouseCapture();
+			return FReply::Handled();
 		}
 	}
 
@@ -271,9 +344,11 @@ FReply UMVE_STD_WidgetClass_StudioCharacterCustomize::NativeOnMouseWheel
 
 void UMVE_STD_WidgetClass_StudioCharacterCustomize::OnAttachFileClicked()
 {
+	PRINTLOG(TEXT("FileNameText [2] OnAttachFileClicked 시작"));
+	
 	if (!StorageSubsystem)
 	{
-		PRINTLOG(TEXT("StorageSubsystem is null"));
+		PRINTLOG(TEXT("FileNameText [2] StorageSubsystem is null"));
 		return;
 	}
 
@@ -281,28 +356,83 @@ void UMVE_STD_WidgetClass_StudioCharacterCustomize::OnAttachFileClicked()
 	FString FilePath = StorageSubsystem->OpenFileDialog();
 	if (FilePath.IsEmpty())
 	{
-		PRINTLOG(TEXT("No file selected"));
+		PRINTLOG(TEXT("FileNameText [2] 파일 선택 취소"));
 		return;
 	}
 
-	// 파일 저장
+	PRINTLOG(TEXT("FileNameText [2] 파일 선택됨: %s"), *FilePath);
+
+	// 파일 저장 (썸네일 없이 먼저)
 	FAvatarData NewData;
 	if (StorageSubsystem->SaveAvatarFile(FilePath, NewData))
 	{
+		PRINTLOG(TEXT("FileNameText [2] AvatarData 저장됨: %s"), *NewData.UniqueID);
+		
 		if (FileNameText)
 		{
 			FileNameText->SetText(FText::FromString(NewData.FileName));
 		}
 
 		CurrentSelectedID = NewData.UniqueID;
-		RefreshPresetList();
-		UpdatePreview(NewData);
-
-		PRINTLOG(TEXT("Avatar saved and selected: %s"), *NewData.UniqueID);
+		
+		// 먼저 프리뷰에 로드
+		if (PreviewActor)
+		{
+			PRINTLOG(TEXT("FileNameText [2] 프리뷰에 메시 로드 중..."));
+			
+			PreviewActor->LoadAvatarMesh(FilePath);
+			
+			// 카메라 리셋
+			CurrentYaw = 270.0f;
+			CurrentPitch = 0.0f;
+			CurrentDistance = DefaultDistance;
+			UpdateCameraPosition();
+			
+			PRINTLOG(TEXT("FileNameText [2] 프리뷰 로드 완료, 0.3초 후 썸네일 캡처 시작"));
+			
+			// FileNameText 0.3초 후 썸네일 캡처 (렌더링 완료 대기)
+			FTimerHandle ThumbnailTimer;
+			GetWorld()->GetTimerManager().SetTimer(ThumbnailTimer, [this, NewData]()
+			{
+				PRINTLOG(TEXT("FileNameText [3] 타이머 실행 - 썸네일 캡처 시작"));
+				
+				// 썸네일 생성
+				UTexture2D* Thumbnail = CapturePreviewThumbnail();
+				
+				if (Thumbnail)
+				{
+					PRINTLOG(TEXT("FileNameText [3] 썸네일 생성 성공!"));
+					
+					// 썸네일 업데이트
+					if (StorageSubsystem->UpdateAvatarThumbnail(NewData.UniqueID, Thumbnail))
+					{
+						PRINTLOG(TEXT("FileNameText [3] 썸네일 저장 성공!"));
+					}
+					else
+					{
+						PRINTLOG(TEXT("FileNameText [3] 썸네일 저장 실패"));
+					}
+				}
+				else
+				{
+					PRINTLOG(TEXT("FileNameText [3] 썸네일 생성 실패"));
+				}
+				
+				// 프리셋 목록 갱신
+				PRINTLOG(TEXT("FileNameText [3] 프리셋 목록 갱신 중..."));
+				RefreshPresetList();
+				
+			}, 0.3f, false);
+		}
+		else
+		{
+			PRINTLOG(TEXT("FileNameText [2] PreviewActor is null"));
+			RefreshPresetList();
+		}
 	}
 	else
 	{
-		PRINTLOG(TEXT("Failed to save avatar file"));
+		PRINTLOG(TEXT("FileNameText [2] AvatarData 저장 실패"));
 	}
 }
 
@@ -320,8 +450,11 @@ void UMVE_STD_WidgetClass_StudioCharacterCustomize::OnNextClicked()
 
 void UMVE_STD_WidgetClass_StudioCharacterCustomize::RefreshPresetList()
 {
+	PRINTLOG(TEXT("FileNameText [5] RefreshPresetList 시작"));
+	
 	if (!PresetContainer || !StorageSubsystem)
 	{
+		PRINTLOG(TEXT("FileNameText [5] PresetContainer or StorageSubsystem is null"));
 		return;
 	}
 
@@ -329,30 +462,62 @@ void UMVE_STD_WidgetClass_StudioCharacterCustomize::RefreshPresetList()
 	PresetButtons.Empty();
 
 	TArray<FAvatarData> Avatars = StorageSubsystem->GetSavedAvatars();
-	for (const FAvatarData& Data : Avatars)
+	
+	PRINTLOG(TEXT("FileNameText [5] 저장된 Avatar 개수: %d"), Avatars.Num());
+	
+	for (int32 i = 0; i < Avatars.Num(); i++)
 	{
+		FAvatarData& Data = Avatars[i];
+		PRINTLOG(TEXT("FileNameText [5] Avatar[%d]: %s, Thumbnail: %s"), 
+			i, 
+			*Data.FileName,
+			Data.ThumbnailTexture ? TEXT("있음") : TEXT("없음"));
+		
 		CreatePresetButton(Data);
 	}
 
-	PRINTLOG(TEXT("Refreshed preset list: %d items"), Avatars.Num());
+	PRINTLOG(TEXT("FileNameText [5] RefreshPresetList 완료"));
 }
 
-void UMVE_STD_WidgetClass_StudioCharacterCustomize::CreatePresetButton(const FAvatarData& Data)
+void UMVE_STD_WidgetClass_StudioCharacterCustomize::CreatePresetButton(FAvatarData& Data)
 {
+	PRINTLOG(TEXT("FileNameText [4] CreatePresetButton: %s"), *Data.FileName);
+	
 	if (!PresetButtonClass)
 	{
-		PRINTLOG(TEXT("PresetButtonClass not set"));
+		PRINTLOG(TEXT("FileNameText [4] PresetButtonClass not set"));
 		return;
 	}
 
 	UPresetButtonWidget* PresetButton = CreateWidget<UPresetButtonWidget>(this, PresetButtonClass);
 	if (PresetButton)
 	{
+		// FileNameText 썸네일 확인
+		if (Data.ThumbnailTexture)
+		{
+			PRINTLOG(TEXT("FileNameText [4] Data.ThumbnailTexture 있음: %dx%d"), 
+				Data.ThumbnailTexture->GetSizeX(), 
+				Data.ThumbnailTexture->GetSizeY());
+		}
+		else
+		{
+			PRINTLOG(TEXT("FileNameText [4] Data.ThumbnailTexture 없음 (null)"));
+		}
+		
+		// AvatarData 설정
 		PresetButton->SetAvatarData(Data);
+		
+		// 클릭 이벤트 바인딩
 		PresetButton->OnButtonClicked.BindUObject(this, &UMVE_STD_WidgetClass_StudioCharacterCustomize::OnPresetClicked);
 
 		PresetButtons.Add(PresetButton);
 		PresetContainer->AddChild(PresetButton);
+		
+		PRINTLOG(TEXT("FileNameText [4] PresetButton 생성 완료"));
+	}
+	else
+	{
+		PRINTLOG(TEXT("FileNameText [4] PresetButton 생성 실패"));
 	}
 }
 
@@ -385,7 +550,7 @@ void UMVE_STD_WidgetClass_StudioCharacterCustomize::UpdatePreview(const FAvatarD
 	PreviewActor->LoadAvatarMesh(Data.FilePath);
 
 	// 카메라 리셋
-	CurrentYaw = 180.0f;
+	CurrentYaw = 0.0f;
 	CurrentPitch = 0.0f;
 	CurrentDistance = DefaultDistance;
 	UpdateCameraPosition();
