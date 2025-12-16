@@ -95,12 +95,18 @@ private:
 
     UPROPERTY()
     FString CurrentRoomId;
-    
+
+    // 세션 생성한 방 정보
     UPROPERTY()
-    FConcertInfo PendingConcertInfo;  
+    FConcertInfo PendingConcertInfo;
+
+    // 세션 참여한 방 정보
+    UPROPERTY()
+    FString JoinedConcertName;
     
     UPROPERTY()
     TArray<FConcertInfo> ConcertList;
+
     
     UPROPERTY()
     bool bIsHost;

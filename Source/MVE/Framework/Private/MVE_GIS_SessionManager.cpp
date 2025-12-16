@@ -190,7 +190,13 @@ bool UMVE_GIS_SessionManager::GetConcertInfoAtIndex(int32 Index, FConcertInfo& O
 
 FString UMVE_GIS_SessionManager::GetCurrentSessionName()
 {
-	return PendingConcertInfo.ConcertName;
+	// 호스트: PendingConcertInfo 사용
+	// 클라이언트: JoinedConcertName 사용
+	if (!PendingConcertInfo.ConcertName.IsEmpty())
+	{
+		return PendingConcertInfo.ConcertName;
+	}
+	return JoinedConcertName;
 }
 
 FString UMVE_GIS_SessionManager::GetCurrentRoomID()
@@ -296,6 +302,7 @@ void UMVE_GIS_SessionManager::JoinSession(int32 Index)
 	}
     
 	const FConcertInfo& ConcertInfo = ConcertList[Index];
+	PendingConcertInfo.ConcertName = ConcertInfo.ConcertName;
 	JoinConcertInternal(ConcertInfo.RoomId);
 }
 
@@ -335,9 +342,13 @@ void UMVE_GIS_SessionManager::OnGetConcertInfoForJoin(bool bSuccess, const FGetC
 		return;
 	}
     
+	// 콘서트 이름 저장 (클라이언트용)
+	JoinedConcertName = Data.Concert.ConcertName;
+	SESSIONPRINTLOG(TEXT("Joined concert name: %s"), *JoinedConcertName);
+
 	// FConcertInfo의 ListenServer 정보 추출
 	const FListenServer& ListenServer = Data.Concert.ListenServer;
-    
+
 	// LocalIP와 Port 확인 (PublicIP가 있으면 우선 사용)
 	FString ServerIP = ListenServer.PublicIP.IsEmpty() ? ListenServer.LocalIP : ListenServer.PublicIP;
 	int32 ServerPort = ListenServer.PublicPort > 0 ? ListenServer.PublicPort : ListenServer.Port;

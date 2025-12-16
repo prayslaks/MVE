@@ -22,27 +22,4 @@ public:
 protected:
 	virtual void NativeConstruct() override;
 
-	UPROPERTY(meta = (BindWidget))
-	UButton* SwingLightStickButton;
-
-	UPROPERTY(meta = (BindWidget))
-	UButton* TakePhotoButton;
-
-	UPROPERTY(meta = (BindWidget))
-	UButton* CheerUpButton;
-	
-	UPROPERTY(meta=(BindWidget))
-	UButton* SwingHandButton;
-
-	UFUNCTION()
-	void OnSwingLightStickButtonClicked();
-	
-	UFUNCTION()
-	void OnTakePhotoButtonClicked();
-
-	UFUNCTION()
-	void OnCheerUpButtonClicked();
-	
-	UFUNCTION()
-	void OnSwingHandButtonClicked();
 };

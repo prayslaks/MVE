@@ -42,11 +42,6 @@ public:
 	 */
 	void UpdateViewerCount(int32 Count);
 
-	// 10초마다 시청자 수 업데이트
-	void GetCurrentPlayer();
-
-	FTimerHandle ViewerCountUpdateTimerHandle;
-
 	/**
 	 * 콘서트 상태 설정 (외부에서 강제로 상태 변경할 때)
 	 * @param bIsOpen true면 콘서트 열림, false면 닫힘
@@ -90,9 +85,12 @@ private:
 	 */
 	void UpdateButtonAppearance();
 
+	/**
+	 * GameMode로부터 시청자 수 업데이트 받음
+	 */
+	UFUNCTION()
+	void OnViewerCountUpdated(int32 NewCount);
+
 	// State
 	bool bIsConcertOpen = false;
-
-	UFUNCTION()
-	void HandleViewerCountUpdate(bool bSuccess, const FGetConcertInfoResponseData& Data, const FString& ErrorMsg);
 };

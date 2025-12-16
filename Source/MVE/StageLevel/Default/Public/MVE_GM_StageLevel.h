@@ -72,4 +72,12 @@ private:
 	// ChatManager
 	UPROPERTY()
 	TObjectPtr<AMVE_StageLevel_ChatManager> ChatManager;
+
+	// 시청자 수 업데이트 타이머
+	FTimerHandle ViewerCountUpdateTimerHandle;
+
+	/**
+	 * 10초마다 시청자 수를 계산하고 GameState에 업데이트
+	 */
+	void UpdateViewerCount();
 };

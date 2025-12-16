@@ -11,11 +11,15 @@
 #include "GameFramework/PlayerState.h"
 #include "StageLevel/Default/Public/MVE_PC_StageLevel_StudioComponent.h"
 #include "StageLevel/Default/Public/MVE_PC_StageLevel.h"
+#include "StageLevel/Default/Public/MVE_GS_StageLevel.h"
 
 AMVE_GM_StageLevel::AMVE_GM_StageLevel()
 {
 	// 심리스 트레블 사용하지 않음
 	bUseSeamlessTravel = false;
+
+	// GameState 클래스 설정
+	GameStateClass = AMVE_GS_StageLevel::StaticClass();
 
 	// 플레이어 컨트롤러
 	if (ConstructorHelpers::FClassFinder<AMVE_PC_StageLevel>
@@ -73,6 +77,16 @@ void AMVE_GM_StageLevel::BeginPlay()
 	if (HasAuthority())
 	{
 		SpawnChatManager();
+
+		// 10초마다 시청자 수 업데이트
+		GetWorld()->GetTimerManager().SetTimer(
+			ViewerCountUpdateTimerHandle,
+			this,
+			&AMVE_GM_StageLevel::UpdateViewerCount,
+			10.f,
+			true,
+			0.f // 즉시 한 번 실행
+		);
 	}
 }
 
@@ -298,5 +312,22 @@ void AMVE_GM_StageLevel::SpawnChatManager()
 	if (ChatManager)
 	{
 		PRINTLOG_CHAT(TEXT("ChatManager spawned"));
+	}
+}
+
+void AMVE_GM_StageLevel::UpdateViewerCount()
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	// 현재 시청자 수 계산 (호스트 제외)
+	int32 ViewerCount = GetNumPlayers() - 1;
+
+	// GameState 업데이트 (자동으로 모든 클라이언트에게 리플리케이트됨)
+	if (AMVE_GS_StageLevel* StageGameState = GetGameState<AMVE_GS_StageLevel>())
+	{
+		StageGameState->SetViewerCount(ViewerCount);
 	}
 }

@@ -1,12 +1,11 @@
 
 #include "StageLevel/Widget/Public/MVE_STU_WC_ConcertRoomInfo.h"
 #include "MVE.h"
-#include "MVE_API_Helper.h"
 #include "MVE_GIS_SessionManager.h"
 #include "Components/EditableTextBox.h"
 #include "Components/TextBlock.h"
 #include "Components/Button.h"
-#include "GameFramework/GameModeBase.h"
+#include "StageLevel/Default/Public/MVE_GS_StageLevel.h"
 
 void UMVE_STU_WC_ConcertRoomInfo::NativeConstruct()
 {
@@ -27,7 +26,6 @@ void UMVE_STU_WC_ConcertRoomInfo::NativeConstruct()
 	// 초기 상태 설정
 	bIsConcertOpen = false;
 	UpdateButtonAppearance();
-	UpdateViewerCount(0); // 초기 시청자 수 0명
 
 	// 콘서트 방 제목 설정
 	if (UMVE_GIS_SessionManager* SessionManager = GetGameInstance()->GetSubsystem<UMVE_GIS_SessionManager>())
@@ -36,14 +34,14 @@ void UMVE_STU_WC_ConcertRoomInfo::NativeConstruct()
 		SetRoomTitle(ConcertName);
 	}
 
-	// 10초마다 시청자 수 업데이트
-	GetWorld()->GetTimerManager().SetTimer(
-		ViewerCountUpdateTimerHandle,
-		this,
-		&UMVE_STU_WC_ConcertRoomInfo::GetCurrentPlayer,
-		10.f,
-		true
-		);
+	// GameState의 ViewerCount 업데이트 델리게이트 구독
+	if (AMVE_GS_StageLevel* StageGameState = GetWorld()->GetGameState<AMVE_GS_StageLevel>())
+	{
+		StageGameState->OnViewerCountChanged.AddDynamic(this, &UMVE_STU_WC_ConcertRoomInfo::OnViewerCountUpdated);
+
+		// 현재 시청자 수로 초기화
+		UpdateViewerCount(StageGameState->GetViewerCount());
+	}
 }
 
 void UMVE_STU_WC_ConcertRoomInfo::NativeDestruct()
@@ -60,15 +58,15 @@ void UMVE_STU_WC_ConcertRoomInfo::NativeDestruct()
 		ConcertToggleButton->OnClicked.RemoveDynamic(this, &ThisClass::OnConcertToggleClicked);
 	}
 
+	// GameState 델리게이트 언바인드
+	if (AMVE_GS_StageLevel* StageGameState = GetWorld()->GetGameState<AMVE_GS_StageLevel>())
+	{
+		StageGameState->OnViewerCountChanged.RemoveDynamic(this, &UMVE_STU_WC_ConcertRoomInfo::OnViewerCountUpdated);
+	}
+
 	// Delegate 클리어
 	OnRoomTitleChanged.Clear();
 	OnConcertToggled.Clear();
-
-	// 타이머 정리
-	if (GetWorld())
-	{
-		GetWorld()->GetTimerManager().ClearTimer(ViewerCountUpdateTimerHandle);
-	}
 
 	Super::NativeDestruct();
 }
@@ -99,15 +97,9 @@ void UMVE_STU_WC_ConcertRoomInfo::UpdateViewerCount(int32 Count)
 	
 }
 
-void UMVE_STU_WC_ConcertRoomInfo::GetCurrentPlayer()
+void UMVE_STU_WC_ConcertRoomInfo::OnViewerCountUpdated(int32 NewCount)
 {
-	AGameModeBase* GameMode = GetWorld()->GetAuthGameMode();
-	if (!GameMode)
-	{
-		return; // 클라이언트에서 호출 시
-	}
-	
-	UpdateViewerCount(GameMode->GetNumPlayers()-1);
+	UpdateViewerCount(NewCount);
 }
 
 void UMVE_STU_WC_ConcertRoomInfo::SetConcertState(bool bIsOpen)
@@ -180,23 +172,6 @@ void UMVE_STU_WC_ConcertRoomInfo::UpdateButtonAppearance()
 		ConcertToggleButtonText->SetText(FText::FromString(TEXT("콘서트 열기")));
 		// TODO: 버튼 색상 변경 (초록색 계열로)
 		// ConcertToggleButton->SetBackgroundColor(FLinearColor::Green);
-	}
-}
-
-void UMVE_STU_WC_ConcertRoomInfo::HandleViewerCountUpdate(bool bSuccess, const FGetConcertInfoResponseData& Data,
-	const FString& ErrorMsg)
-{
-	PRINTLOG(TEXT("HandleViewerCountUpdate 호출됨"));
-	
-	if (bSuccess)
-	{
-		int32 ViewerCount = Data.Concert.CurrentAudience;
-		PRINTLOG(TEXT("HandleViewerCountUpdate success"));
-		UpdateViewerCount(ViewerCount);
-	}
-	else
-	{
-		PRINTLOG(TEXT("HandleViewerCountUpdate failed"));
 	}
 }
 
