@@ -49,6 +49,12 @@ AMVE_StageLevel_AudCharacter::AMVE_StageLevel_AudCharacter()
 	
 	// 컨트롤 모드 기본
 	CurrentControlMode = EAudienceControlMode::Default;
+	
+	// 액션 카메라 위치
+	PhotoActionCameraLocation = FVector(0.0f, 50.0f, 50.0f);
+	ThrowActionCameraLocation = FVector(0.0f, 80.0f, 80.0f);
+	CheerActionCameraLocation = FVector(0.0f, 40.0f, 40.0f);
+	WaveLightStickActionCameraLocation = FVector(0.0f, 60.0f, 60.0f);
 }
 
 void AMVE_StageLevel_AudCharacter::BeginPlay()
@@ -72,6 +78,7 @@ void AMVE_StageLevel_AudCharacter::BeginPlay()
 			PRINTNETLOG(this, TEXT("입력모드 : GameOnly"))
 		}
 	}
+	
 	// 타임라인 설정
 	if (CameraTransitionCurve)
 	{
@@ -146,7 +153,7 @@ void AMVE_StageLevel_AudCharacter::SetControlMode(const EAudienceControlMode New
 		bUseControllerRotationYaw = false;
 		
 		// 화면 회전 잠금 설정
-		bLockLookAround = true;
+		bLockCamera = true;
 	};
 	const auto CameraMode2 = [this]()
 	{
@@ -155,11 +162,11 @@ void AMVE_StageLevel_AudCharacter::SetControlMode(const EAudienceControlMode New
 		bUseControllerRotationYaw = true;
 		if (CameraTimeline)
 		{
-			CameraTimeline->Play();
+			CameraTimeline->PlayFromStart();
 		}
 		
 		// 화면 회전 잠금 해제
-		bLockLookAround = false;
+		bLockCamera = false;
 	};
 	const auto CameraMode3 = [this]()
 	{
@@ -168,11 +175,11 @@ void AMVE_StageLevel_AudCharacter::SetControlMode(const EAudienceControlMode New
 		bUseControllerRotationYaw = false;
 		if (CameraTimeline)
 		{
-			CameraTimeline->Reverse();
+			CameraTimeline->PlayFromStart();
 		}
 		
 		// 화면 회전 잠금 해제
-		bLockLookAround = false;
+		bLockCamera = false;
 	};
 	
 	switch (CurrentControlMode)
@@ -182,32 +189,56 @@ void AMVE_StageLevel_AudCharacter::SetControlMode(const EAudienceControlMode New
 			CameraMode1();
 			break;
 		}
-	case EAudienceControlMode::Aiming:
+	case EAudienceControlMode::Throw:
 		{
+			// 카메라 보간 위치
+			SpringArmStartInterpLength = SpringArm->TargetArmLength;
+			SpringArmTargetInterpLength = 150.0f;
+			CameraStartInterpLocation = SpringArm->GetRelativeLocation();
+			CameraTargetInterpLocation = ThrowActionCameraLocation;
 			SetAudObject(nullptr, TEXT("오디언스 오브젝트 해제!"));
 			CameraMode2();
 			break;
 		}
 	case EAudienceControlMode::Photo:
 		{
+			// 카메라 보간 위치
+			SpringArmStartInterpLength = SpringArm->TargetArmLength;
+			SpringArmTargetInterpLength = 150.0f;
+			CameraStartInterpLocation = SpringArm->GetRelativeLocation();
+			CameraTargetInterpLocation = PhotoActionCameraLocation;
 			SetAudObject(AudCameraChildActorComp->GetChildActor(), TEXT("오디언스 카메라 준비 완료!"));
 			CameraMode2();
 			break;
 		}
 	case EAudienceControlMode::Cheer:
 		{
+			// 카메라 보간 위치
+			SpringArmStartInterpLength = SpringArm->TargetArmLength;
+			SpringArmTargetInterpLength = 150.0f;
+			CameraStartInterpLocation = SpringArm->GetRelativeLocation();
+			CameraTargetInterpLocation = CheerActionCameraLocation;
 			SetAudObject(nullptr, TEXT("오디언스 오브젝트 해제!"));
 			CameraMode2();
 			break;
 		}
 	case EAudienceControlMode::WaveLightStick:
 		{
+			SpringArmStartInterpLength = SpringArm->TargetArmLength;
+			SpringArmTargetInterpLength = 150.0f;
+			CameraStartInterpLocation = SpringArm->GetRelativeLocation();
+			CameraTargetInterpLocation = WaveLightStickActionCameraLocation;
 			SetAudObject(nullptr, TEXT("오디언스 오브젝트 해제!"));
 			CameraMode2();
 			break;
 		}
 	case EAudienceControlMode::Default:
 		{
+			// 카메라 보간 위치
+			SpringArmStartInterpLength = SpringArm->TargetArmLength;
+			SpringArmTargetInterpLength = 250.0f;
+			CameraStartInterpLocation = SpringArm->GetRelativeLocation();
+			CameraTargetInterpLocation = FVector(0.0f, 0.0f, 0.0f);
 			SetAudObject(nullptr, TEXT("오디언스 오브젝트 해제!"));
 			CameraMode3();
 			break;
@@ -227,7 +258,7 @@ void AMVE_StageLevel_AudCharacter::OnInputActionAimStarted(const FInputActionVal
 	// 모드에 따라서 입력 처리
 	switch (CurrentControlMode)
 	{
-	case EAudienceControlMode::Aiming:
+	case EAudienceControlMode::Throw:
 	case EAudienceControlMode::Photo:
 		// 현재 홀드 여부를 추출
 		bAimEnabled = Value.Get<bool>();
@@ -242,7 +273,7 @@ void AMVE_StageLevel_AudCharacter::OnInputActionAimCompleted(const FInputActionV
 	// 모드에 따라서 입력 처리
 	switch (CurrentControlMode)
 	{
-	case EAudienceControlMode::Aiming:
+	case EAudienceControlMode::Throw:
 	case EAudienceControlMode::Photo:
 		// 현재 홀드 여부를 추출
 		bAimEnabled = Value.Get<bool>();
@@ -259,32 +290,58 @@ void AMVE_StageLevel_AudCharacter::OnInputActionExecuteStarted(const FInputActio
 	{
 		return;
 	}
-	FTimerDelegate TimerDelegate;
-	TimerDelegate.BindWeakLambda(this, [this]()
+
+	const auto ExecuteExpireTimer = [this]()
 	{
-		bIsExecuting = false;
-		PRINTNETLOG(this, TEXT("실행 입력 액션 타이머 종료!"))
-	});
-	GetWorldTimerManager().SetTimer(ExecuteTimerHandle, TimerDelegate, 1.0, false);
-	bIsExecuting = true;
+		FTimerDelegate TimerDelegate;
+		TimerDelegate.BindWeakLambda(this, [this]()
+		{
+			bIsExecuting = false;
+			PRINTNETLOG(this, TEXT("실행 입력 액션 타이머 종료!"))
+		});
+		GetWorldTimerManager().SetTimer(ExecuteTimerHandle, TimerDelegate, 1.0, false);
+		bIsExecuting = true;	
+	};
 	
 	// 현재 모드에 따라서 다른 도구, 애니메이션, 사운드 사용
 	switch (CurrentControlMode)
 	{
 	case EAudienceControlMode::WidgetSelection:
 		break;
-	case EAudienceControlMode::Aiming:
-		PlayAnimMontage(AudThrowAnimMontage);
+	case EAudienceControlMode::Throw:
+		{
+			// 조준 상태가 아니면 던지기 입력 액션을 발동할 수 없다
+			if (GetAimEnabled() == false)
+			{	
+				break;
+			}
+			PRINTNETLOG(this, TEXT("던지기 입력 액션!"))
+			PlayAnimMontage(AudThrowAnimMontage);
+			break;
+		}
 	case EAudienceControlMode::Photo:
 		if (const auto AudCamera = Cast<AMVE_StageLevel_AudCamera>(AudCameraChildActorComp->GetChildActor()))
 		{
-			PRINTNETLOG(this, TEXT("카메라 플래시 입력 액션!"))
+			// 조준 상태가 아니면 던지기 입력 액션을 발동할 수 없다
+			if (GetAimEnabled() == false)
+			{	
+				break;
+			}
+			PRINTNETLOG(this, TEXT("카메라 입력 액션!"))
 			AudCamera->TriggerFlash();
+			ExecuteExpireTimer();
+			break;
 		}
-		break;
 	case EAudienceControlMode::Cheer:
+		{
+			PRINTNETLOG(this, TEXT("환호 입력 액션!"));
+			break;
+		}
 	case EAudienceControlMode::WaveLightStick:
-		break;
+		{
+			PRINTNETLOG(this, TEXT("응원 입력 액션"));
+			break;
+		}
 	case EAudienceControlMode::Default:
 	default:
 		// 기본 상태에서는 캐릭터가 카메라를 따라 회전하지 않는다
@@ -300,7 +357,7 @@ void AMVE_StageLevel_AudCharacter::OnInputActionLookTriggered(const FInputAction
 		return;
 	}
 	
-	if (bLockLookAround)
+	if (bLockCamera)
 	{
 		return;
 	}
@@ -338,13 +395,17 @@ void AMVE_StageLevel_AudCharacter::OnInputActionSwitchAudienceModeCompleted()
 
 void AMVE_StageLevel_AudCharacter::UpdateCameraTimeline(const float Alpha) const
 {
-	// 스프링 암 길이 보간
-	constexpr float DefaultArmLength = 250.0;
-	constexpr float ActionArmLength = 150.0;
-	SpringArm->TargetArmLength = FMath::Lerp(DefaultArmLength, ActionArmLength, Alpha);
+	{
+		// 스프링 암 길이 보간
+		const float Start = SpringArmStartInterpLength;
+		const float End = SpringArmTargetInterpLength;
+		SpringArm->TargetArmLength = FMath::Lerp(Start, End, Alpha);
+	}
 	
-	// 카메라 상대 위치 보간
-	const FVector DefaultLocation = FVector::ZeroVector;
-	const FVector ActionLocation = FVector(0.0, 80.0, 80.0);
-	SpringArm->SetRelativeLocation(FMath::Lerp(DefaultLocation, ActionLocation, Alpha));
+	{
+		// 카메라 상대 위치 보간
+		const FVector Start = CameraStartInterpLocation;
+		const FVector End = CameraTargetInterpLocation;
+		SpringArm->SetRelativeLocation(FMath::Lerp(Start, End, Alpha));
+	}
 }

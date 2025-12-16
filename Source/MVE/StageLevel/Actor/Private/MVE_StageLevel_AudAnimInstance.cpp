@@ -54,3 +54,8 @@ void UMVE_StageLevel_AudAnimInstance::NativeUpdateAnimation(const float DeltaSec
 		AimPitch = FMath::FInterpTo(AimPitch, 0.f, DeltaSeconds, 15.f);
 	}
 }
+
+void UMVE_StageLevel_AudAnimInstance::AnimNotify_EndExecute() const
+{
+	OwningCharacter->SetIsExecuting(false);
+}

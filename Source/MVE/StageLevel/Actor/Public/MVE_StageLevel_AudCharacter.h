@@ -23,7 +23,7 @@ enum class EAudienceControlMode : uint8
  	// 기본 상태. 카메라만 자유롭게 움직임
  	Default = 0 UMETA(DisplayName="기본"),
 	// 조준 상태. 캐릭터가 카메라 방향을 따라 회전, 에임 오프셋 사용                  
-	Aiming = 1 UMETA(DisplayName="조준"),
+	Throw = 1 UMETA(DisplayName="던지기"),
 	// 사진 촬영 상태. 조준 상태와 동일
 	Photo = 2 UMETA(DisplayName="사진"),
 	// 환호 상태. 캐릭터가 카메라 방향을 따라 회전
@@ -62,6 +62,9 @@ public:
 	UFUNCTION()
 	FORCEINLINE bool GetIsExecuting() const { return bIsExecuting; }
 	
+	UFUNCTION()
+	FORCEINLINE void SetIsExecuting(const bool Value) { bIsExecuting = Value; }
+	
 protected:
 	// IA_Look : 화면 전환
 	UFUNCTION()
@@ -90,24 +93,24 @@ protected:
 	UFUNCTION()
 	void UpdateCameraTimeline(float Alpha) const;
 private:
+	
+	// 카메라 관련 필드
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "MVE|Components", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<USpringArmComponent> SpringArm;
-	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "MVE|Components", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UCameraComponent> Camera;
-	
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "MVE|Components", meta = (AllowPrivateAccess = "true"))
-	TObjectPtr<UAudioComponent> AudioComponent;
-	
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "MVE|Components", meta = (AllowPrivateAccess = "true"))
-	TObjectPtr<UMVE_StageLevel_AudCharacterShooterComponent> ShooterComponent;
-	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "MVE|Components", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UTimelineComponent> CameraTimeline;
-	
 	UPROPERTY(EditAnywhere, Category = "MVE|Components", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UCurveFloat> CameraTransitionCurve;
+	UPROPERTY(VisibleAnywhere, Category = "MVE|Control") 
+	bool bLockCamera;
 	
+	// 오디언스 상호작용 관련 필드
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "MVE|Components", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UAudioComponent> AudioComponent;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "MVE|Components", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UMVE_StageLevel_AudCharacterShooterComponent> ShooterComponent;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "MVE|Control", meta = (AllowPrivateAccess = "true"))
 	EAudienceControlMode CurrentControlMode;
 	
@@ -118,29 +121,39 @@ private:
 	UPROPERTY()
 	bool bAimEnabled;
 	
-	UPROPERTY(VisibleAnywhere, Category = "MVE|Control") 
-	bool bLockLookAround;
-	
+	// 입력 매핑 컨텍스트와 입력 액션
 	UPROPERTY(EditAnywhere, Category = "MVE|Control", meta = (AllowPrivateAccess = "true"))           
 	TObjectPtr<UInputMappingContext> IMC_AudCharacter;
-	                                                                                              
 	UPROPERTY(EditAnywhere, Category = "MVE|Control", meta = (AllowPrivateAccess = "true"))           
 	TObjectPtr<UInputAction> IA_Move;
-	                                                                                              
 	UPROPERTY(EditAnywhere, Category = "MVE|Control", meta = (AllowPrivateAccess = "true"))           
 	TObjectPtr<UInputAction> IA_Jump;
-	                                                                                              
 	UPROPERTY(EditAnywhere, Category = "MVE|Control", meta = (AllowPrivateAccess = "true"))           
 	TObjectPtr<UInputAction> IA_SwitchAudienceMode;
-	                                                                                              
 	UPROPERTY(EditAnywhere, Category = "MVE|Control", meta = (AllowPrivateAccess = "true"))           
 	TObjectPtr<UInputAction> IA_Aim;
-	
 	UPROPERTY(EditAnywhere, Category = "MVE|Control", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UInputAction> IA_Execute;
-	                                                                                              
 	UPROPERTY(EditAnywhere, Category = "MVE|Control", meta = (AllowPrivateAccess = "true"))      
 	TObjectPtr<UInputAction> IA_Look;
+
+	// 상호작용 모드 별 카메라 위치
+	UPROPERTY(VisibleAnywhere, Category = "MVE|Control", meta = (AllowPrivateAccess = "true"))
+	float SpringArmStartInterpLength;
+	UPROPERTY(VisibleAnywhere, Category = "MVE|Control", meta = (AllowPrivateAccess = "true"))
+	float SpringArmTargetInterpLength;
+	UPROPERTY(VisibleAnywhere, Category = "MVE|Control", meta = (AllowPrivateAccess = "true"))
+	FVector CameraStartInterpLocation;
+	UPROPERTY(VisibleAnywhere, Category = "MVE|Control", meta = (AllowPrivateAccess = "true"))
+	FVector CameraTargetInterpLocation;
+	UPROPERTY(EditAnywhere, Category = "MVE|Control", meta = (AllowPrivateAccess = "true"))
+	FVector PhotoActionCameraLocation;
+	UPROPERTY(EditAnywhere, Category = "MVE|Control", meta = (AllowPrivateAccess = "true"))
+	FVector ThrowActionCameraLocation;
+	UPROPERTY(EditAnywhere, Category = "MVE|Control", meta = (AllowPrivateAccess = "true"))
+	FVector CheerActionCameraLocation;
+	UPROPERTY(EditAnywhere, Category = "MVE|Control", meta = (AllowPrivateAccess = "true"))
+	FVector WaveLightStickActionCameraLocation;
 	
 	UPROPERTY(VisibleAnywhere, Category = "MVE|Objects", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<AMVE_StageLevel_AudObject> CurrentAudObject;

@@ -38,4 +38,7 @@ protected:
 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Character")
 	bool bIsExecuting;
+	
+	UFUNCTION()
+	void AnimNotify_EndExecute() const;
 };
