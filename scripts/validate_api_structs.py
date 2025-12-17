@@ -26,6 +26,16 @@ PRE_IMPLEMENTED_SCHEMAS = {
     "ErrorResponse": None,  # Error response schema - skip validation
 }
 
+# 매크로 정의 - 매크로 이름과 확장되는 프로퍼티 매핑
+# Key: 매크로 이름, Value: [(property_name, property_type), ...]
+MACRO_DEFINITIONS = {
+    "MVE_API_RESPONSE_BASE": [
+        ("Success", "bool"),
+        ("Code", "FString"),
+        ("Message", "FString"),
+    ]
+}
+
 # --- HELPER FUNCTIONS ---
 
 def to_pascal_case(s: str) -> str:
@@ -146,6 +156,15 @@ def parse_cpp_header(file_path: Path) -> Tuple[Dict[str, Dict[str, str]], Dict[s
             current_struct_name = None
             continue
 
+        # 구조체 내에서 매크로 사용 찾기
+        if current_struct_name:
+            for macro_name, macro_props in MACRO_DEFINITIONS.items():
+                if macro_name in line:
+                    # 매크로를 발견하면 해당 프로퍼티들을 구조체에 추가
+                    for prop_name, prop_type in macro_props:
+                        structs[current_struct_name][prop_name] = prop_type
+                    break
+
         # 구조체 내에서 UPROPERTY 찾기
         if current_struct_name and line.startswith("UPROPERTY("):
             # UPROPERTY 다음 줄에 변수 선언이 있는 경우가 많음
@@ -199,6 +218,11 @@ def parse_openapi_specs(spec_paths: List[Path]) -> Tuple[Dict[str, Any], Dict[st
                             if status_code.startswith('2'): # 성공 응답만 체크 (200, 201, 202 등)
                                 content = response.get("content", {}).get("application/json", {})
                                 schema = content.get("schema", {})
+
+                                # $ref를 직접 사용하는 경우는 Component Schema로만 검증
+                                # (중복 검증 방지)
+                                if "$ref" in schema:
+                                    break
 
                                 key = f"{method.upper()} {path}"
 

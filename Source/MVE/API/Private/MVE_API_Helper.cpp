@@ -7,8 +7,7 @@
 #include "IPAddress.h"     // For FInternetAddr
 #include "Engine/World.h"   // For UWorld
 
-// MVE Server URL
-#define SERVER_URL TEXT("http://ec2-13-125-244-186.ap-northeast-2.compute.amazonaws.com")
+#pragma region 네이티브 & 블루프린트 리스폰스 핸들러 매크로 
 
 // 새로운 USTRUCT 기반 응답 핸들러 매크로
 #define HANDLE_RESPONSE_STRUCT(StructType, OnResult) \
@@ -63,6 +62,31 @@
         } \
     })
 
+// 블루프린트 래퍼 매크로
+#define WRAP_DELEGATE(DelegateType, OnResultBP) \
+    F##DelegateType OnResult; \
+    OnResult.BindLambda([OnResultBP](auto... Args) { \
+    OnResultBP.ExecuteIfBound(Args...); \
+    });
+
+#pragma endregion
+
+// MVE Server URL - AWS EC2 인스턴스
+#define SERVER_URL TEXT("http://ec2-13-125-244-186.ap-northeast-2.compute.amazonaws.com")
+
+// 인증 JWT 토큰 획득
+FString UMVE_API_Helper::GetAuthToken()
+{
+    return GlobalAuthToken;
+}
+
+// 인증 JWT 토큰 설정
+void UMVE_API_Helper::SetAuthToken(const FString& Token)
+{
+    GlobalAuthToken = Token;
+}
+
+// 초기화
 void UMVE_API_Helper::Initialize()
 {
     LoginServerURL = FString::Printf(TEXT("%s"), SERVER_URL);
@@ -96,6 +120,7 @@ void UMVE_API_Helper::Initialize()
     }
 }
 
+// 로스트 IP와 포트 획득
 bool UMVE_API_Helper::GetHostLocalIPAndPort(const UObject* WorldContextObject, FString& OutLocalIP, int32& OutPort) 
 {
     if (!WorldContextObject || !WorldContextObject->GetWorld())
@@ -334,7 +359,7 @@ void UMVE_API_Helper::GetProfile(const FOnGetProfileComplete& OnResult)
 }
 
 // 리소스 서버 관련 API
-void UMVE_API_Helper::SaveAccessoryPreset(const FString& PresetName, const TArray<TSharedPtr<FJsonValue>>& Accessories, const FString& Description, bool bIsPublic, const FOnSavePresetComplete& OnResult)
+void UMVE_API_Helper::SaveAccessoryPreset(const FString& PresetName, const TArray<TSharedPtr<FJsonValue>>& Accessories, const FString& Description, const bool bIsPublic, const FOnSavePresetComplete& OnResult)
 
 {
 
@@ -384,7 +409,7 @@ void UMVE_API_Helper::GetPresetDetail(const int32 PresetId, const FOnGetPresetDe
     FMVE_HTTP_Client::SendGetRequest(URL, GlobalAuthToken, HANDLE_RESPONSE_STRUCT(FGetPresetDetailResponseData, OnResult));
 }
 
-void UMVE_API_Helper::UpdatePreset(const int32 PresetId, const FString& PresetName, const TArray<TSharedPtr<FJsonValue>>& Accessories, const FString& Description, bool bIsPublic, const FOnGenericApiComplete& OnResult)
+void UMVE_API_Helper::UpdatePreset(const int32 PresetId, const FString& PresetName, const TArray<TSharedPtr<FJsonValue>>& Accessories, const FString& Description, const bool bIsPublic, const FOnGenericApiComplete& OnResult)
 {
     const FString URL = FString::Printf(TEXT("%s/api/presets/%d"), *ResourceServerURL, PresetId);
     
@@ -424,7 +449,7 @@ void UMVE_API_Helper::StreamAudio(const int32 AudioId, const FOnStreamAudioCompl
     FMVE_HTTP_Client::SendGetRequest(URL, GlobalAuthToken, HANDLE_RESPONSE_STRUCT(FStreamAudioResponseData, OnResult));
 }
 
-void UMVE_API_Helper::UploadAudio(const FString& FilePath, const FString& Title, const FString& Artist, float Duration, const FOnUploadAudioComplete& OnResult)
+void UMVE_API_Helper::UploadAudio(const FString& FilePath, const FString& Title, const FString& Artist, const float Duration, const FOnUploadAudioComplete& OnResult)
 
 {
 
@@ -726,109 +751,53 @@ void UMVE_API_Helper::GetModelList(const FString& RoomId, const FOnGetModelListC
 }
 
 void UMVE_API_Helper::GenerateModel(const FString& Prompt, const FString& ImagePath, const FOnGenerateModelComplete& OnResult)
-
 {
-
     const FString URL = FString::Printf(TEXT("%s/api/models/generate"), *ResourceServerURL);
-
-
-
     TMap<FString, FString> FormFields;
-
     FormFields.Add(TEXT("prompt"), Prompt);
-
-
-
     TArray<uint8> FileData;
-
     FString FileName;
-
     if (!ImagePath.IsEmpty())
-
     {
-
         if (!FFileHelper::LoadFileToArray(FileData, *ImagePath))
-
         {
-
             OnResult.ExecuteIfBound(false, FGenerateModelResponseData(), TEXT("FILE_READ_ERROR"));
-
             return;
-
         }
-
         FileName = FPaths::GetCleanFilename(ImagePath);
-
     }
-
-    
-
     FMVE_HTTP_Client::SendMultipartRequest(URL, TEXT("image"), FileData, FileName, FormFields, GlobalAuthToken, HANDLE_RESPONSE_STRUCT(FGenerateModelResponseData, OnResult));
-
 }
 
 void UMVE_API_Helper::GetModelGenerationStatus(const FString& JobId, const FOnGetJobStatusComplete& OnResult)
-
 {
-
     const FString URL = FString::Printf(TEXT("%s/api/models/jobs/%s"), *ResourceServerURL, *JobId);
-
     FMVE_HTTP_Client::SendGetRequest(URL, GlobalAuthToken, HANDLE_RESPONSE_STRUCT(FGetJobStatusResponseData, OnResult));
-
 }
 
 void UMVE_API_Helper::UploadModel(const FString& ModelPath, const FString& ThumbnailPath, const FString& ModelName, const FOnUploadModelComplete& OnResult)
-
 {
-
     const FString URL = FString::Printf(TEXT("%s/api/models/upload"), *ResourceServerURL);
-
-
-
     TMap<FString, FString> FormFields;
-
     if (!ModelName.IsEmpty())
-
     {
-
         FormFields.Add(TEXT("model_name"), ModelName);
-
     }
-
-
-
     TArray<uint8> ModelData;
-
     if (!FFileHelper::LoadFileToArray(ModelData, *ModelPath))
-
     {
-
         OnResult.ExecuteIfBound(false, FUploadModelResponseData(), TEXT("FILE_READ_ERROR"));
-
         return;
-
     }
-
-    
-
     // 현재 HTTP 클라이언트는 단일 파일만 지원하므로 모델 파일만 전송합니다.
-
     // 만약 다중 파일 업로드가 필요하면 MVE_HTTP_Client 수정이 필요합니다.
-
     const FString FileName = FPaths::GetCleanFilename(ModelPath);
-
     FMVE_HTTP_Client::SendMultipartRequest(URL, TEXT("model"), ModelData, FileName, FormFields, GlobalAuthToken, HANDLE_RESPONSE_STRUCT(FUploadModelResponseData, OnResult));
-
 }
 
 void UMVE_API_Helper::DownloadModel(int32 ModelId, const FString& SavePath, const FOnGenericApiComplete& OnResult)
-
 {
-
     const FString URL = FString::Printf(TEXT("%s/api/models/%d/download"), *ResourceServerURL, ModelId);
-
-
-
     auto HandleDownloadResponse = FOnHttpDownloadResult::CreateLambda([SavePath, ModelId, OnResult](bool bSuccess, const TArray<uint8>& FileData, const FString& ErrorMessage)
 
     {
@@ -890,11 +859,7 @@ void UMVE_API_Helper::DownloadModel(int32 ModelId, const FString& SavePath, cons
         }
 
     });
-
-
-
     FMVE_HTTP_Client::DownloadFile(URL, GlobalAuthToken, HandleDownloadResponse);
-
 }
 
 void UMVE_API_Helper::DeleteModel(const int32 ModelId, const FOnDeleteModelComplete& OnResult)
@@ -903,28 +868,12 @@ void UMVE_API_Helper::DeleteModel(const int32 ModelId, const FOnDeleteModelCompl
     FMVE_HTTP_Client::SendDeleteRequest(URL, GlobalAuthToken, HANDLE_RESPONSE_STRUCT(FDeleteModelResponseData, OnResult));
 }
 
+// 블루프린트 래핑
+
 bool UMVE_API_Helper::GetHostLocalIPAndPortBP(const UObject* WorldContextObject, FString& OutLocalIP, int32& OutPort)
 {
     return GetHostLocalIPAndPort(WorldContextObject, OutLocalIP, OutPort);
 }
-
-// 인증 JWT 토큰 획득 및 설정
-FString UMVE_API_Helper::GetAuthToken()
-{
-    return GlobalAuthToken;
-}
-
-void UMVE_API_Helper::SetAuthToken(const FString& Token)
-{
-    GlobalAuthToken = Token;
-}
-
-// 블루프린트 래퍼 매크로
-#define WRAP_DELEGATE(DelegateType, OnResultBP) \
-    F##DelegateType OnResult; \
-    OnResult.BindLambda([OnResultBP](auto... Args) { \
-        OnResultBP.ExecuteIfBound(Args...); \
-    });
 
 void UMVE_API_Helper::LoginHealthCheckBP(UObject* WorldContextObject, const FOnGenericApiCompleteBP& OnResultBP)
 {
@@ -986,7 +935,8 @@ void UMVE_API_Helper::GetProfileBP(UObject* WorldContextObject, const FOnGetProf
     GetProfile(OnResult);
 }
 
-void UMVE_API_Helper::SaveAccessoryPresetBP(UObject* WorldContextObject, const FString& PresetName, const FString& AccessoriesJson, const FString& Description, bool bIsPublic, const FOnSavePresetCompleteBP& OnResultBP)
+
+void UMVE_API_Helper::SaveAccessoryPresetBP(UObject* WorldContextObject, const FString& PresetName, const FString& AccessoriesJson, const FString& Description, const bool bIsPublic, const FOnSavePresetCompleteBP& OnResultBP)
 {
     TArray<TSharedPtr<FJsonValue>> Accessories;
     TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(AccessoriesJson);
@@ -1008,7 +958,7 @@ void UMVE_API_Helper::GetPresetDetailBP(UObject* WorldContextObject, const int32
     GetPresetDetail(PresetId, OnResult);
 }
 
-void UMVE_API_Helper::UpdatePresetBP(UObject* WorldContextObject, const int32 PresetId, const FString& PresetName, const FString& AccessoriesJson, const FString& Description, bool bIsPublic, const FOnGenericApiCompleteBP& OnResultBP, FLatentActionInfo LatentInfo)
+void UMVE_API_Helper::UpdatePresetBP(UObject* WorldContextObject, const int32 PresetId, const FString& PresetName, const FString& AccessoriesJson, const FString& Description, const bool bIsPublic, const FOnGenericApiCompleteBP& OnResultBP, FLatentActionInfo LatentInfo)
 {
     TArray<TSharedPtr<FJsonValue>> Accessories;
     if(!AccessoriesJson.IsEmpty())
@@ -1027,6 +977,7 @@ void UMVE_API_Helper::DeletePresetBP(UObject* WorldContextObject, const int32 Pr
     DeletePreset(PresetId, OnResult);
 }
 
+
 void UMVE_API_Helper::GetAudioListBP(UObject* WorldContextObject, const FOnGetAudioListCompleteBP& OnResultBP)
 {
     WRAP_DELEGATE(OnGetAudioListComplete, OnResultBP);
@@ -1039,7 +990,7 @@ void UMVE_API_Helper::StreamAudioBP(UObject* WorldContextObject, const int32 Aud
     StreamAudio(AudioId, OnResult);
 }
 
-void UMVE_API_Helper::UploadAudioBP(UObject* WorldContextObject, const FString& FilePath, const FString& Title, const FString& Artist, float Duration, const FOnUploadAudioCompleteBP& OnResultBP)
+void UMVE_API_Helper::UploadAudioBP(UObject* WorldContextObject, const FString& FilePath, const FString& Title, const FString& Artist, const float Duration, const FOnUploadAudioCompleteBP& OnResultBP)
 {
     WRAP_DELEGATE(OnUploadAudioComplete, OnResultBP);
     UploadAudio(FilePath, Title, Artist, Duration, OnResult);
@@ -1064,7 +1015,7 @@ void UMVE_API_Helper::DownloadAudioFileBP(UObject* WorldContextObject, const int
 }
 
 
-void UMVE_API_Helper::CreateConcertBP(UObject* WorldContextObject, const FString& ConcertName, const TArray<FConcertSong>& Songs, const TArray<FAccessory>& Accessories, int32 MaxAudience, const FOnCreateConcertCompleteBP& OnResultBP)
+void UMVE_API_Helper::CreateConcertBP(UObject* WorldContextObject, const FString& ConcertName, const TArray<FConcertSong>& Songs, const TArray<FAccessory>& Accessories, const int32 MaxAudience, const FOnCreateConcertCompleteBP& OnResultBP)
 {
     WRAP_DELEGATE(OnCreateConcertComplete, OnResultBP);
     CreateConcert(ConcertName, Songs, Accessories, MaxAudience, OnResult);
