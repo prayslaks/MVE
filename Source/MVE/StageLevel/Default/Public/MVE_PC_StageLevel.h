@@ -1,10 +1,10 @@
-
 #pragma once
 
 #include "CoreMinimal.h"
 #include "GameFramework/PlayerController.h"
 #include "MVE_PC_StageLevel.generated.h"
 
+class AMVE_StageLevel_AudCharacter;
 class UMVE_StageLevel_WidgetController_Chat;
 class UMVE_WC_StageLevel_AudRadialMenu;
 class UMVE_WC_Chat;
@@ -16,18 +16,20 @@ class MVE_API AMVE_PC_StageLevel : public APlayerController
 
 public:
 	AMVE_PC_StageLevel();
-
-	/** 래디얼 메뉴의 표시 여부를 토글하고 마우스 커서 및 입력 모드를 설정합니다. */
-	void ToggleRadialMenu(const bool bShow);
-
-	/** 래디얼 메뉴에서 현재 선택된 섹터의 인덱스를 반환합니다. */
-	int32 GetRadialMenuSelection() const;
 	
-protected:
 	virtual void BeginPlay() override;
 
 	virtual void OnPossess(APawn* InPawn) override;
+	
+	UFUNCTION()
+	AMVE_StageLevel_AudCharacter* GetBindingAudCharacter() const;
+	
+	// 래디얼 메뉴의 표시 여부를 토글하고 마우스 커서 및 입력 모드를 설정한다
+	void ToggleRadialMenu(const bool bShow);
 
+	// 래디얼 메뉴에서 현재 선택된 섹터의 인덱스를 반환한다
+	int32 GetRadialMenuSelection() const;
+protected:
 	// 호스트용 위젯 클래스
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "MVE|UI")
 	TSubclassOf<UUserWidget> HostStandardMenuWidgetClass;
@@ -44,7 +46,7 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "MVE|UI")
 	TObjectPtr<UMVE_WC_StageLevel_AudRadialMenu> AudRadialMenuWidget;
 	
-	// 위젯들을 생성만 하고 뷰포트에는 추가하지 않습니다.
+	// 위젯들을 생성만 하고 뷰포트에는 추가하지 않는다
 	void CreateWidgets();
 	
 	// 호스트인지 확인하는 헬퍼 함수
@@ -54,22 +56,20 @@ private:
 	// 마우스 커서를 뷰포트 중앙으로 이동시킵니다.
 	void CenterMouseCursor();
 
-
 public:
-	// 관객(Audience) 역할을 수행하는 플레이어의 상호작용을 처리하는 컴포넌트입니다.
+	// 오디언스 역할을 수행하는 플레이어의 상호작용을 처리하는 컴포넌트
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "MVE|Component")
 	TObjectPtr<class UMVE_PC_StageLevel_AudienceComponent> AudComponent;
 
-	// 학생(Standard) 역할을 수행하는 플레이어의 기능을 처리하는 컴포넌트입니다.
+	// 스튜디오 역할을 수행하는 플레이어의 기능을 처리하는 컴포넌트
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "MVE|Component")
 	TObjectPtr<class UMVE_PC_StageLevel_StudioComponent> StdComponent;
 
-public:
-	/** 캐릭터에 부착된 오디오 컴포넌트를 가져옵니다. */
+	// 캐릭터에 부착된 오디오 컴포넌트를 가져온다
 	UFUNCTION(BlueprintCallable, Category = "MVE|Component")
 	UAudioComponent* GetAudioComponent() const;
 
-	/** 캐릭터에 부착된 슈터 컴포넌트를 가져옵니다. */
+	// 캐릭터에 부착된 슈터 컴포넌트를 가져온다
 	UFUNCTION(BlueprintCallable, Category = "MVE|Component")
 	class UMVE_StageLevel_AudCharacterShooterComponent* GetShooterComponent() const;
 	
