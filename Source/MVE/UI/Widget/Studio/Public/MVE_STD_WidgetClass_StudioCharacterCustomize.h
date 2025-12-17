@@ -45,10 +45,10 @@ protected:
 
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UButton> NextButton;
-
+	
 	UPROPERTY(EditDefaultsOnly, Category = "Avatar")
 	TSubclassOf<UUserWidget> PresetButtonClass;
-
+	
 	// 카메라 설정
 	UPROPERTY(EditAnywhere, Category = "Preview")
 	float RotationSpeed = 0.5f;
@@ -57,10 +57,10 @@ protected:
 	float ZoomSpeed = 50.0f;
 
 	UPROPERTY(EditAnywhere, Category = "Preview")
-	float MinDistance = 150.0f;
+	float MinDistance = 100.0f;
 
 	UPROPERTY(EditAnywhere, Category = "Preview")
-	float MaxDistance = 600.0f;
+	float MaxDistance = 6000.0f;
 
 	UPROPERTY(EditAnywhere, Category = "Preview")
 	float DefaultDistance = 300.0f;
@@ -92,10 +92,11 @@ private:
 	void OnNextClicked();
 
 	void RefreshPresetList();
-	void CreatePresetButton(const FAvatarData& Data);
+	void CreatePresetButton(FAvatarData& Data);
 	void OnPresetClicked(const FString& UniqueID);
 	void UpdatePreview(const FAvatarData& Data);
 	void InitializePreview();
+	UTexture2D* CapturePreviewThumbnail();
 	void UpdateCameraPosition();
 	
 	void SetRenderTarget(UTextureRenderTarget2D* InRenderTarget);
