@@ -18,27 +18,32 @@ class MVE_API AMVE_StageLevel_AudCamera : public AMVE_StageLevel_AudObject
 
 public:
 	AMVE_StageLevel_AudCamera();
-
-	UFUNCTION(BlueprintCallable, Category = "CameraFlash")
-	void TriggerFlash();
 	
-protected:
 	virtual void BeginPlay() override;
-private:
-	UFUNCTION()
-	void OnFlashUpdate(float Value) const;
-	
-protected:
-	
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
-	TObjectPtr<USpotLightComponent> SpotLightComp;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	UFUNCTION(Category = "MVE|TakePhoto")
+	void TakePhoto() const;
+
+protected:
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "MVE|Components")
+	TObjectPtr<USpotLightComponent> SpotLightComp;
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "MVE|Components")
+	TObjectPtr<UAudioComponent> AudioComp;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "MVE|Components")
 	TObjectPtr<UTimelineComponent> FlashTimelineComp;
 
-	UPROPERTY(EditAnywhere, Category = "CameraFlash")
+	UPROPERTY(EditAnywhere, Category = "MVE|TakePhoto")
 	TObjectPtr<UCurveFloat> FlashCurve;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "CameraFlash")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MVE|TakePhoto")
 	float FlashIntensityMultiplier = 5000.0f;
+	
+	UPROPERTY(EditDefaultsOnly, Category = "MVE|TakePhoto")
+	TObjectPtr<USoundBase> TakePhotoSound;
+	
+private:
+	UFUNCTION(Category = "MVE|TakePhoto")
+	void OnFlashUpdate(float Value) const;
 };

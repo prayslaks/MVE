@@ -11,7 +11,6 @@
 #include "SenderReceiver.generated.h"
 
 
-
  // [AI 서버 정보]
  // - 서버 주소: http://172.16.20.234:8001
  // - 생성 API:  POST /generate_mesh
@@ -56,7 +55,7 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GenAI|Config")
     FString ServerURL = TEXT("http://172.16.100.123:8001");
 
-    // 메시 생성 API 엔드포인트 //TODO
+    // 메시 생성 API 엔드포인트 // TODO
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GenAI|Config")
     FString GenerateEndpoint = TEXT("/generate_3D_obj");
 
@@ -71,8 +70,7 @@ public:
     // ========================================================================
     //                          송신 API (Unreal → AI)
     // ========================================================================
-
-    //
+	
      // SendGenerationRequest
      // 
      // AI 서버에 메시 생성 요청 전송

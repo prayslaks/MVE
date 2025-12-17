@@ -1,10 +1,10 @@
-﻿#pragma once
+﻿// AvatarStorageSubsystem.h
+#pragma once
 
 #include "CoreMinimal.h"
 #include "Subsystems/GameInstanceSubsystem.h"
-#include "Data/AvatarData.h"
+#include "Data/AvatarData.h" 
 #include "AvatarStorageSubsystem.generated.h"
-
 
 class AAvatarPreviewActor;
 
@@ -14,44 +14,34 @@ class MVE_API UAvatarStorageSubsystem : public UGameInstanceSubsystem
 	GENERATED_BODY()
 
 public:
+	// 초기화
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
+	virtual void Deinitialize() override;
 
-	// GLB 파일 선택 다이얼로그
-	UFUNCTION(BlueprintCallable)
+	//  파일 다이얼로그 (GLB 선택)
+	UFUNCTION(BlueprintCallable, Category = "Avatar Storage")
 	FString OpenFileDialog();
 
-	// GLB 파일 저장
-	UFUNCTION(BlueprintCallable)
-	bool SaveAvatarFile(const FString& SourceFilePath, FAvatarData& OutData);
+	//  Avatar 파일 저장
+	UFUNCTION(BlueprintCallable, Category = "Avatar Storage")
+	bool SaveAvatarFile(const FString& FilePath, FAvatarData& OutData);
 
-	// 저장된 아바타 목록 가져오기
-	UFUNCTION(BlueprintCallable)
-	TArray<FAvatarData> GetSavedAvatars();
+	//  썸네일 업데이트 함수 선언 (추가!) 
+	UFUNCTION(BlueprintCallable, Category = "Avatar Storage")
+	bool UpdateAvatarThumbnail(const FString& UniqueID, UTexture2D* Thumbnail);
 
-	// 특정 아바타 데이터 가져오기
-	UFUNCTION(BlueprintCallable)
-	bool GetAvatarData(const FString& UniqueID, FAvatarData& OutData);
-	
-	FString SavePath; // Saved/Avatars/
-	TArray<FAvatarData> AvatarList;
+	//  저장된 Avatar 목록 가져오기
+	UFUNCTION(BlueprintCallable, Category = "Avatar Storage")
+	TArray<FAvatarData> GetSavedAvatars() const;
 
-	void LoadAvatarList();
-	void SaveAvatarList();
-	FString GenerateUniqueID(const FString& FileName);
+	//  특정 Avatar 데이터 가져오기
+	UFUNCTION(BlueprintCallable, Category = "Avatar Storage")
+	bool GetAvatarData(const FString& UniqueID, FAvatarData& OutData) const;
 
-
-
-	// 클래스 내부에 추가
-public:
-	// 프리뷰 액터 생성
-	UFUNCTION(BlueprintCallable, Category = "Preview")
+	//  PreviewActor 생성
+	UFUNCTION(BlueprintCallable, Category = "Avatar Storage")
 	AAvatarPreviewActor* CreatePreviewActor(UWorld* World);
-
-	// 프리뷰 업데이트
-	UFUNCTION(BlueprintCallable, Category = "Preview")
-	void UpdatePreview(const FString& UniqueID);
-
-private:
-	UPROPERTY()
-	TObjectPtr<AAvatarPreviewActor> PreviewActor;
+	
+	//  메모리에 Avatar 데이터 저장 (UniqueID -> FAvatarData)
+	TMap<FString, FAvatarData> AvatarDataMap;
 };

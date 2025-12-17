@@ -1,238 +1,223 @@
-﻿#include "AvatarStorageSubsystem.h"
+﻿// AvatarStorageSubsystem.cpp
+#include "AvatarStorageSubsystem.h"
 #include "MVE.h"
-#include "Misc/Paths.h"
-#include "Misc/FileHelper.h"
-#include "HAL/PlatformFileManager.h"
-#include "DesktopPlatformModule.h"
+#include "MVE/UI/Widget/Studio/Public/AvatarPreviewActor.h"
 #include "IDesktopPlatform.h"
+#include "DesktopPlatformModule.h"
 #include "Framework/Application/SlateApplication.h"
-#include "Serialization/JsonSerializer.h"
-#include "Dom/JsonObject.h"
-#include "Mve/UI/Widget/Studio/Public/AvatarPreviewActor.h"
 
 void UAvatarStorageSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
 	Super::Initialize(Collection);
+	
+	UE_LOG(LogTemp, Warning, TEXT(" AvatarStorageSubsystem 초기화됨"));
+}
 
-	// Saved/Avatars/ 경로 설정
-	SavePath = FPaths::ProjectSavedDir() / TEXT("Avatars/");
-
-	// 디렉토리 생성
-	IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
-	if (!PlatformFile.DirectoryExists(*SavePath))
-	{
-		PlatformFile.CreateDirectory(*SavePath);
-		PRINTLOG(TEXT("Created avatar directory: %s"), *SavePath);
-	}
-
-	// 저장된 목록 로드
-	LoadAvatarList();
-
-	PRINTLOG(TEXT("AvatarStorageSubsystem Initialized"));
+void UAvatarStorageSubsystem::Deinitialize()
+{
+	AvatarDataMap.Empty();
+	
+	UE_LOG(LogTemp, Warning, TEXT("AvatarStorageSubsystem 종료됨"));
+	
+	Super::Deinitialize();
 }
 
 FString UAvatarStorageSubsystem::OpenFileDialog()
 {
+	TArray<FString> OutFiles;
+	
 	IDesktopPlatform* DesktopPlatform = FDesktopPlatformModule::Get();
 	if (!DesktopPlatform)
 	{
+		UE_LOG(LogTemp, Error, TEXT(" DesktopPlatform을 가져올 수 없음"));
 		return FString();
 	}
 
-	TArray<FString> OutFiles;
-	const void* ParentWindowHandle = FSlateApplication::Get().FindBestParentWindowHandleForDialogs(nullptr);
-	const FString FileTypes = TEXT("GLB Files (*.glb)|*.glb");
+	void* ParentWindowHandle = nullptr;
+	if (FSlateApplication::IsInitialized())
+	{
+		TSharedPtr<SWindow> ParentWindow = FSlateApplication::Get().GetActiveTopLevelWindow();
+		if (ParentWindow.IsValid())
+		{
+			ParentWindowHandle = ParentWindow->GetNativeWindow()->GetOSWindowHandle();
+		}
+	}
 
-	bool bOpened = DesktopPlatform->OpenFileDialog(
+	const FString FileTypes = TEXT("GLB Files (*.glb)|*.glb|All Files (*.*)|*.*");
+	const FString DefaultPath = FPaths::ProjectContentDir();
+	
+	bool bFileSelected = DesktopPlatform->OpenFileDialog(
 		ParentWindowHandle,
 		TEXT("GLB 파일 선택"),
-		FPaths::ProjectDir(),
+		DefaultPath,
 		TEXT(""),
 		FileTypes,
 		EFileDialogFlags::None,
 		OutFiles
 	);
 
-	if (bOpened && OutFiles.Num() > 0)
+	if (bFileSelected && OutFiles.Num() > 0)
 	{
+		UE_LOG(LogTemp, Warning, TEXT(" 파일 선택됨: %s"), *OutFiles[0]);
 		return OutFiles[0];
 	}
 
 	return FString();
 }
 
-FString UAvatarStorageSubsystem::GenerateUniqueID(const FString& FileName)
+bool UAvatarStorageSubsystem::SaveAvatarFile(const FString& FilePath, FAvatarData& OutData)
 {
-	FDateTime Now = FDateTime::Now();
-	return FString::Printf(TEXT("%s_%04d%02d%02d_%02d%02d%02d"),
-		*FPaths::GetBaseFilename(FileName),
-		Now.GetYear(), Now.GetMonth(), Now.GetDay(),
-		Now.GetHour(), Now.GetMinute(), Now.GetSecond());
-}
-
-bool UAvatarStorageSubsystem::SaveAvatarFile(const FString& SourceFilePath, FAvatarData& OutData)
-{
-	// 파일 존재 확인
-	if (!FPaths::FileExists(SourceFilePath))
+	UE_LOG(LogTemp, Warning, TEXT("🔍 [Storage-1] SaveAvatarFile 시작: %s"), *FilePath);
+	
+	if (FilePath.IsEmpty() || !FPaths::FileExists(FilePath))
 	{
-		PRINTLOG(TEXT("Source file not found: %s"), *SourceFilePath);
+		UE_LOG(LogTemp, Error, TEXT(" [Storage-1] 잘못된 파일 경로: %s"), *FilePath);
 		return false;
 	}
 
-	// 확장자 확인
-	if (FPaths::GetExtension(SourceFilePath).ToLower() != TEXT("glb"))
-	{
-		PRINTLOG(TEXT("Invalid file extension"));
-		return false;
-	}
-
-	// 파일 정보 생성
-	FString FileName = FPaths::GetCleanFilename(SourceFilePath);
-	FString UniqueID = GenerateUniqueID(FileName);
-	FString DestPath = SavePath / (UniqueID + TEXT(".glb"));
-
-	// 파일 복사
-	IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
-	if (!PlatformFile.CopyFile(*DestPath, *SourceFilePath))
-	{
-		PRINTLOG(TEXT("Failed to copy file"));
-		return false;
-	}
-
-	// 데이터 생성
-	OutData.FileName = FileName;
+	// UniqueID 생성
+	FString UniqueID = FGuid::NewGuid().ToString();
+	
+	// FAvatarData 생성
 	OutData.UniqueID = UniqueID;
-	OutData.FilePath = DestPath;
+	OutData.FileName = FPaths::GetCleanFilename(FilePath);
+	OutData.FilePath = FilePath;
 	OutData.SavedDate = FDateTime::Now();
-
-	// 목록에 추가
-	AvatarList.Add(OutData);
-	SaveAvatarList();
-
-	PRINTLOG(TEXT("Avatar saved: %s"), *UniqueID);
+	OutData.ThumbnailTexture = nullptr;  // 나중에 UpdateAvatarThumbnail로 설정됨
+	
+	// 메모리에 저장
+	AvatarDataMap.Add(UniqueID, OutData);
+	
+	UE_LOG(LogTemp, Warning, TEXT(" [Storage-1] Avatar 저장됨: %s, ID: %s"), *OutData.FileName, *UniqueID);
+	UE_LOG(LogTemp, Warning, TEXT("   - 현재 저장된 Avatar 개수: %d"), AvatarDataMap.Num());
+	
 	return true;
 }
 
-TArray<FAvatarData> UAvatarStorageSubsystem::GetSavedAvatars()
+//  매개변수 이름 수정
+bool UAvatarStorageSubsystem::UpdateAvatarThumbnail(const FString& UniqueID, UTexture2D* Thumbnail)
 {
-	return AvatarList;
-}
-
-bool UAvatarStorageSubsystem::GetAvatarData(const FString& UniqueID, FAvatarData& OutData)
-{
-	for (const FAvatarData& Data : AvatarList)
+	UE_LOG(LogTemp, Warning, TEXT("🔍 [Storage-2] UpdateAvatarThumbnail 시작: %s"), *UniqueID);
+	
+	if (UniqueID.IsEmpty())
 	{
-		if (Data.UniqueID == UniqueID)
+		UE_LOG(LogTemp, Error, TEXT(" [Storage-2] UniqueID가 비어있음"));
+		return false;
+	}
+	
+	if (!Thumbnail)
+	{
+		UE_LOG(LogTemp, Error, TEXT(" [Storage-2] Thumbnail이 null"));
+		return false;
+	}
+	
+	// 메모리에서 데이터 찾기
+	FAvatarData* Data = AvatarDataMap.Find(UniqueID);
+	
+	if (Data)
+	{
+		UE_LOG(LogTemp, Warning, TEXT(" [Storage-2] Avatar 찾음: %s"), *Data->FileName);
+		
+		// 썸네일 설정
+		Data->ThumbnailTexture = Thumbnail;
+		
+		UE_LOG(LogTemp, Warning, TEXT(" [Storage-2] 썸네일 업데이트 성공!"));
+		UE_LOG(LogTemp, Warning, TEXT("   - Thumbnail Size: %dx%d"), 
+			Thumbnail->GetSizeX(), 
+			Thumbnail->GetSizeY());
+		
+		return true;
+	}
+	else
+	{
+		UE_LOG(LogTemp, Error, TEXT(" [Storage-2] Avatar를 찾을 수 없음: %s"), *UniqueID);
+		UE_LOG(LogTemp, Error, TEXT("   - 현재 저장된 Avatar 개수: %d"), AvatarDataMap.Num());
+		
+		// 디버깅: 저장된 모든 ID 출력
+		for (const auto& Pair : AvatarDataMap)
 		{
-			OutData = Data;
-			return true;
+			UE_LOG(LogTemp, Error, TEXT("   - 저장된 ID: %s"), *Pair.Key);
 		}
+		
+		return false;
 	}
-	return false;
 }
 
-void UAvatarStorageSubsystem::LoadAvatarList()
+TArray<FAvatarData> UAvatarStorageSubsystem::GetSavedAvatars() const
 {
-	FString JsonPath = SavePath / TEXT("AvatarList.json");
-	FString JsonString;
-
-	if (FFileHelper::LoadFileToString(JsonString, *JsonPath))
+	UE_LOG(LogTemp, Warning, TEXT("🔍 [Storage-3] GetSavedAvatars 호출"));
+	
+	TArray<FAvatarData> Result;
+	AvatarDataMap.GenerateValueArray(Result);
+	
+	UE_LOG(LogTemp, Warning, TEXT(" [Storage-3] 반환할 Avatar 개수: %d"), Result.Num());
+	
+	// 각 Avatar의 썸네일 상태 출력
+	for (int32 i = 0; i < Result.Num(); i++)
 	{
-		TSharedPtr<FJsonObject> JsonObject;
-		TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(JsonString);
-
-		if (FJsonSerializer::Deserialize(Reader, JsonObject) && JsonObject.IsValid())
-		{
-			const TArray<TSharedPtr<FJsonValue>>* JsonArray;
-			if (JsonObject->TryGetArrayField(TEXT("Avatars"), JsonArray))
-			{
-				for (const TSharedPtr<FJsonValue>& JsonValue : *JsonArray)
-				{
-					TSharedPtr<FJsonObject> AvatarObj = JsonValue->AsObject();
-					
-					FAvatarData Data;
-					Data.FileName = AvatarObj->GetStringField(TEXT("FileName"));
-					Data.UniqueID = AvatarObj->GetStringField(TEXT("UniqueID"));
-					Data.FilePath = AvatarObj->GetStringField(TEXT("FilePath"));
-					FDateTime::Parse(AvatarObj->GetStringField(TEXT("SavedDate")), Data.SavedDate);
-
-					AvatarList.Add(Data);
-				}
-			}
-		}
+		UE_LOG(LogTemp, Warning, TEXT("   - [%d] %s: Thumbnail %s"), 
+			i, 
+			*Result[i].FileName,
+			Result[i].ThumbnailTexture ? TEXT("있음") : TEXT("없음"));
 	}
-
-	PRINTLOG(TEXT("Loaded %d avatars"), AvatarList.Num());
+	
+	// 시간순 정렬 (최신순)
+	Result.Sort([](const FAvatarData& A, const FAvatarData& B) {
+		return A.SavedDate > B.SavedDate;
+	});
+	
+	return Result;
 }
 
-void UAvatarStorageSubsystem::SaveAvatarList()
+bool UAvatarStorageSubsystem::GetAvatarData(const FString& UniqueID, FAvatarData& OutData) const
 {
-	TSharedPtr<FJsonObject> RootObject = MakeShareable(new FJsonObject);
-	TArray<TSharedPtr<FJsonValue>> JsonArray;
-
-	for (const FAvatarData& Data : AvatarList)
+	UE_LOG(LogTemp, Warning, TEXT("🔍 [Storage-4] GetAvatarData: %s"), *UniqueID);
+	
+	const FAvatarData* Data = AvatarDataMap.Find(UniqueID);
+	
+	if (Data)
 	{
-		TSharedPtr<FJsonObject> AvatarObj = MakeShareable(new FJsonObject);
-		AvatarObj->SetStringField(TEXT("FileName"), Data.FileName);
-		AvatarObj->SetStringField(TEXT("UniqueID"), Data.UniqueID);
-		AvatarObj->SetStringField(TEXT("FilePath"), Data.FilePath);
-		AvatarObj->SetStringField(TEXT("SavedDate"), Data.SavedDate.ToString());
-
-		JsonArray.Add(MakeShareable(new FJsonValueObject(AvatarObj)));
+		OutData = *Data;
+		
+		UE_LOG(LogTemp, Warning, TEXT(" [Storage-4] Avatar 찾음: %s"), *Data->FileName);
+		UE_LOG(LogTemp, Warning, TEXT("   - Thumbnail: %s"), 
+			Data->ThumbnailTexture ? TEXT("있음") : TEXT("없음"));
+		
+		return true;
 	}
-
-	RootObject->SetArrayField(TEXT("Avatars"), JsonArray);
-
-	FString OutputString;
-	TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&OutputString);
-	FJsonSerializer::Serialize(RootObject.ToSharedRef(), Writer);
-
-	FString JsonPath = SavePath / TEXT("AvatarList.json");
-	FFileHelper::SaveStringToFile(OutputString, *JsonPath);
+	else
+	{
+		UE_LOG(LogTemp, Error, TEXT(" [Storage-4] Avatar를 찾을 수 없음: %s"), *UniqueID);
+		return false;
+	}
 }
 
 AAvatarPreviewActor* UAvatarStorageSubsystem::CreatePreviewActor(UWorld* World)
 {
 	if (!World)
 	{
+		UE_LOG(LogTemp, Error, TEXT(" World is null"));
 		return nullptr;
 	}
 
-	// 기존 액터가 있으면 제거
-	if (PreviewActor)
-	{
-		PreviewActor->Destroy();
-	}
-
-	// 새 액터 스폰 (화면 밖에 배치)
-	FVector SpawnLocation = FVector(10000.0f, 0.0f, 0.0f);
-	FRotator SpawnRotation = FRotator::ZeroRotator;
-
-	PreviewActor = World->SpawnActor<AAvatarPreviewActor>(
+	FActorSpawnParameters SpawnParams;
+	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	
+	AAvatarPreviewActor* PreviewActor = World->SpawnActor<AAvatarPreviewActor>(
 		AAvatarPreviewActor::StaticClass(),
-		SpawnLocation,
-		SpawnRotation
+		FVector::ZeroVector,
+		FRotator::ZeroRotator,
+		SpawnParams
 	);
 
 	if (PreviewActor)
 	{
-		PRINTLOG(TEXT("Preview actor created"));
+		UE_LOG(LogTemp, Warning, TEXT(" PreviewActor 생성됨"));
+	}
+	else
+	{
+		UE_LOG(LogTemp, Error, TEXT(" PreviewActor 생성 실패"));
 	}
 
 	return PreviewActor;
-}
-
-void UAvatarStorageSubsystem::UpdatePreview(const FString& UniqueID)
-{
-	if (!PreviewActor)
-	{
-		PRINTLOG(TEXT("PreviewActor is null"));
-		return;
-	}
-
-	FAvatarData Data;
-	if (GetAvatarData(UniqueID, Data))
-	{
-		PreviewActor->LoadAvatarMesh(Data.FilePath);
-	}
 }

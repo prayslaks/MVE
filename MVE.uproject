@@ -92,10 +92,6 @@
 			"Enabled": true
 		},
 		{
-			"Name": "OSC",
-			"Enabled": true
-		},
-		{
 			"Name": "LiveLinkCurveDebugUI",
 			"Enabled": true
 		},
@@ -140,6 +136,18 @@
 		{
 			"Name": "MetaHumanCharacter",
 			"Enabled": true
+		},
+		{
+			"Name": "Remocapp",
+			"Enabled": true,
+			"MarketplaceURL": "com.epicgames.launcher://ue/marketplace/product/fa02402072ab4d928728daf6ce565ec7",
+			"SupportedTargetPlatforms": [
+				"Win64"
+			]
+		},
+		{
+			"Name": "UE-OSC",
+			"Enabled": false
 		}
 	]
 }

@@ -34,13 +34,17 @@ public class MVE : ModuleRules
 			"RenderCore",					// 
 			"Niagara",						// 나이아가라 이펙트
 			"Sockets",						// 리슨 서버 IP와 포트 관리
+			"WebSockets",
 			"Networking",					// 리슨 서버 IP와 포트 관리
-			"GameplayTags"					// 프리셋 아이템 식별용 태그
+			"AudioCaptureCore",				// STT 오디오 캡쳐 
+			"GameplayTags",
+			"OSC",
+			"UE_OSC"
 		});
 
 		PrivateDependencyModuleNames.AddRange(new string[]
 		{
-			"DesktopPlatform", "MediaAssets", "UE_OSC"
+			"DesktopPlatform", "MediaAssets"
 		});
 
 		PublicIncludePaths.AddRange(new string[] {

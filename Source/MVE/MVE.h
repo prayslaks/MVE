@@ -32,7 +32,7 @@ FORCEINLINE FString GetNetModeString(const UObject* WorldContextObject)
 			return TEXT("ListenServer");
 		case NM_Client:
 			// In PIE, GPlayInEditorID is > 0 for clients. This helps distinguish them.
-			return FString::Printf(TEXT("Client_%d"), GPlayInEditorID > 0 ? GPlayInEditorID - 1 : 0);
+			return FString::Printf(TEXT("Client_%d"), UE::GetPlayInEditorID() > 0 ? UE::GetPlayInEditorID() - 1 : 0);
 		default:
 			return FString(); // Return empty string for unknown modes
 	}

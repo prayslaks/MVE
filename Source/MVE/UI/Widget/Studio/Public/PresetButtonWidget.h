@@ -9,7 +9,7 @@ class UButton;
 class UImage;
 class UTextBlock;
 
-DECLARE_DELEGATE_OneParam(FOnPresetClicked, const FString&);
+DECLARE_DELEGATE_OneParam(FOnPresetButtonClicked, const FString&);
 
 UCLASS()
 class MVE_API UPresetButtonWidget : public UUserWidget
@@ -19,21 +19,20 @@ class MVE_API UPresetButtonWidget : public UUserWidget
 public:
 	virtual void NativeConstruct() override;
 
-	void SetAvatarData(const FAvatarData& InData);
-
-	FOnPresetClicked OnButtonClicked;
-
-protected:
-	UPROPERTY(meta = (BindWidget))
-	TObjectPtr<UButton> MainButton;
+	FOnPresetButtonClicked OnButtonClicked;
 
 	UPROPERTY(meta = (BindWidget))
-	TObjectPtr<UImage> ThumbnailImage;
+	TObjectPtr<UButton> PresetButton;
 
 	UPROPERTY(meta = (BindWidget))
-	TObjectPtr<UTextBlock> NameText;
+	TObjectPtr<UImage>  ThumbnailImage;
 
-private:
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<UTextBlock> FileNameText;
+
+	UFUNCTION(BlueprintCallable)
+	void SetAvatarData(FAvatarData& InData);
+
 	FAvatarData AvatarData;
 
 	UFUNCTION()

@@ -114,9 +114,14 @@ void AMVE_PC_StageLevel::OnPossess(APawn* InPawn)
 	}
 }
 
+AMVE_StageLevel_AudCharacter* AMVE_PC_StageLevel::GetBindingAudCharacter() const
+{
+	return Cast<AMVE_StageLevel_AudCharacter>(GetPawn());
+}
+
 void AMVE_PC_StageLevel::ToggleRadialMenu(const bool bShow)
 {
-	if (!AudRadialMenuWidget)
+	if (AudRadialMenuWidget == false)
 	{
 		return;
 	}
