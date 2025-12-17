@@ -35,6 +35,7 @@ public class MVE : ModuleRules
 			"Niagara",						// 나이아가라 이펙트
 			"Sockets",						// 리슨 서버 IP와 포트 관리
 			"Networking",					// 리슨 서버 IP와 포트 관리
+			"GameplayTags"					// 프리셋 아이템 식별용 태그
 		});
 
 		PrivateDependencyModuleNames.AddRange(new string[]

@@ -6,7 +6,8 @@
       "Bash(dir:*)",
       "Bash(findstr:*)",
       "Bash(echo:*)",
-      "Bash(\"C:\\Program Files\\Epic Games\\UE_5.6\\Engine\\Build\\BatchFiles\\Build.bat\" MVEEditor Win64 Development \"C:\\Users\\user\\Documents\\UnrealProjects\\MVE\\MVE.uproject\" -waitmutex)"
+      "Bash(\"C:\\Program Files\\Epic Games\\UE_5.6\\Engine\\Build\\BatchFiles\\Build.bat\" MVEEditor Win64 Development \"C:\\Users\\user\\Documents\\UnrealProjects\\MVE\\MVE.uproject\" -waitmutex)",
+      "Bash(git commit:*)"
     ],
     "deny": [],
     "ask": []
