@@ -21,10 +21,10 @@ class MVE_API UMVE_AUD_WidgetClass_RoomInfoWidget : public UUserWidget, public I
 protected:
 	// === Bound Widgets ===
 	UPROPERTY(meta = (BindWidget))
-	TObjectPtr<UTextBlock> RoomIDText;
+	TObjectPtr<UTextBlock> ConcertNameText;
 
 	UPROPERTY(meta = (BindWidget))
-	TObjectPtr<UTextBlock> RoomTitleText;
+	TObjectPtr<UTextBlock> StudioNameText;
 
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UTextBlock> BroadcastTimeText;
@@ -36,7 +36,7 @@ protected:
 	TObjectPtr<UImage> ThumbnailImage;
 
 	UPROPERTY(meta = (BindWidget))
-	TObjectPtr<UButton> RoomButton;
+	TObjectPtr<UButton> ConcertRoomButton;
 
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UBorder> RoomBorder;
@@ -59,12 +59,12 @@ protected:
 private:
 	// 현재 표시 중인 데이터
 	UPROPERTY()
-	TObjectPtr<URoomInfoData> CachedRoomData;
+	TObjectPtr<UConcertInfoData> ConcertData;
 
 public:
 	// 방 클릭 이벤트
-	DECLARE_MULTICAST_DELEGATE_OneParam(FOnRoomClicked, URoomInfoData*);
-	FOnRoomClicked OnRoomClicked;
+	DECLARE_MULTICAST_DELEGATE_OneParam(FOnConcertRoomClicked, UConcertInfoData*);
+	FOnConcertRoomClicked OnConcertRoomClicked;
 
 protected:
 	virtual void NativeConstruct() override;
@@ -73,7 +73,7 @@ protected:
 	// === IUserObjectListEntry 인터페이스 구현 ===
     
 	/**
-	 * ListView가 이 위젯에 데이터를 설정할 때 자동 호출
+	 * TileView가 이 위젯에 데이터를 설정할 때 자동 호출
 	 * 이 함수에서 UI 업데이트 수행
 	 */
 	virtual void NativeOnListItemObjectSet(UObject* ListItemObject) override;
@@ -87,13 +87,13 @@ private:
 	/**
 	 * UI 업데이트
 	 */
-	void UpdateUI(URoomInfoData* RoomData);
+	void UpdateUI(UConcertInfoData* RoomData);
 
 	/**
 	 * 버튼 클릭 핸들러
 	 */
 	UFUNCTION()
-	void OnRoomButtonClicked();
+	void OnConcertRoomButtonClicked();
 
 	UFUNCTION()
 	void OnButtonHovered();

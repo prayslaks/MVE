@@ -33,7 +33,7 @@ void UMVE_AUD_AudienceStationModel::BindSessionManagerEvents()
 {
 	if (SessionManager)
 	{
-		SessionManager->OnSessionsFound.AddUObject(this, &UMVE_AUD_AudienceStationModel::OnSessionsFound);
+		//SessionManager->OnSessionsFound.AddUObject(this, &UMVE_AUD_AudienceStationModel::OnSessionsFound);
 	}
 }
 

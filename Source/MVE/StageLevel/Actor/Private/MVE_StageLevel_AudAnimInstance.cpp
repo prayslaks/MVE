@@ -30,7 +30,7 @@ void UMVE_StageLevel_AudAnimInstance::NativeUpdateAnimation(const float DeltaSec
 	AudienceControlMode = OwningCharacter->GetControlMode();
 	
 	// 에임 활성화 여부를 캐릭터에서 가져온다
-	bAimEnabled = OwningCharacter->GetAimEnabled();
+	bAimEnabled = OwningCharacter->GetIsAiming();
 	
 	// 액션 여부를 캐릭터에서 가져온다
 	bIsExecuting = OwningCharacter->GetIsExecuting();
@@ -57,5 +57,5 @@ void UMVE_StageLevel_AudAnimInstance::NativeUpdateAnimation(const float DeltaSec
 
 void UMVE_StageLevel_AudAnimInstance::AnimNotify_EndExecute() const
 {
-	OwningCharacter->SetIsExecuting(false);
+	//OwningCharacter->SetIsExecuting(false);
 }

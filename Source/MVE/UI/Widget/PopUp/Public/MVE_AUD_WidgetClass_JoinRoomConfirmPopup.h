@@ -2,6 +2,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "MVE_API_ResponseData.h"
 #include "Blueprint/UserWidget.h"
 #include "Data/RoomInfo.h"
 #include "MVE_AUD_WidgetClass_JoinRoomConfirmPopup.generated.h"
@@ -19,10 +20,10 @@ public:
 	 * 방 정보 설정 (외부에서 호출)
 	 */
 	UFUNCTION(BlueprintCallable)
-	void SetRoomInfo(const FRoomInfo& RoomInfo);
+	void SetRoomInfo(const FConcertInfo& RoomInfo);
 
 	// 확인/취소 이벤트
-	DECLARE_MULTICAST_DELEGATE_OneParam(FOnConfirmed, const FRoomInfo&);
+	DECLARE_MULTICAST_DELEGATE_OneParam(FOnConfirmed, const FConcertInfo&);
 	FOnConfirmed OnConfirmed;
 
 	DECLARE_MULTICAST_DELEGATE(FOnCancelled);
@@ -33,7 +34,7 @@ protected:
 
 private:
 	// 현재 표시 중인 방 정보
-	FRoomInfo CurrentRoomInfo;
+	FConcertInfo CurrentRoomInfo;
 
 protected:
 	UPROPERTY(meta = (BindWidget))

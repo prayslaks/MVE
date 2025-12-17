@@ -6,6 +6,7 @@
 #include "Components/ActorComponent.h"
 #include "MVE_PC_StageLevel_AudienceComponent.generated.h"
 
+class AMVE_PC_StageLevel;
 class USoundBase;
 
 UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
@@ -19,50 +20,33 @@ public:
 	virtual void BeginPlay() override;
 
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
+	
+	UFUNCTION()
+	AMVE_PC_StageLevel* GetBindingPC() const;
 
 protected:
+	// 물건 던지기 사운드
+	UPROPERTY(EditDefaultsOnly, Category = "MVE|Sound")
+	TObjectPtr<USoundBase> ThrowSound;
+	
 	// 응원봉 흔들기 사운드
 	UPROPERTY(EditDefaultsOnly, Category = "MVE|Sound")
-	TObjectPtr<USoundBase> SwingStickSound;
-
-	// 사진 찍기 사운드
-	UPROPERTY(EditDefaultsOnly, Category = "MVE|Sound")
-	TObjectPtr<USoundBase> TakePhotoSound;
+	TObjectPtr<USoundBase> WaveLightStickSound;
 
 	// 환호 사운드
 	UPROPERTY(EditDefaultsOnly, Category = "MVE|Sound")
 	TObjectPtr<USoundBase> CheerUpSound;
 
 public:
-	// 서버에게 응원봉 흔들기를 요청
+	// 던지기 기능과 관련된 ServerRPC
 	UFUNCTION(Server, Reliable)
-	void SwingLightStickOnServer(const FVector& Location);
-
-	// 모든 클라이언트에게 응원봉 흔들기 이펙트를 동기화
-	UFUNCTION(NetMulticast, Reliable)
-	void MulticastSwingLightStick(const FVector& Location);
-
-	// 서버에게 사진 찍기를 요청
+	void Server_ThrowSomething(const FVector& Location, const FVector& Direction);
+	
+	// 응원봉 기능과 관련된 ServerRPC
 	UFUNCTION(Server, Reliable)
-	void TakePhotoOnServer(const FVector& Location);
+	void Server_WaveLightStick(const FVector& Location);
 
-	// 모든 클라이언트에게 사진 찍기 이펙트를 동기화
-	UFUNCTION(NetMulticast, Reliable)
-	void MulticastTakePhoto(const FVector& Location);
-
-	// 서버에게 환호하기를 요청
+	// 환호 기능과 관련된 ServerRPC
 	UFUNCTION(Server, Reliable)
-	void CheerUpOnServer(const FVector& Location);
-
-	// 모든 클라이언트에게 환호하기 이펙트를 동기화
-	UFUNCTION(NetMulticast, Reliable)
-	void MulticastCheerUp(const FVector& Location);
-
-	/**
-	 * 소유자(PlayerController)에게 발사체 발사를 요청합니다.
-	 * @param Location 발사 시작 위치입니다.
-	 * @param Direction 발사 방향입니다.
-	 */
-	UFUNCTION(BlueprintCallable, Category = "MVE|Action")
-	void RequestThrowProjectile(const FVector& Location, const FVector& Direction);
+	void Server_CheerUp(const FVector& Location);
 };

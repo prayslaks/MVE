@@ -30,6 +30,7 @@ public class MVE : ModuleRules
 			"Niagara",						// 각종 이펙트
 			"OnlineSubsystem",
 			"OnlineSubsystemSteam",
+			"OnlineSubsystemUtils",
 			"RenderCore",					// 
 			"Niagara",						// 나이아가라 이펙트
 			"Sockets",						// 리슨 서버 IP와 포트 관리

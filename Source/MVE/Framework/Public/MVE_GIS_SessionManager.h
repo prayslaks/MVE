@@ -2,104 +2,116 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "MVE_API_ResponseData.h"
 #include "Data/RoomInfo.h"
 #include "Subsystems/GameInstanceSubsystem.h"
 #include "OnlineSubsystem.h"
 #include "Interfaces/OnlineSessionInterface.h"
 #include "MVE_GIS_SessionManager.generated.h"
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnSessionCreated, bool, bSuccess);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnSessionsFound, bool, bSuccess, int32, NumSessions);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnSessionJoined, bool, bSuccess);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnBroadcastStateChanged, bool, bIsOpen);
+
 UCLASS()
 class MVE_API UMVE_GIS_SessionManager : public UGameInstanceSubsystem
 {
 	GENERATED_BODY()
-
 public:
-	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
-	virtual void Deinitialize() override;
+    
+    UFUNCTION(BlueprintCallable, Category = "MVE|Session")
+    void CreateSession(const FConcertInfo& ConcertInfo);
+    
+    UFUNCTION(BlueprintCallable, Category = "MVE|Session")
+    void FindSessions();
+    
+    UFUNCTION(BlueprintCallable, Category = "MVE|Session")
+    void JoinSession(int32 Index);
+    
+    UFUNCTION(BlueprintCallable, Category = "MVE|Session")
+    void JoinSessionByRoomId(const FString& RoomId);
+    
+    UFUNCTION(BlueprintCallable, Category = "MVE|Session")
+    void DestroySession();
+    
+    UFUNCTION(BlueprintCallable, BlueprintPure, Category = "MVE|Session")
+    const TArray<FConcertInfo>& GetConcertList() const { return ConcertList; }
+    
+    UFUNCTION(BlueprintCallable, BlueprintPure, Category = "MVE|Session")
+    bool GetConcertInfoAtIndex(int32 Index, FConcertInfo& OutConcertInfo) const;
+    
+    UFUNCTION(BlueprintCallable, BlueprintPure, Category = "MVE|Session")
+    FString GetCurrentSessionName();
 
-	/**
-	 * 세션(방) 생성
-	 * @param RoomInfo 방 정보
-	 */
-	UFUNCTION(BlueprintCallable)
-	void CreateSession(const FRoomInfo& RoomInfo);
+    UFUNCTION(BlueprintCallable, BlueprintPure, Category = "MVE|Session")
+    FString GetCurrentRoomID();
+    
+    UPROPERTY(BlueprintAssignable, Category = "MVE|Session")
+    FOnSessionCreated OnSessionCreated;
+    
+    UPROPERTY(BlueprintAssignable, Category = "MVE|Session")
+    FOnSessionsFound OnSessionsFound;
+    
+    UPROPERTY(BlueprintAssignable, Category = "MVE|Session")
+    FOnSessionJoined OnSessionJoined;
 
-	/**
-	 * 세션 목록 조회 (Find Sessions)
-	 */
-	UFUNCTION(BlueprintCallable)
-	void FindSessions();
-
-	/**
-	 * 세션 참가
-	 */
-	UFUNCTION(BlueprintCallable)
-	void JoinSession(const FString& SessionId);
-
-	/**
-	 * 세션 나가기
-	 */
-	UFUNCTION(BlueprintCallable)
-	void LeaveSession();
-
-	/**
-	 * 세션 삭제
-	 */
-	UFUNCTION(BlueprintCallable)
-	void DestroySession();
-
-	// === 델리게이트 (이벤트 알림) ===
-
-	// 세션 생성 완료
-	DECLARE_MULTICAST_DELEGATE_OneParam(FOnSessionCreated, bool /* bSuccess */);
-	FOnSessionCreated OnSessionCreated;
-
-	// 세션 목록 조회 완료
-	DECLARE_MULTICAST_DELEGATE_TwoParams(FOnSessionsFound, bool /* bSuccess */, const TArray<FRoomInfo>& /* Sessions */);
-	FOnSessionsFound OnSessionsFound;
-
-	// 세션 참가 완료
-	DECLARE_MULTICAST_DELEGATE_OneParam(FOnSessionJoined, bool /* bSuccess */);
-	FOnSessionJoined OnSessionJoined;
+    // ===== 방송 시작/종료 =====
+    
+    // 방송 시작 (bIsOpen = true)
+    UFUNCTION(BlueprintCallable, Category = "MVE|Session")
+    void StartBroadcast();
+    
+    // 방송 종료 (bIsOpen = false, 검색 불가능하지만 세션은 유지)
+    UFUNCTION(BlueprintCallable, Category = "MVE|Session")
+    void StopBroadcast();
+    
+    // 현재 방송 중인지 확인
+    UFUNCTION(BlueprintCallable, BlueprintPure, Category = "MVE|Session")
+    bool IsBroadcasting() const { return bIsBroadcasting; }
+    
+    // 델리게이트 추가
+    UPROPERTY(BlueprintAssignable, Category = "MVE|Session")
+    FOnBroadcastStateChanged OnBroadcastStateChanged;
 
 private:
+    void CreateConcertInternal(const FConcertInfo& ConcertInfo);
+    void OnCreateConcertComplete(bool bSuccess, const FConcertCreationData& Data, const FString& ErrorCode);
+    void RegisterListenServer();
+    void OnRegisterListenServerComplete(bool bSuccess, const FRegisterListenServerData& Data, const FString& ErrorCode);
+    void OpenConcert();
+    void OnToggleConcertOpenComplete(bool bSuccess, const FString& MessageOrError);
+    
+    void OnGetConcertListComplete(bool bSuccess, const FGetConcertListData& Data, const FString& ErrorCode);
+    
+    void JoinConcertInternal(const FString& RoomId);
+    void OnGetConcertInfoForJoin(bool bSuccess, const FGetConcertInfoResponseData& Data, const FString& ErrorCode);
+    void OnJoinConcertComplete(bool bSuccess, const FString& MessageOrError);
+    
+    void OnLeaveConcertComplete(bool bSuccess, const FString& MessageOrError);
+    void OnCloseConcertComplete(bool bSuccess, const FString& MessageOrError);
+    
+    int32 GetUniqueClientId() const;
 
-	FString StringBase64Encode(FString str);
-	FString StringBase64Decode(FString str);
-	
-	IOnlineSessionPtr SessionInterface;
+    UPROPERTY()
+    FString CurrentRoomId;
+    
+    UPROPERTY()
+    FConcertInfo PendingConcertInfo;  
+    
+    UPROPERTY()
+    TArray<FConcertInfo> ConcertList;
+    
+    UPROPERTY()
+    bool bIsHost;
+    
+    UPROPERTY()
+    FString PendingTravelIP;
+    
+    UPROPERTY()
+    int32 PendingTravelPort;
 
-	// 세션 검색 설정
-	TSharedPtr<FOnlineSessionSearch> SessionSearch;
-
-	// 콜백 함수들
-	void OnCreateSessionComplete(FName SessionName, bool bSuccess);
-	void OnFindSessionsComplete(bool bSuccess);
-	void OnJoinSessionComplete(FName SessionName, EOnJoinSessionCompleteResult::Type Result);
-	void OnDestroySessionComplete(FName SessionName, bool bSuccess);
-	void OnLeaveSessionComplete(FName SessionName, bool bSuccess);
-
-	// 델리게이트 핸들
-	FDelegateHandle CreateSessionDelegateHandle;
-	FDelegateHandle FindSessionsDelegateHandle;
-	FDelegateHandle JoinSessionDelegateHandle;
-	FDelegateHandle DestroySessionDelegateHandle;
-	FDelegateHandle LeaveSessionDelegateHandle;
-
-	/**
-	 * OnlineSessionSearchResult → FRoomInfo 변환
-	 */
-	FRoomInfo ConvertSearchResultToRoomInfo(const FOnlineSessionSearchResult& SearchResult);
-
-	// 세션 생성 대기 중인 방 정보
-	FRoomInfo PendingRoomInfo;
-
-	// 세션 생성 대기 플래그
-	bool bPendingCreateSession = false;
-
-	// 실제 세션 생성 로직
-	void CreateSessionInternal(const FRoomInfo& RoomInfo);
-
-	APlayerController* GetPlayerController();
+    UPROPERTY()
+    bool bIsBroadcasting; // 현재 방송 주 ㅇ여부
 };
 

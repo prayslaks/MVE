@@ -2,7 +2,9 @@
   "permissions": {
     "allow": [
       "Bash(cat:*)",
-      "WebFetch(domain:github.com)"
+      "WebFetch(domain:github.com)",
+      "Bash(dir:*)",
+      "Bash(findstr:*)"
     ],
     "deny": [],
     "ask": []

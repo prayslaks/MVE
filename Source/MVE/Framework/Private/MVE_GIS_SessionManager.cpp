@@ -1,340 +1,508 @@
 
 #include "../Public/MVE_GIS_SessionManager.h"
 #include "MVE.h"
-#include "OnlineSubsystem.h"
-#include "OnlineSubsystemUtils.h"
-#include "OnlineSessionSettings.h"
-#include "Online/OnlineSessionNames.h"
-#include "Kismet/GameplayStatics.h"
-#include <string>
+#include "MVE_API_Helper.h"
 
-void UMVE_GIS_SessionManager::Initialize(FSubsystemCollectionBase& Collection)
+
+// ========================================
+// 세션 생성
+// ========================================
+
+void UMVE_GIS_SessionManager::CreateSession(const FConcertInfo& ConcertInfo)
 {
-	Super::Initialize(Collection);
-
-	// Online Subsystem 가져오기
-	IOnlineSubsystem* OnlineSubsystem = IOnlineSubsystem::Get();
+	SESSIONPRINTLOG(TEXT("Creating concert session: %s"), *ConcertInfo.ConcertName);
     
-	if (OnlineSubsystem)
-	{
-		SessionInterface = OnlineSubsystem->GetSessionInterface();
-        
-		if (SessionInterface.IsValid())
-		{
-			// 델리게이트 바인딩
-			CreateSessionDelegateHandle = SessionInterface->AddOnCreateSessionCompleteDelegate_Handle(
-				FOnCreateSessionCompleteDelegate::CreateUObject(this, &UMVE_GIS_SessionManager::OnCreateSessionComplete));
-            
-			FindSessionsDelegateHandle = SessionInterface->AddOnFindSessionsCompleteDelegate_Handle(
-				FOnFindSessionsCompleteDelegate::CreateUObject(this, &UMVE_GIS_SessionManager::OnFindSessionsComplete));
-            
-			JoinSessionDelegateHandle = SessionInterface->AddOnJoinSessionCompleteDelegate_Handle(
-				FOnJoinSessionCompleteDelegate::CreateUObject(this, &UMVE_GIS_SessionManager::OnJoinSessionComplete));
-            
-			DestroySessionDelegateHandle = SessionInterface->AddOnDestroySessionCompleteDelegate_Handle(
-				FOnDestroySessionCompleteDelegate::CreateUObject(this, &UMVE_GIS_SessionManager::OnDestroySessionComplete));
-			LeaveSessionDelegateHandle = SessionInterface->AddOnDestroySessionCompleteDelegate_Handle(
-							FOnDestroySessionCompleteDelegate::CreateUObject(this, &UMVE_GIS_SessionManager::OnLeaveSessionComplete));
-			
-			PRINTLOG(TEXT("SessionManager initialized"));
-		}
-	}
+	bIsHost = true;
+	PendingConcertInfo = ConcertInfo;
+    
+	CreateConcertInternal(ConcertInfo);
 }
 
-void UMVE_GIS_SessionManager::Deinitialize()
+void UMVE_GIS_SessionManager::CreateConcertInternal(const FConcertInfo& ConcertInfo)
 {
-	if (SessionInterface.IsValid())
-	{
-		SessionInterface->ClearOnCreateSessionCompleteDelegate_Handle(CreateSessionDelegateHandle);
-		SessionInterface->ClearOnFindSessionsCompleteDelegate_Handle(FindSessionsDelegateHandle);
-		SessionInterface->ClearOnJoinSessionCompleteDelegate_Handle(JoinSessionDelegateHandle);
-		SessionInterface->ClearOnDestroySessionCompleteDelegate_Handle(DestroySessionDelegateHandle);
-		SessionInterface->ClearOnDestroySessionCompleteDelegate_Handle(LeaveSessionDelegateHandle);
-	}
-	
-	Super::Deinitialize();
+	FOnCreateConcertComplete OnResult;
+	OnResult.BindUObject(this, &UMVE_GIS_SessionManager::OnCreateConcertComplete);
+    
+	// FConcertInfo에서 필요한 필드만 API로 전달
+	UMVE_API_Helper::CreateConcert(
+		ConcertInfo.ConcertName,
+		ConcertInfo.Songs,
+		ConcertInfo.Accessories,
+		ConcertInfo.MaxAudience,
+		OnResult
+	);
 }
 
-void UMVE_GIS_SessionManager::CreateSession(const FRoomInfo& RoomInfo)
+void UMVE_GIS_SessionManager::OnCreateConcertComplete(bool bSuccess, const FConcertCreationData& Data, const FString& ErrorCode)
 {
-	if (!SessionInterface.IsValid())
+	if (!bSuccess)
 	{
-		SESSIONPRINTLOG(TEXT("SessionInterface is invalid"));
+		SESSIONPRINTLOG(TEXT("CreateConcert failed: %s"), *ErrorCode);
 		OnSessionCreated.Broadcast(false);
 		return;
 	}
-	
-	// 기존 세션이 있는지 확인
-	auto ExistingSession = SessionInterface->GetNamedSession(NAME_GameSession);
-	if (ExistingSession != nullptr)
+    
+	CurrentRoomId = Data.RoomId;
+	SESSIONPRINTLOG(TEXT("Concert created. RoomId: %s"), *CurrentRoomId);
+    
+	// Step 2: Listen Server 시작
+	UWorld* World = GetWorld();
+	if (!World)
 	{
-		SESSIONPRINTLOG(TEXT("Existing session found. Destroying before creating new one..."));
-
-		// 세션 생성 정보를 저장하고 대기 플래그 설정
-		PendingRoomInfo = RoomInfo;
-		bPendingCreateSession = true;
-
-		// 기존 세션 파괴
-		SessionInterface->DestroySession(NAME_GameSession);
-		return;
-	}
-
-	// 기존 세션이 없으면 바로 생성
-	CreateSessionInternal(RoomInfo);
-}
-
-void UMVE_GIS_SessionManager::CreateSessionInternal(const FRoomInfo& RoomInfo)
-{
-	if (!SessionInterface.IsValid())
-	{
-		SESSIONPRINTLOG(TEXT("SessionInterface is invalid"));
+		SESSIONPRINTLOG(TEXT("World is null!"));
 		OnSessionCreated.Broadcast(false);
 		return;
 	}
-	
-	SESSIONPRINTLOG(TEXT("Creating new session..."));
-
-	// 세션을 만들기 위한 옵션 담을 변수
-	FOnlineSessionSettings sessionSettings;
-	// 현재 사용중인 서브시스템 이름 가져오자.
-	FName subsysName = Online::GetSubsystem(GetWorld())->GetSubsystemName();
-	// 만약에 서브시스템이 이름이 NULL 이면 Lan 을 이용하게 설정
-	sessionSettings.bIsLANMatch = subsysName.IsEqual(FName(TEXT("NULL")));
-	UE_LOG(LogTemp, Warning, TEXT("서브시스템 : %s"), *subsysName.ToString());
-
-	// Steam 에선 필수 (bUseLobbiesIfAvailable, bUsesPresence)
-	// Lobby 사용 여부 설정
-	sessionSettings.bUseLobbiesIfAvailable = true;
-	// 친구 상태를 확인할 수 있는 여부
-	sessionSettings.bUsesPresence = true;
-
-	// 세션 검색 허용 여부
-	sessionSettings.bShouldAdvertise = true;
-	// 세션 최대 참여 인원 설정
-	sessionSettings.NumPublicConnections = RoomInfo.MaxViewers;
-	// 세션 중간에 참여 가능 여부 설정
-	sessionSettings.bAllowJoinInProgress = true;
-
-	// displayName 을 Base64 로 변환
-	FString displayName = StringBase64Encode(RoomInfo.RoomTitle);
-	sessionSettings.Set(FName("ROOM_TITLE"), displayName, EOnlineDataAdvertisementType::ViaOnlineServiceAndPing);
-	
-	
-	// sessionSettings 이용해서 세션 생성 (NAME_GameSession으로 통일)
-	FUniqueNetIdPtr netId =
-		GetWorld()->GetFirstLocalPlayerFromController()->GetUniqueNetIdForPlatformUser().GetUniqueNetId();
-	SessionInterface->CreateSession(*netId, NAME_GameSession, sessionSettings);
+    
+	// ServerTravel로 Listen Server 시작
+	FString TravelURL = TEXT("/Game/Maps/StageLevel?listen");
+	World->ServerTravel(TravelURL);
+    
+	// ServerTravel 완료 후 RegisterListenServer 호출
+	// (약간의 지연 필요 - Listen Server가 완전히 시작될 때까지 대기)
+	FTimerHandle TimerHandle;
+	World->GetTimerManager().SetTimer(
+		TimerHandle,
+		this,
+		&UMVE_GIS_SessionManager::RegisterListenServer,
+		2.0f, // 2초 대기
+		false
+	);
 }
 
-APlayerController* UMVE_GIS_SessionManager::GetPlayerController()
+void UMVE_GIS_SessionManager::RegisterListenServer()
 {
-	return GetGameInstance()->GetWorld()->GetFirstPlayerController();
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		SESSIONPRINTLOG(TEXT("World is null during RegisterListenServer!"));
+		OnSessionCreated.Broadcast(false);
+		return;
+	}
+    
+	FString LocalIP;
+	int32 Port;
+    
+	if (!UMVE_API_Helper::GetHostLocalIPAndPort(World, LocalIP, Port))
+	{
+		SESSIONPRINTLOG(TEXT("Failed to get local IP and port"));
+		OnSessionCreated.Broadcast(false);
+		return;
+	}
+    
+	SESSIONPRINTLOG(TEXT("Registering Listen Server: %s:%d"), *LocalIP, Port);
+    
+	FOnRegisterListenServerComplete OnResult;
+	OnResult.BindUObject(this, &UMVE_GIS_SessionManager::OnRegisterListenServerComplete);
+    
+	UMVE_API_Helper::RegisterListenServer(
+		CurrentRoomId,
+		LocalIP,
+		Port,
+		TEXT(""), // PublicIP (옵션)
+		0,        // PublicPort (옵션)
+		OnResult
+	);
 }
+
+void UMVE_GIS_SessionManager::OnRegisterListenServerComplete(bool bSuccess, const FRegisterListenServerData& Data, const FString& ErrorCode)
+{
+	if (!bSuccess)
+	{
+		SESSIONPRINTLOG(TEXT("RegisterListenServer failed: %s"), *ErrorCode);
+		OnSessionCreated.Broadcast(false);
+		return;
+	}
+    
+	SESSIONPRINTLOG(TEXT("Listen Server registered successfully"));
+
+	SESSIONPRINTLOG(TEXT("Session created. Waiting for user to start broadcast..."));
+	OnSessionCreated.Broadcast(true); // 세션 생성 완료!
+}
+
+void UMVE_GIS_SessionManager::OpenConcert()
+{
+	FOnGenericApiComplete OnResult;
+	OnResult.BindUObject(this, &UMVE_GIS_SessionManager::OnToggleConcertOpenComplete);
+    
+	UMVE_API_Helper::ToggleConcertOpen(CurrentRoomId, true, OnResult);
+}
+
+void UMVE_GIS_SessionManager::OnToggleConcertOpenComplete(bool bSuccess, const FString& MessageOrError)
+{
+	if (!bSuccess)
+	{
+		SESSIONPRINTLOG(TEXT("ToggleConcertOpen failed: %s"), *MessageOrError);
+		OnSessionCreated.Broadcast(false);
+		return;
+	}
+    
+	SESSIONPRINTLOG(TEXT("Concert opened successfully. RoomId: %s"), *CurrentRoomId);
+    
+	// 세션 생성 완료!
+	OnSessionCreated.Broadcast(true);
+}
+
+
+// ========================================
+// 세션 목록 조회
+// ========================================
+
 
 void UMVE_GIS_SessionManager::FindSessions()
 {
-	if (!SessionInterface.IsValid())
-	{
-		PRINTLOG(TEXT("SessionInterface is invalid!"));
-		OnSessionsFound.Broadcast(false, TArray<FRoomInfo>());
-		return;
-	}
-
-	// 세션 검색 설정
-	SessionSearch = MakeShared<FOnlineSessionSearch>();
-	SessionSearch->MaxSearchResults = 100;
-	SessionSearch->bIsLanQuery = false;
-	SessionSearch->QuerySettings.Set(SEARCH_PRESENCE, true, EOnlineComparisonOp::Equals);
-
-	PRINTLOG(TEXT("Searching for sessions..."));
-
-	// 세션 검색 시작
-	const ULocalPlayer* LocalPlayer = GetWorld()->GetFirstLocalPlayerFromController();
-	SessionInterface->FindSessions(*LocalPlayer->GetPreferredUniqueNetId(), SessionSearch.ToSharedRef());
+	SESSIONPRINTLOG(TEXT("Finding concert sessions..."));
+    
+	ConcertList.Empty(); // 기존 목록 초기화
+    
+	FOnGetConcertListComplete OnResult;
+	OnResult.BindUObject(this, &UMVE_GIS_SessionManager::OnGetConcertListComplete);
+    
+	UMVE_API_Helper::GetConcertList(OnResult);
 }
 
-void UMVE_GIS_SessionManager::JoinSession(const FString& SessionId)
+void UMVE_GIS_SessionManager::OnGetConcertListComplete(bool bSuccess, const FGetConcertListData& Data, const FString& ErrorCode)
 {
-	if (!SessionInterface.IsValid() || !SessionSearch.IsValid())
+	if (!bSuccess)
 	{
-		PRINTLOG(TEXT("Cannot join session - invalid interface or search"));
+		SESSIONPRINTLOG(TEXT("GetConcertList failed: %s"), *ErrorCode);
+		OnSessionsFound.Broadcast(false, 0);
+		return;
+	}
+    
+	ConcertList = Data.Concerts;
+	SESSIONPRINTLOG(TEXT("Found %d concerts"), ConcertList.Num());
+    
+	// 세션 목록 조회 완료
+	OnSessionsFound.Broadcast(true, ConcertList.Num());
+}
+
+bool UMVE_GIS_SessionManager::GetConcertInfoAtIndex(int32 Index, FConcertInfo& OutConcertInfo) const
+{
+	if (!ConcertList.IsValidIndex(Index))
+	{
+		return false;
+	}
+    
+	OutConcertInfo = ConcertList[Index];
+	return true;
+}
+
+FString UMVE_GIS_SessionManager::GetCurrentSessionName()
+{
+	return PendingConcertInfo.ConcertName;
+}
+
+FString UMVE_GIS_SessionManager::GetCurrentRoomID()
+{
+	return CurrentRoomId;
+}
+
+
+// ========================================
+// 방송 시작/종료
+// ========================================
+
+void UMVE_GIS_SessionManager::StartBroadcast()
+{
+	if (CurrentRoomId.IsEmpty())
+	{
+		SESSIONPRINTLOG(TEXT("Cannot start broadcast: No active session"));
+		return;
+	}
+    
+	if (!bIsHost)
+	{
+		SESSIONPRINTLOG(TEXT("Cannot start broadcast: Not a host"));
+		return;
+	}
+    
+	if (bIsBroadcasting)
+	{
+		SESSIONPRINTLOG(TEXT("Broadcast already started"));
+		return;
+	}
+    
+	SESSIONPRINTLOG(TEXT("Starting broadcast for RoomId: %s"), *CurrentRoomId);
+    
+	FOnGenericApiComplete OnResult;
+	OnResult.BindLambda([this](bool bSuccess, FString MessageOrError)
+	{
+		if (!bSuccess)
+		{
+			SESSIONPRINTLOG(TEXT("StartBroadcast failed: %s"), *MessageOrError);
+			OnBroadcastStateChanged.Broadcast(false);
+			return;
+		}
+        
+		bIsBroadcasting = true;
+		SESSIONPRINTLOG(TEXT("Broadcast started successfully. Concert is now visible to viewers."));
+		OnBroadcastStateChanged.Broadcast(true);
+	});
+    
+	UMVE_API_Helper::ToggleConcertOpen(CurrentRoomId, true, OnResult);
+}
+
+void UMVE_GIS_SessionManager::StopBroadcast()
+{
+	if (CurrentRoomId.IsEmpty())
+	{
+		SESSIONPRINTLOG(TEXT("Cannot stop broadcast: No active session"));
+		return;
+	}
+    
+	if (!bIsHost)
+	{
+		SESSIONPRINTLOG(TEXT("Cannot stop broadcast: Not a host"));
+		return;
+	}
+    
+	if (!bIsBroadcasting)
+	{
+		SESSIONPRINTLOG(TEXT("Broadcast already stopped"));
+		return;
+	}
+    
+	SESSIONPRINTLOG(TEXT("Stopping broadcast for RoomId: %s"), *CurrentRoomId);
+    
+	FOnGenericApiComplete OnResult;
+	OnResult.BindLambda([this](bool bSuccess, FString MessageOrError)
+	{
+		if (!bSuccess)
+		{
+			SESSIONPRINTLOG(TEXT("StopBroadcast failed: %s"), *MessageOrError);
+			return;
+		}
+        
+		bIsBroadcasting = false;
+		SESSIONPRINTLOG(TEXT("Broadcast stopped. Concert is no longer visible to viewers."));
+		OnBroadcastStateChanged.Broadcast(false);
+	});
+    
+	UMVE_API_Helper::ToggleConcertOpen(CurrentRoomId, false, OnResult);
+}
+
+// ========================================
+// 세션 참가
+// ========================================
+
+void UMVE_GIS_SessionManager::JoinSession(int32 Index)
+{
+	if (!ConcertList.IsValidIndex(Index))
+	{
+		SESSIONPRINTLOG(TEXT("Invalid concert index: %d"), Index);
 		OnSessionJoined.Broadcast(false);
 		return;
 	}
-
-	// SessionId로 검색 결과에서 해당 세션 찾기
-	for (FOnlineSessionSearchResult& SearchResult : SessionSearch->SearchResults)
-	{
-		FString ResultSessionId = SearchResult.GetSessionIdStr();
-
-		if (ResultSessionId == SessionId)
-		{
-			// 5.5 이후 부터 바꼈다...
-			SearchResult.Session.SessionSettings.bUseLobbiesIfAvailable = true;
-			SearchResult.Session.SessionSettings.bUsesPresence = true;
-
-			PRINTLOG(TEXT("Joining session: %s"), *SessionId);
-
-			const ULocalPlayer* LocalPlayer = GetWorld()->GetFirstLocalPlayerFromController();
-			
-			SessionInterface->JoinSession(*LocalPlayer->GetPreferredUniqueNetId(), NAME_GameSession, SearchResult);
-			return;
-		}
-	}
-
-	PRINTLOG(TEXT("Session not found: %s"), *SessionId);
-	OnSessionJoined.Broadcast(false);
+    
+	const FConcertInfo& ConcertInfo = ConcertList[Index];
+	JoinConcertInternal(ConcertInfo.RoomId);
 }
 
-void UMVE_GIS_SessionManager::LeaveSession()
+void UMVE_GIS_SessionManager::JoinSessionByRoomId(const FString& RoomId)
 {
-	SessionInterface->DestroySession(NAME_GameSession);
+	if (RoomId.IsEmpty())
+	{
+		SESSIONPRINTLOG(TEXT("RoomId is empty!"));
+		OnSessionJoined.Broadcast(false);
+		return;
+	}
+    
+	JoinConcertInternal(RoomId);
 }
+
+void UMVE_GIS_SessionManager::JoinConcertInternal(const FString& RoomId)
+{
+	CurrentRoomId = RoomId;
+	bIsHost = false;
+    
+	SESSIONPRINTLOG(TEXT("Joining concert: %s"), *RoomId);
+    
+	// Step 1: Concert 상세 정보 조회 (IP:Port 확인)
+	FOnGetConcertInfoComplete OnGetInfoResult;
+	OnGetInfoResult.BindUObject(this, &UMVE_GIS_SessionManager::OnGetConcertInfoForJoin);
+    
+	UMVE_API_Helper::GetConcertInfo(RoomId, OnGetInfoResult);
+}
+
+void UMVE_GIS_SessionManager::OnGetConcertInfoForJoin(bool bSuccess, const FGetConcertInfoResponseData& Data,
+	const FString& ErrorCode)
+{
+	if (!bSuccess)
+	{
+		SESSIONPRINTLOG(TEXT("GetConcertInfo failed: %s"), *ErrorCode);
+		OnSessionJoined.Broadcast(false);
+		return;
+	}
+    
+	// FConcertInfo의 ListenServer 정보 추출
+	const FListenServer& ListenServer = Data.Concert.ListenServer;
+    
+	// LocalIP와 Port 확인 (PublicIP가 있으면 우선 사용)
+	FString ServerIP = ListenServer.PublicIP.IsEmpty() ? ListenServer.LocalIP : ListenServer.PublicIP;
+	int32 ServerPort = ListenServer.PublicPort > 0 ? ListenServer.PublicPort : ListenServer.Port;
+    
+	if (ServerIP.IsEmpty() || ServerPort <= 0)
+	{
+		SESSIONPRINTLOG(TEXT("Listen Server info not available. IP: %s, Port: %d"), 
+			*ServerIP, ServerPort);
+		OnSessionJoined.Broadcast(false);
+		return;
+	}
+    
+	PendingTravelIP = ServerIP;
+	PendingTravelPort = ServerPort;
+    
+	SESSIONPRINTLOG(TEXT("Concert info received. Server: %s:%d"), *PendingTravelIP, PendingTravelPort);
+    
+	// Step 2: Redis에 참가 등록
+	FOnGenericApiComplete OnJoinResult;
+	OnJoinResult.BindUObject(this, &UMVE_GIS_SessionManager::OnJoinConcertComplete);
+    
+	int32 ClientId = GetUniqueClientId();
+	UMVE_API_Helper::JoinConcert(CurrentRoomId, ClientId, OnJoinResult);
+}
+
+void UMVE_GIS_SessionManager::OnJoinConcertComplete(bool bSuccess, const FString& MessageOrError)
+{
+	if (!bSuccess)
+	{
+		SESSIONPRINTLOG(TEXT("JoinConcert failed: %s"), *MessageOrError);
+		OnSessionJoined.Broadcast(false);
+		return;
+	}
+    
+	SESSIONPRINTLOG(TEXT("Joined concert successfully in Redis"));
+    
+	// Step 3: 실제 게임 서버로 이동
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		SESSIONPRINTLOG(TEXT("World is null!"));
+		OnSessionJoined.Broadcast(false);
+		return;
+	}
+    
+	APlayerController* PC = World->GetFirstPlayerController();
+	if (!PC)
+	{
+		SESSIONPRINTLOG(TEXT("PlayerController is null!"));
+		OnSessionJoined.Broadcast(false);
+		return;
+	}
+    
+	FString TravelURL = FString::Printf(TEXT("%s:%d"), *PendingTravelIP, PendingTravelPort);
+	SESSIONPRINTLOG(TEXT("Traveling to: %s"), *TravelURL);
+    
+	PC->ClientTravel(TravelURL, TRAVEL_Absolute);
+    
+	// 참가 완료!
+	OnSessionJoined.Broadcast(true);
+}
+
+// ========================================
+// 세션 종료
+// ========================================
 
 void UMVE_GIS_SessionManager::DestroySession()
 {
-	if (!SessionInterface.IsValid())
+	if (CurrentRoomId.IsEmpty())
 	{
+		SESSIONPRINTLOG(TEXT("No active session to destroy"));
 		return;
 	}
-
-	SessionInterface->DestroySession(NAME_GameSession);
-}
-
-FString UMVE_GIS_SessionManager::StringBase64Encode(FString str)
-{
-	// str을 std::string 로 변환
-	std::string utf8string = TCHAR_TO_UTF8(*str);
-	// utf8string 을 uint8 의 Array 변환
-	TArray<uint8> arrayData = TArray<uint8>((uint8*)utf8string.c_str(), utf8string.length());
-
-	return FBase64::Encode(arrayData);
-}
-
-FString UMVE_GIS_SessionManager::StringBase64Decode(FString str)
-{
-	TArray<uint8> arrayData;
-	FBase64::Decode(str, arrayData);
-	std::string utf8String((char*)arrayData.GetData(), arrayData.Num());
-	return UTF8_TO_TCHAR(utf8String.c_str());
-}
-
-void UMVE_GIS_SessionManager::OnCreateSessionComplete(FName SessionName, bool bSuccess)
-{
-	SESSIONPRINTLOG(TEXT("Session creation complete: %s"), bSuccess ? TEXT("SUCCESS") : TEXT("FAILED"));
-
-	if (bSuccess)
+    
+	SESSIONPRINTLOG(TEXT("Destroying session: %s (Host: %d)"), *CurrentRoomId, bIsHost);
+    
+	if (bIsHost)
 	{
-		SESSIONPRINTLOG(TEXT("Opening StageLevel as new Listen Server..."));
-		GetWorld()->ServerTravel(TEXT("/Game/Maps/StageLevel?listen"));
-		//UGameplayStatics::OpenLevel(GetWorld(), FName(TEXT("StageLevel")), true, TEXT("listen"));
+		// 호스트: Concert 닫기
+		FOnGenericApiComplete OnResult;
+		OnResult.BindUObject(this, &UMVE_GIS_SessionManager::OnCloseConcertComplete);
+        
+		UMVE_API_Helper::ToggleConcertOpen(CurrentRoomId, false, OnResult);
 	}
-
-	// 세션 생성 결과 브로드캐스트
-	OnSessionCreated.Broadcast(bSuccess);
+	else
+	{
+		// 클라이언트: Concert 떠나기
+		FOnGenericApiComplete OnResult;
+		OnResult.BindUObject(this, &UMVE_GIS_SessionManager::OnLeaveConcertComplete);
+        
+		int32 ClientId = GetUniqueClientId();
+		UMVE_API_Helper::LeaveConcert(CurrentRoomId, ClientId, OnResult);
+	}
 }
 
-void UMVE_GIS_SessionManager::OnFindSessionsComplete(bool bSuccess)
+void UMVE_GIS_SessionManager::OnLeaveConcertComplete(bool bSuccess, const FString& MessageOrError)
 {
-	if (!bSuccess || !SessionSearch.IsValid())
+	if (!bSuccess)
 	{
-		OnSessionsFound.Broadcast(false, TArray<FRoomInfo>());
-		return;
+		SESSIONPRINTLOG(TEXT("LeaveConcert failed: %s"), *MessageOrError);
 	}
-
-	TArray<FRoomInfo> FoundRooms;
-
-	PRINTLOG(TEXT("Found %d sessions"), SessionSearch->SearchResults.Num());
-
-	// 검색 결과를 FRoomInfo로 변환
-	for (const FOnlineSessionSearchResult& SearchResult : SessionSearch->SearchResults)
+	else
 	{
-		FRoomInfo RoomInfo = ConvertSearchResultToRoomInfo(SearchResult);
-		FoundRooms.Add(RoomInfo);
-
-		PRINTLOG(TEXT("Session: %s (Ping: %d)"), 
-				 *RoomInfo.RoomTitle, SearchResult.PingInMs);
+		SESSIONPRINTLOG(TEXT("Left concert successfully"));
 	}
-
-	OnSessionsFound.Broadcast(true, FoundRooms);
-}
-
-void UMVE_GIS_SessionManager::OnJoinSessionComplete(FName SessionName, EOnJoinSessionCompleteResult::Type Result)
-{
-	bool bSuccess = (Result == EOnJoinSessionCompleteResult::Success);
-	OnSessionJoined.Broadcast(bSuccess);
-
-	if (bSuccess && SessionInterface.IsValid())
+    
+	// 성공/실패 관계없이 메인 레벨로 복귀
+	CurrentRoomId.Empty();
+	bIsHost = false;
+    
+	UWorld* World = GetWorld();
+	if (World)
 	{
-		// 서버 주소 가져오기
-		FString ConnectInfo;
-		if (SessionInterface->GetResolvedConnectString(NAME_GameSession, ConnectInfo))
+		APlayerController* PC = World->GetFirstPlayerController();
+		if (PC)
 		{
-			PRINTLOG(TEXT("Connecting to: %s"), *ConnectInfo);
-
-			// 서버로 이동
-			APlayerController* PC = GetWorld()->GetFirstPlayerController();
-			if (PC)
-			{
-				PC->ClientTravel(ConnectInfo, ETravelType::TRAVEL_Absolute);
-			}
+			PC->ClientTravel(TEXT("/Game/Maps/MainLevel"), TRAVEL_Absolute);
 		}
 	}
 }
 
-void UMVE_GIS_SessionManager::OnDestroySessionComplete(FName SessionName, bool bSuccess)
+void UMVE_GIS_SessionManager::OnCloseConcertComplete(bool bSuccess, const FString& MessageOrError)
 {
-	SESSIONPRINTLOG(TEXT("Session destroyed: %s"), bSuccess ? TEXT("SUCCESS") : TEXT("FAILED"));
-
-	// 세션 생성 대기 중이었다면 이제 생성
-	if (bPendingCreateSession && bSuccess)
+	if (!bSuccess)
 	{
-		SESSIONPRINTLOG(TEXT("Retrying session creation after destroy..."));
-		bPendingCreateSession = false;
-		CreateSessionInternal(PendingRoomInfo);
+		SESSIONPRINTLOG(TEXT("CloseConcert failed: %s"), *MessageOrError);
+	}
+	else
+	{
+		SESSIONPRINTLOG(TEXT("Closed concert successfully"));
+	}
+    
+	// 성공/실패 관계없이 메인 레벨로 복귀
+	CurrentRoomId.Empty();
+	bIsHost = false;
+    
+	UWorld* World = GetWorld();
+	if (World)
+	{
+		APlayerController* PC = World->GetFirstPlayerController();
+		if (PC)
+		{
+			PC->ClientTravel(TEXT("/Game/Maps/MainLevel"), TRAVEL_Absolute);
+		}
 	}
 }
 
-FRoomInfo UMVE_GIS_SessionManager::ConvertSearchResultToRoomInfo(const FOnlineSessionSearchResult& SearchResult)
+// ========================================
+// 유틸리티
+// ========================================
+
+int32 UMVE_GIS_SessionManager::GetUniqueClientId() const
 {
-	FRoomInfo RoomInfo;
-
-	// 세션 ID
-	RoomInfo.RoomID = SearchResult.GetSessionIdStr();
-
-	// 커스텀 데이터 가져오기
-	FString RoomTitle;
-	if (SearchResult.Session.SessionSettings.Get(FName("ROOM_TITLE"), RoomTitle))
+	UWorld* World = GetWorld();
+	if (!World)
 	{
-		RoomInfo.RoomTitle = StringBase64Decode(RoomTitle);
+		return -1;
 	}
-
-	FString ConcertType;
-	if (SearchResult.Session.SessionSettings.Get(FName("CONCERT_TYPE"), ConcertType))
+    
+	APlayerController* PC = World->GetFirstPlayerController();
+	if (!PC)
 	{
-		RoomInfo.ConcertType = ConcertType;
+		return -1;
 	}
-
-	bool bIsLive = false;
-	if (SearchResult.Session.SessionSettings.Get(FName("IS_LIVE"), bIsLive))
-	{
-		RoomInfo.bIsLive = bIsLive;
-	}
-
-	// 시청자 수
-	RoomInfo.ViewerCount = SearchResult.Session.SessionSettings.NumPublicConnections - 
-						   SearchResult.Session.NumOpenPublicConnections;
-
-	return RoomInfo;
-}
-
-void UMVE_GIS_SessionManager::OnLeaveSessionComplete(FName SessionName, bool bSuccess)
-{
-	PRINTLOG(TEXT("Leave session result: %s"), bSuccess ? TEXT("SUCCESS") : TEXT("FAILED"));
-
-	if (bSuccess)
-	{
-		// 세션 나간 후 로비로 이동 등 추가 로직
-		PRINTLOG(TEXT("Successfully left the session"));
-	}
+    
+	// NetPlayerIndex 사용 (멀티플레이어에서 고유 ID)
+	return PC->NetPlayerIndex;
 }
