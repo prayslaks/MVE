@@ -5,7 +5,7 @@
 
 void UMVE_STU_WC_PresetCategoryButton::SetCategoryNameText(FText PresetName)
 {
-	PresetNameText->SetText(PresetName);
+	CategoryNameText->SetText(PresetName);
 }
 
 void UMVE_STU_WC_PresetCategoryButton::NativeConstruct()
