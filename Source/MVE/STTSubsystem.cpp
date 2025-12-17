@@ -233,11 +233,16 @@ void USTTSubsystem::OnWebSocketMessage(const FString& Message)
 
 // ------------------------------------ 오디오 처리 ------------------------------------
 
+// ================================================================================================
+// STTSubsystem.cpp 수정본 - OnAudioCapture 함수
+// 위치: 라인 236 이후에 추가
+// ================================================================================================
+
 void USTTSubsystem::OnAudioCapture(
     const float* InAudioData,
     int32 InNumFrames,
     int32 InNumChannels,
-    int32 InSampleRate, 
+    int32 InSampleRate,
     double InStreamTime,
     bool bInOverflow)
 {
@@ -246,92 +251,94 @@ void USTTSubsystem::OnAudioCapture(
         return;
     }
 
-    // ========================================
-    // 스테레오 → 모노 변환 (서버는 모노 채널 기대)
-    // ========================================
-    
-    TArray<float> MonoData;
-    if (InNumChannels == 2)
-    {
-        // 스테레오를 모노로: (L + R) / 2
-        MonoData.Reserve(InNumFrames);
-        for (int32 i = 0; i < InNumFrames; ++i)
-        {
-            float L = InAudioData[i * 2];
-            float R = InAudioData[i * 2 + 1];
-            MonoData.Add((L + R) * 0.5f);
-        }
-        InAudioData = MonoData.GetData();
-        InNumChannels = 1;
-        
-        static bool bLoggedMono = false;
-        if (!bLoggedMono)
-        {
-            PRINTLOG(TEXT("[채널] 스테레오 → 모노 변환 완료 (%d 프레임)"), InNumFrames);
-            bLoggedMono = true;
-        }
-    }
-    
-    // ========================================
-    // 핵심 수정 2: 개선된 다운샘플링 로직
-    // ========================================
+    const int32 TARGET_SAMPLE_RATE = 16000;
     
     TArray<float> ProcessedFloatData;
-    int32 TotalSamples = InNumFrames * InNumChannels;
     
-    // 실제 입력 샘플레이트 로그 (디버그용)
-    static bool bLoggedOnce = false;
-    if (!bLoggedOnce)
+    // 1단계: 모노 변환
+    if (InNumChannels > 1)
     {
-        PRINTLOG(TEXT("[오디오] 입력 SR: %d Hz, 목표 SR: %d Hz, 채널: %d, 프레임: %d, 게인: %.1fx"), 
-            InSampleRate, SampleRate, InNumChannels, InNumFrames, AudioGain);
-        bLoggedOnce = true;
-    }
-
-    // 다운샘플링 처리
-    if (InSampleRate > SampleRate)
-    {
-        // 정수배가 아니어도 처리 (48000 -> 16000은 3배)
-        const float DownsampleRatio = static_cast<float>(InSampleRate) / static_cast<float>(SampleRate);
-        const int32 ExpectedOutputSamples = FMath::CeilToInt(TotalSamples / DownsampleRatio);
-        
-        ProcessedFloatData.Reserve(ExpectedOutputSamples);
-
-        // 출력 샘플 기준으로 순회
-        for (int32 OutIdx = 0; OutIdx < ExpectedOutputSamples; OutIdx++)
+        ProcessedFloatData.Reserve(InNumFrames);
+        for (int32 i = 0; i < InNumFrames; ++i)
         {
-            // 소스 인덱스 계산 (반올림)
-            int32 SrcIdx = FMath::RoundToInt(OutIdx * DownsampleRatio);
-            if (SrcIdx < TotalSamples)
+            float MonoSample = 0.0f;
+            for (int32 ch = 0; ch < InNumChannels; ++ch)
             {
-                ProcessedFloatData.Add(InAudioData[SrcIdx]);
+                MonoSample += InAudioData[i * InNumChannels + ch];
             }
+            ProcessedFloatData.Add(MonoSample / InNumChannels);
         }
-        
-        TotalSamples = ProcessedFloatData.Num();
-        PRINTLOG(TEXT("[다운샘플링] %d -> %d 샘플 (비율: %.2f)"), 
-            InNumFrames * InNumChannels, TotalSamples, DownsampleRatio);
-    }
-    else if (InSampleRate == SampleRate)
-    {
-        // 샘플레이트 일치 - 복사만
-        ProcessedFloatData.Append(InAudioData, TotalSamples);
     }
     else
     {
-        // 업샘플링은 지원 안 함
-        LogError(FString::Printf(TEXT("마이크 샘플레이트(%d)가 목표(%d)보다 낮음 - 업샘플링 미지원"), 
-            InSampleRate, SampleRate));
-        return;
+        ProcessedFloatData.Append(InAudioData, InNumFrames);
     }
     
     // ========================================
-    // RMS 기반 자동 정규화 (VAD 최적화)
+    // 2단계: 🔥 Cubic (Catmull-Rom) 보간 리샘플링
+    // 선형보다 훨씬 좋고, Lanczos보다 가벼움
     // ========================================
     
+    TArray<float> ResampledData;
+    
+    if (InSampleRate != TARGET_SAMPLE_RATE)
+    {
+        const float ResampleRatio = (float)TARGET_SAMPLE_RATE / (float)InSampleRate;
+        const int32 OutputFrames = FMath::FloorToInt(ProcessedFloatData.Num() * ResampleRatio);
+        
+        ResampledData.Reserve(OutputFrames);
+        
+        for (int32 OutIdx = 0; OutIdx < OutputFrames; ++OutIdx)
+        {
+            const float SrcPosFloat = OutIdx / ResampleRatio;
+            const int32 SrcIdx1 = FMath::FloorToInt(SrcPosFloat); // 중심 샘플 (왼쪽)
+            const float Fraction = SrcPosFloat - SrcIdx1;
+            
+            // Cubic 보간을 위해 4개 샘플 필요: p0, p1, p2, p3
+            const int32 SrcIdx0 = FMath::Max(SrcIdx1 - 1, 0);
+            const int32 SrcIdx2 = FMath::Min(SrcIdx1 + 1, ProcessedFloatData.Num() - 1);
+            const int32 SrcIdx3 = FMath::Min(SrcIdx1 + 2, ProcessedFloatData.Num() - 1);
+            
+            const float p0 = ProcessedFloatData[SrcIdx0];
+            const float p1 = ProcessedFloatData[SrcIdx1];
+            const float p2 = ProcessedFloatData[SrcIdx2];
+            const float p3 = ProcessedFloatData[SrcIdx3];
+            
+            // Catmull-Rom 스플라인 (Cubic Hermite)
+            // 음성 신호에 적합: 부드러우면서도 고주파 보존
+            const float t = Fraction;
+            const float t2 = t * t;
+            const float t3 = t2 * t;
+            
+            const float a0 = -0.5f * p0 + 1.5f * p1 - 1.5f * p2 + 0.5f * p3;
+            const float a1 = p0 - 2.5f * p1 + 2.0f * p2 - 0.5f * p3;
+            const float a2 = -0.5f * p0 + 0.5f * p2;
+            const float a3 = p1;
+            
+            const float Sample = a0 * t3 + a1 * t2 + a2 * t + a3;
+            
+            ResampledData.Add(Sample);
+        }
+        
+        static bool bLoggedResampling = false;
+        if (!bLoggedResampling)
+        {
+            PRINTLOG(TEXT("[🎵 Cubic 리샘플링] Catmull-Rom 보간 사용 (고품질)"));
+            PRINTLOG(TEXT("[리샘플링] %d Hz → %d Hz | %d → %d 프레임 (%.1f%% 크기)"), 
+                InSampleRate, TARGET_SAMPLE_RATE, 
+                ProcessedFloatData.Num(), ResampledData.Num(),
+                (ResampledData.Num() * 100.0f) / ProcessedFloatData.Num());
+            bLoggedResampling = true;
+        }
+        
+        ProcessedFloatData = MoveTemp(ResampledData);
+    }
+    
+    int32 TotalSamples = ProcessedFloatData.Num();
+    
+    // 3단계: 볼륨 증폭
     float FinalGain = AudioGain;
     
-    // 옵션 1: 피크 정규화 (가장 강력, VAD 극대화)
     if (bUsePeakNormalization && TotalSamples > 0)
     {
         float MaxPeak = 0.0f;
@@ -340,39 +347,22 @@ void USTTSubsystem::OnAudioCapture(
             MaxPeak = FMath::Max(MaxPeak, FMath::Abs(ProcessedFloatData[i]));
         }
         
-        // 노이즈 게이트: 너무 작은 신호는 증폭하지 않음 (0.05 = 5%)
-        if (MaxPeak > 0.05f)
+        if (MaxPeak > NoiseGateThreshold)
         {
-            // 피크를 0.9로 맞춤 (클리핑 여유)
             float PeakGain = 0.9f / MaxPeak;
-            // 과도한 증폭 방지 (최대 10배)
-            PeakGain = FMath::Min(PeakGain, 10.0f);
+            PeakGain = FMath::Min(PeakGain, 30.0f);
             FinalGain *= PeakGain;
             
             static bool bLoggedPeak = false;
             if (!bLoggedPeak)
             {
-                int32 ExpectedMaxInt16 = (int32)(0.9f * 32767.0f);
-                PRINTLOG(TEXT("[피크정규화] 최대 피크: %.4f, 피크 게인: %.2fx, 최종: %.2fx → 예상 MaxVolume: ~%d"), 
-                    MaxPeak, PeakGain, FinalGain, ExpectedMaxInt16);
+                PRINTLOG(TEXT("[피크정규화] MaxPeak: %.4f → 게인: %.1fx"), MaxPeak, FinalGain);
                 bLoggedPeak = true;
             }
         }
-        else
-        {
-            // 노이즈만 있음 - 실제 마이크 입력 없음
-            static int32 NoiseCount = 0;
-            NoiseCount++;
-            if (NoiseCount % 50 == 1)
-            {
-                PRINTLOG(TEXT("[마이크 확인 필요] 신호가 너무 작음 (피크: %.5f < 0.05) - Windows에서 마이크 테스트 필요!"), MaxPeak);
-            }
-        }
     }
-    // 옵션 2: RMS 정규화 (균형잡힌 증폭)
     else if (bUseAutoNormalization && TotalSamples > 0)
     {
-        // RMS 계산
         float SumSquares = 0.0f;
         for (int32 i = 0; i < TotalSamples; ++i)
         {
@@ -380,91 +370,84 @@ void USTTSubsystem::OnAudioCapture(
         }
         float CurrentRMS = FMath::Sqrt(SumSquares / TotalSamples);
         
-        // 노이즈 게이트: 너무 작은 RMS는 증폭하지 않음 (0.02 이상)
-        if (CurrentRMS > 0.02f)
+        if (CurrentRMS > (NoiseGateThreshold * 5.0f))
         {
             float AutoGain = TargetRMS / CurrentRMS;
-            // 과도한 증폭 방지 (최대 10배)
-            AutoGain = FMath::Clamp(AutoGain, 1.0f, 10.0f);
+            AutoGain = FMath::Clamp(AutoGain, 1.0f, 30.0f);
             FinalGain *= AutoGain;
-            
-            static bool bLoggedRMS = false;
-            if (!bLoggedRMS)
-            {
-                PRINTLOG(TEXT("[RMS정규화] 현재 RMS: %.4f, 목표: %.2f, 자동 게인: %.2fx, 최종: %.2fx"), 
-                    CurrentRMS, TargetRMS, AutoGain, FinalGain);
-                bLoggedRMS = true;
-            }
-        }
-        else
-        {
-            // 노이즈만 있음
-            static int32 NoiseCount = 0;
-            NoiseCount++;
-            if (NoiseCount % 50 == 1)
-            {
-                PRINTLOG(TEXT("[마이크 확인 필요] RMS가 너무 작음 (%.5f < 0.02) - Windows에서 마이크 테스트 필요!"), CurrentRMS);
-            }
         }
     }
     
     // ========================================
-    // 핵심 수정 3: 명시적 리틀 엔디안 int16 변환
+    // 4단계: float → int16 변환
     // ========================================
     
     TArray<uint8> IncomingPCMData;
-    IncomingPCMData.Reserve(TotalSamples * 2); // int16 = 2 bytes
-
-    int16 MaxVolume = 0; // 서버의 mx 값과 동일한 체크
+    IncomingPCMData.Reserve(TotalSamples * 2);
+    
+    int16 MaxVolumeInt16 = 0;
+    int32 ClippedCount = 0; // 클리핑 카운트
     
     for (int32 i = 0; i < TotalSamples; ++i)
     {
-        // 최종 게인 적용 후 클리핑
-        float Sample = FMath::Clamp(ProcessedFloatData[i] * FinalGain, -1.0f, 1.0f);
-        int16 IntSample = static_cast<int16>(Sample * 32767.0f); 
+        float Sample = ProcessedFloatData[i] * FinalGain;
         
-        // 최대 볼륨 트래킹 (서버의 np.max(np.abs(audio_int16))와 동일)
-        MaxVolume = FMath::Max(MaxVolume, (int16)FMath::Abs(IntSample));
+        // 클리핑 체크
+        if (FMath::Abs(Sample) >= 0.99f)
+        {
+            ClippedCount++;
+        }
         
-        // 리틀 엔디안 명시적 변환 (Python의 int16 tobytes()와 동일)
+        // 클램핑
+        Sample = FMath::Clamp(Sample, -1.0f, 1.0f);
+        
+        // int16 변환 (32767 사용)
+        int16 IntSample = static_cast<int16>(Sample * 32767.0f);
+        
+        MaxVolumeInt16 = FMath::Max(MaxVolumeInt16, (int16)FMath::Abs(IntSample));
+        
+        // 리틀 엔디안 바이트 변환
         uint8 LowByte = static_cast<uint8>(IntSample & 0xFF);
         uint8 HighByte = static_cast<uint8>((IntSample >> 8) & 0xFF);
         
         IncomingPCMData.Add(LowByte);
         IncomingPCMData.Add(HighByte);
     }
-
-    PendingAudioBuffer.Append(IncomingPCMData);
-
-    // ========================================
-    // 1024 바이트 청크 분할 및 전송
-    // 서버 요구사항:
-    // - VAD_BYTE_SIZE = AUDIO_CHUNK_SIZE * 2 = 512 * 2 = 1024 bytes
-    // - 볼륨 체크: mx = np.max(np.abs(audio_int16))
-    // - VAD Threshold로 음성 감지
-    // ========================================
     
-    const int32 DesiredChunkSize = 1024; // 서버: VAD_BYTE_SIZE = AUDIO_CHUNK_SIZE(512) * 2
-
+    PendingAudioBuffer.Append(IncomingPCMData);
+    
+    // 5단계: 1024 바이트 청크 전송
+    const int32 DesiredChunkSize = 1024;
+    
     while (PendingAudioBuffer.Num() >= DesiredChunkSize)
     {
-        TArray<uint8> ChunkToSend; 
+        TArray<uint8> ChunkToSend;
         ChunkToSend.Append(PendingAudioBuffer.GetData(), DesiredChunkSize);
-
+        
         SendAudioChunk(ChunkToSend);
-
+        
         PendingAudioBuffer.RemoveAt(0, DesiredChunkSize);
     }
     
-    // 주기적 로그 (5초마다)
+    // 주기적 로그
     static double LastLogTime = 0.0;
-    static int32 LogCounter = 0;
     if (InStreamTime - LastLogTime > 5.0)
     {
-        PRINTLOG(TEXT("[버퍼] 잔류: %d bytes | 볼륨(MaxVolume): %d / 32767 (%.1f%%)"), 
-            PendingAudioBuffer.Num(), MaxVolume, (MaxVolume / 32767.0f) * 100.0f);
+        float VolumePercent = (MaxVolumeInt16 / 32767.0f) * 100.0f;
+        float ClipPercent = (ClippedCount * 100.0f) / TotalSamples;
+        
+        PRINTLOG(TEXT("[🎤 상태] 버퍼: %d bytes | 볼륨: %d (%.1f%%) | 클리핑: %.1f%%"), 
+            PendingAudioBuffer.Num(), MaxVolumeInt16, VolumePercent, ClipPercent);
+        
+        // 클리핑 경고
+        if (ClipPercent > 5.0f)
+        {
+            PRINTLOG(TEXT("⚠️ [클리핑 경고] %.1f%% 샘플이 클리핑됨 - AudioGain을 %.1f로 낮추세요"), 
+                ClipPercent, AudioGain * 0.7f);
+        }
+        
         LastLogTime = InStreamTime;
-        LogCounter++;
+        ClippedCount = 0;
     }
 }
 

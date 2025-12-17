@@ -26,7 +26,7 @@ void AMVE_GM_StageLevel::LoadCharacterClasses()
 	// Host 캐릭터
 	if (!HostCharacterClass)
 	{
-		FSoftClassPath HostPath(TEXT("/Remocapp/Features/BP_Orlando.BP_Orlando_C"));
+		FSoftClassPath HostPath(TEXT("/Remocapp/Features/BP_MainCharacter.BP_MainCharacter_C"));
 		HostCharacterClass = HostPath.TryLoadClass<APawn>();
 
 		// 디버깅용

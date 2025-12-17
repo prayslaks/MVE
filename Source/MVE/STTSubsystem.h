@@ -56,53 +56,56 @@ public:
 
     // ------------------------------------ 델리게이트 ------------------------------------
 
-    UPROPERTY(BlueprintAssignable, Category = "STT|Events")
+    UPROPERTY(BlueprintAssignable)
     FOnSTTTextStream OnSTTTextStream;
 
-    UPROPERTY(BlueprintAssignable, Category = "STT|Events")
+    UPROPERTY(BlueprintAssignable)
     FOnKeywordDetected OnKeywordDetected;
 
-    UPROPERTY(BlueprintAssignable, Category = "STT|Events")
+    UPROPERTY(BlueprintAssignable)
     FOnSTTConnectionStatus OnConnectionStatusChanged;
 
-    UPROPERTY(BlueprintAssignable, Category = "STT|Events")
+    UPROPERTY(BlueprintAssignable)
     FOnSTTError OnSTTError;
 
     // ------------------------------------ 서버 설정 ------------------------------------
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "STT|Config")
-    FString WebSocketURL = TEXT("ws://172.16.100.40:8001/ws");
+    UPROPERTY(EditAnywhere, BlueprintReadWrite)
+    FString WebSocketURL = TEXT("ws://127.0.0.1:8001/ws");
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "STT|Config")
+    UPROPERTY(EditAnywhere, BlueprintReadWrite)
     int32 SampleRate = 48000; // AI 서버가 기대하는 샘플레이트
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "STT|Config")
+    UPROPERTY(EditAnywhere, BlueprintReadWrite)
     int32 NumChannels = 1; // 모노 채널
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "STT|Config", meta = (ClampMin = "0.1", ClampMax = "10.0"))
-    float AudioGain = 8.0f; // 마이크 볼륨 증폭 (1.0 = 원본, 권장: 3.0~8.0, WASAPI는 낮게 캡처됨)
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (ClampMin = "0.1", ClampMax = "30.0"))
+    float AudioGain = 1.0f; // 마이크 볼륨 증폭 (1.0 = 원본, 권장: 5.0~15.0, WASAPI는 낮게 캡처됨)
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "STT|Config")
+    UPROPERTY(EditAnywhere, BlueprintReadWrite)
     bool bUseAutoNormalization = true; // RMS 기반 자동 정규화 (VAD 최적화)
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "STT|Config", meta = (ClampMin = "0.1", ClampMax = "1.0"))
-    float TargetRMS = 0.1f; // 목표 RMS 레벨 (0.05~0.15 권장, 기본 0.1)
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (ClampMin = "0.1", ClampMax = "1.0"))
+    float TargetRMS = 0.005f; // 목표 RMS 레벨 (0.05~0.15 권장, 기본 0.1)
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "STT|Config")
+    UPROPERTY(EditAnywhere, BlueprintReadWrite)
     bool bUsePeakNormalization = true; // 피크 정규화 (최대 볼륨 강제, VAD 극대화)
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "STT|Config")
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (ClampMin = "0.0", ClampMax = "0.1"))
+    float NoiseGateThreshold = 0.001f; // 노이즈 게이트임계값 (0.001 권장, 0.0=비활성화)
+    UPROPERTY(EditAnywhere, BlueprintReadWrite)
     TMap<FString, FGameplayTag> KeywordTagMap;
 
     // ------------------------------------ Public API ------------------------------------
 
-    UFUNCTION(BlueprintCallable, Category = "STT|Control")
+    UFUNCTION(BlueprintCallable)
     void StartTranscribing();
 
-    UFUNCTION(BlueprintCallable, Category = "STT|Control")
+    UFUNCTION(BlueprintCallable)
     void StopTranscribing();
 
-    UFUNCTION(BlueprintCallable, Category = "STT|Keywords")
+    UFUNCTION(BlueprintCallable)
     void RegisterKeyword(const FString& Keyword, FGameplayTag ActionTag);
     
     // ------------------------------------ 오디오 캡처 및 버퍼 ------------------------------------

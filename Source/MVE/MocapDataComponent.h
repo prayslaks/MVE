@@ -2,121 +2,170 @@
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
-#include "Receive/OscReceiverInterface.h"
-#include "Common/OscDataElemStruct.h"
+#include "Sockets.h"
+#include "SocketSubsystem.h"
+#include "IPAddress.h"
+#include "Networking.h"
 #include "CompressedMotionData.h"
 #include "MocapDataComponent.generated.h"
 
-// 일반 데이터
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnControlDataReceived, int32, ControlIndex, FTransform, ControlTransform);
-
-// 압축 프레임
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnCompressedFrameReceived, FCompressedMotionFrame, CompressedFrame);
-
-// 페이스 데이터 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPackedFrameReceived, FPackedMotionFrame, PackedFrame);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnFaceMorphDataReceived, const TArray<float>&, MorphTargets);
 
 UCLASS(ClassGroup=(Mocap), meta=(BlueprintSpawnableComponent))
 class MVE_API UMocapDataComponent : public UActorComponent
 {
-	GENERATED_BODY()
+    GENERATED_BODY()
 
 public:
-	UMocapDataComponent();
-	virtual ~UMocapDataComponent();
+    UMocapDataComponent();
+    virtual ~UMocapDataComponent();
 
-	virtual void BeginPlay() override;
-	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
-	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
+    virtual void BeginPlay() override;
+    virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+    virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
-	// 델리게이트
-	UPROPERTY(BlueprintAssignable, Category = "Mocap")
-	FOnControlDataReceived OnControlDataReceived;
+    // 델리게이트
+    UPROPERTY(BlueprintAssignable, Category = "Mocap")
+    FOnControlDataReceived OnControlDataReceived;
 
-	UPROPERTY(BlueprintAssignable, Category = "Mocap")
-	FOnCompressedFrameReceived OnCompressedFrameReceived;
+    UPROPERTY(BlueprintAssignable, Category = "Mocap")
+    FOnCompressedFrameReceived OnCompressedFrameReceived;
 
-	UPROPERTY(BlueprintAssignable, Category = "Mocap")
-	FOnFaceMorphDataReceived OnFaceMorphDataReceived;
-	
-	// OSC 설정
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mocap")
-	int32 ReceivePort = 39570;
+    // 네트워크 최적화된 패킹 프레임 델리게이트
+    UPROPERTY(BlueprintAssignable, Category = "Mocap")
+    FOnPackedFrameReceived OnPackedFrameReceived;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mocap")
-	FName AddressFilter = FName(TEXT("/Remocapp"));
+    UPROPERTY(BlueprintAssignable, Category = "Mocap")
+    FOnFaceMorphDataReceived OnFaceMorphDataReceived;
 
-	// 페이스 데이터 활성화
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mocap")
-	bool bEnableFaceData = false;
+    // UDP 설정
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mocap")
+    int32 ReceivePort = 39570;
 
-	// 압축 옵션
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mocap|Compression")
-	bool bUseCompression = true;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mocap")
+    FString ListenAddress = TEXT("0.0.0.0");
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mocap|Compression")
-	bool bUseDeltaCompression = true;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mocap")
+    bool bEnableFaceData = false;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mocap|Compression")
-	float DeltaThreshold = 0.01f;
+    // 압축 옵션
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mocap|Compression")
+    bool bUseCompression = true;
 
-	// 디버깅
-	UFUNCTION(BlueprintPure, Category = "Mocap|Debug")
-	int32 GetLastFrameBoneCount() const { return LastFrameBoneCount; }
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mocap|Compression")
+    bool bUseDeltaCompression = true;
 
-	UFUNCTION(BlueprintPure, Category = "Mocap|Debug")
-	float GetCompressionRatio() const { return CompressionRatio; }
-	
-	// OSC Receiver
-	class FMocapOscReceiver : public IOscReceiverInterface
-	{
-	public:
-		UMocapDataComponent* Owner;
+    // 기본 Delta Threshold (LOD 미사용 시)
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mocap|Compression")
+    float DeltaThreshold = 0.02f;
 
-		FMocapOscReceiver(UMocapDataComponent* InOwner) : Owner(InOwner) {}
+    // LOD 시스템 사용 여부
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mocap|Compression")
+    bool bUseLODSystem = true;
 
-		virtual FName GetAddressFilter() const override
-		{
-			return Owner ? Owner->AddressFilter : FName();
-		}
+    // LOD 설정
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mocap|Compression")
+    FBoneLODConfig LODConfig;
 
-		virtual void SendEvent(const FName& Address, const TArray<FOscDataElemStruct>& Data, const FString& SenderIp) override
-		{
-			if (Owner)
-			{
-				Owner->OnOscMessageReceived(Address, Data, SenderIp);
-			}
-		}
-	};
+    // Keyframe 간격 (프레임 단위, 0이면 keyframe 없음)
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mocap|Compression", meta = (ClampMin = "0", ClampMax = "120"))
+    int32 KeyframeInterval = 30;
 
-	TUniquePtr<FMocapOscReceiver> OscReceiver;
+    // 적응형 프레임 레이트 사용
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mocap|Compression")
+    bool bUseAdaptiveFrameRate = true;
 
-	// OSC 메시지 수신
-	void OnOscMessageReceived(const FName& Address, const TArray<FOscDataElemStruct>& Data, const FString& SenderIp);
-	
-	// 데이터 처리
-	void ProcessControlData(const TArray<FOscDataElemStruct>& Data);
-	void ProcessFaceMorphData(const TArray<FOscDataElemStruct>& Data);
+    // 기본 프레임 간격 (ms)
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mocap|Compression", meta = (ClampMin = "16", ClampMax = "100"))
+    float BaseFrameIntervalMs = 33.0f;
 
-	// 압축 관련
-	struct FBoneData
-	{
-		int32 Index;
-		FVector Location;
-		FQuat Rotation;
-	};
+    // 클라이언트 수에 따른 최대 프레임 간격 (ms)
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mocap|Compression", meta = (ClampMin = "33", ClampMax = "200"))
+    float MaxFrameIntervalMs = 66.0f;
 
-	TArray<FBoneData> CurrentFrameBones;
-	float FrameStartTime = 0.0f;
-	bool bFrameStarted = false;
+    // 현재 연결된 클라이언트 수 (외부에서 설정)
+    UPROPERTY(BlueprintReadWrite, Category = "Mocap|Compression")
+    int32 ConnectedClientCount = 0;
 
-	FCompressedMotionFrame CurrentCompressedFrame;
-	TMap<uint8, FCompressedBoneTransform> BoneCache;
+    // 디버그
+    UFUNCTION(BlueprintPure, Category = "Mocap|Debug")
+    int32 GetLastFrameBoneCount() const { return LastFrameBoneCount; }
 
-	void ProcessCompressedFrame();
-	bool ShouldSendBone(uint8 BoneIndex, const FCompressedBoneTransform& NewTransform);
+    UFUNCTION(BlueprintPure, Category = "Mocap|Debug")
+    float GetCompressionRatio() const { return CompressionRatio; }
 
-	// 통계
-	int32 LastFrameBoneCount = 0;
-	float CompressionRatio = 0.0f;
+    UFUNCTION(BlueprintPure, Category = "Mocap|Debug")
+    int32 GetCurrentFrameIndex() const { return FrameCounter; }
+
+    UFUNCTION(BlueprintPure, Category = "Mocap|Debug")
+    float GetCurrentFrameIntervalMs() const { return CurrentFrameIntervalMs; }
+
+    UFUNCTION(BlueprintPure, Category = "Mocap|Debug")
+    int32 GetLastPackedDataSize() const { return LastPackedDataSize; }
+
+    UFUNCTION(BlueprintCallable, Category="Mocap")
+    void StartMocap();
+
+    // UDP 소켓
+    FSocket* ListenSocket;
+    
+    TUniquePtr<FUdpSocketReceiver> SocketReceiver;
+
+    UFUNCTION(BlueprintCallable)
+    void InitializeSocket();
+    
+    void ShutdownSocket();
+    void OnDataReceived(const FArrayReaderPtr& Data, const FIPv4Endpoint& Endpoint);
+    
+    // OSC 파싱
+    struct FOSCPacket
+    {
+        FString Address;
+        TArray<float> FloatArgs;
+        TArray<int32> IntArgs;
+    };
+    
+    bool ParseOSCBundle(const uint8* Data, int32 Size, TArray<FOSCPacket>& OutPackets);
+    bool ParseOSCMessage(const uint8* Data, int32 Size, FOSCPacket& OutPacket);
+    
+    void ProcessControlPacket(const FOSCPacket& Packet);
+    void ProcessFacePacket(const FOSCPacket& Packet);
+
+    // 압축 관련
+    struct FBoneData
+    {
+        int32 Index;
+        FVector Location;
+        FQuat Rotation;
+    };
+
+    TArray<FBoneData> CurrentFrameBones;
+    float FrameStartTime = 0.0f;
+    bool bFrameStarted = false;
+
+    FCompressedMotionFrame CurrentCompressedFrame;
+    TMap<uint8, FCompressedBoneTransform> BoneCache;
+
+    void ProcessCompressedFrame();
+    bool ShouldSendBone(uint8 BoneIndex, const FCompressedBoneTransform& NewTransform);
+
+    // Keyframe 판단
+    bool IsKeyframe() const;
+
+    // 적응형 프레임 간격 계산
+    float CalculateAdaptiveFrameInterval() const;
+
+    int32 LastFrameBoneCount = 0;
+    float CompressionRatio = 0.0f;
+    int32 FrameCounter = 0;
+    float CurrentFrameIntervalMs = 33.0f;
+    int32 LastPackedDataSize = 0;
+    
+    // 유틸리티
+    int32 ReadInt32BigEndian(const uint8* Data);
+    float ReadFloatBigEndian(const uint8* Data);
+    FString ReadOSCString(const uint8* Data, int32& OutBytesRead);
 };

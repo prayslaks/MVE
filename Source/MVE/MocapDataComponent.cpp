@@ -1,269 +1,495 @@
 ﻿#include "MocapDataComponent.h"
-#include "Receive/OscDispatcher.h"
-#include "Common/OscFunctionLibrary.h"
-#include "Misc/CompressedGrowableBuffer.h"
+#include "MVE.h"
+#include "Sockets.h"
+#include "SocketSubsystem.h"
+#include "Misc/ScopeLock.h"
 
 UMocapDataComponent::UMocapDataComponent()
 {
-	PrimaryComponentTick.bCanEverTick = true;
+    PrimaryComponentTick.bCanEverTick = true;
+    ListenSocket = nullptr;
+    SocketReceiver = nullptr;
 }
 
 UMocapDataComponent::~UMocapDataComponent()
 {
+    ShutdownSocket();
 }
 
 void UMocapDataComponent::BeginPlay()
 {
-	Super::BeginPlay();
-
-	UE_LOG(LogTemp, Warning, TEXT("[MocapData] BeginPlay 시작"));
- 
-	UOscDispatcher* Dispatcher = UOscDispatcher::Get();
-	if (!Dispatcher)
-	{
-		UE_LOG(LogTemp, Error, TEXT("[MocapData] OSC Dispatcher 획득 실패"));
-		return;
-	}
-
-	UE_LOG(LogTemp, Warning, TEXT("[MocapData] OSC Dispatcher 획득 성공"));
-
-	OscReceiver = MakeUnique<FMocapOscReceiver>(this);
-	Dispatcher->RegisterReceiver(OscReceiver.Get());
-
-	UE_LOG(LogTemp, Warning, TEXT("[MocapData] 등록 완료 - 포트:%d, 필터:%s, 압축:%s, 델타:%s, 페이스:%s"),
-		ReceivePort,
-		*AddressFilter.ToString(),
-		bUseCompression ? TEXT("ON") : TEXT("OFF"),
-		bUseDeltaCompression ? TEXT("ON") : TEXT("OFF"),
-		bEnableFaceData ? TEXT("ON") : TEXT("OFF"));
+    Super::BeginPlay();
+    
+    UE_LOG(LogTemp, Warning, TEXT("[MocapData] BeginPlay 시작"));
+   
 }
 
 void UMocapDataComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
-	Super::EndPlay(EndPlayReason);
-
-	UOscDispatcher* Dispatcher = UOscDispatcher::Get();
-	if (Dispatcher && OscReceiver)
-	{
-		Dispatcher->UnregisterReceiver(OscReceiver.Get());
-		UE_LOG(LogTemp, Warning, TEXT("[MocapData] OSC Receiver 등록 해제"));
-	}
-
-	OscReceiver.Reset();
+    Super::EndPlay(EndPlayReason);
+    ShutdownSocket();
 }
 
 void UMocapDataComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
-	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+    Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
-	// 압축 모드에서 프레임 타임아웃 체크 (33ms = 30 FPS)
-	if (bUseCompression && bFrameStarted)
-	{
-		float CurrentTime = GetWorld()->GetTimeSeconds();
-		if ((CurrentTime - FrameStartTime) > 0.033f)
-		{
-			// 프레임 완성
-			ProcessCompressedFrame();
-			CurrentFrameBones.Reset();
-			bFrameStarted = false;
-		}
-	}
+    if (bUseCompression && bFrameStarted)
+    {
+        // 적응형 프레임 간격 계산
+        CurrentFrameIntervalMs = CalculateAdaptiveFrameInterval();
+        float FrameIntervalSeconds = CurrentFrameIntervalMs / 1000.0f;
+
+        float CurrentTime = GetWorld()->GetTimeSeconds();
+        if ((CurrentTime - FrameStartTime) > FrameIntervalSeconds)
+        {
+            ProcessCompressedFrame();
+            CurrentFrameBones.Reset();
+            bFrameStarted = false;
+            FrameCounter++;
+        }
+    }
 }
 
-void UMocapDataComponent::OnOscMessageReceived(
-	const FName& Address, 
-	const TArray<FOscDataElemStruct>& Data, 
-	const FString& SenderIp)
+float UMocapDataComponent::CalculateAdaptiveFrameInterval() const
 {
-	FString AddressPath = Address.ToString();
+    if (!bUseAdaptiveFrameRate)
+    {
+        return BaseFrameIntervalMs;
+    }
 
-	// 페이스 데이터
-	if (AddressPath.Equals(TEXT("/Remocapp/UE/Face"), ESearchCase::IgnoreCase))
-	{
-		if (bEnableFaceData)
-		{
-			ProcessFaceMorphData(Data);
-		}
-		return;
-	}
+    // 클라이언트 수에 따라 선형 보간
+    // 0명: BaseFrameIntervalMs, 10명 이상: MaxFrameIntervalMs
+    const int32 MaxClientsForScaling = 10;
+    float Alpha = FMath::Clamp((float)ConnectedClientCount / MaxClientsForScaling, 0.0f, 1.0f);
 
-	// 컨트롤 데이터
-	ProcessControlData(Data);
+    return FMath::Lerp(BaseFrameIntervalMs, MaxFrameIntervalMs, Alpha);
 }
 
-void UMocapDataComponent::ProcessControlData(const TArray<FOscDataElemStruct>& Data)
+bool UMocapDataComponent::IsKeyframe() const
 {
-	if (Data.Num() < 8)
-	{
-		return;
-	}
+    if (KeyframeInterval <= 0) return false;
+    return (FrameCounter % KeyframeInterval) == 0;
+}
 
-	int32 ControlIndex = UOscFunctionLibrary::AsInt(Data[0]);
+void UMocapDataComponent::StartMocap()
+{
+    if (ListenSocket)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("Mocap already started"));
+        return;
+    }
+    InitializeSocket();
+}
 
-	TArray<float> Values;
-	Values.Reserve(7);
+void UMocapDataComponent::InitializeSocket()
+{
+    UE_LOG(LogTemp, Error, TEXT("🔥 InitializeSocket ENTERED"));
+    UE_LOG(LogTemp, Error, TEXT("🔥 ReceivePort = %d"), ReceivePort);
 
-	for (int32 i = 1; i < Data.Num() && i <= 7; ++i)
-	{
-		if (Data[i].IsFloat())
-		{
-			Values.Add(UOscFunctionLibrary::AsFloat(Data[i]));
-		}
-	}
+    ISocketSubsystem* SocketSubsystem = ISocketSubsystem::Get(PLATFORM_SOCKETSUBSYSTEM);
+    if (!SocketSubsystem)
+    {
+        UE_LOG(LogTemp, Error, TEXT("❌ No SocketSubsystem"));
+        return;
+    }
+    UE_LOG(LogTemp, Warning, TEXT("SocketSubsystem OK"));
 
-	if (Values.Num() < 7)
-	{
-		return;
-	}
+    ListenSocket = SocketSubsystem->CreateSocket(
+        NAME_DGram,
+        TEXT("MocapUDPSocket"),
+        false
+    );
 
-	FVector Location(Values[0], Values[1], Values[2]);
-	FQuat Rotation(Values[3], Values[4], Values[5], Values[6]);
+    if (!ListenSocket)
+    {
+        UE_LOG(LogTemp, Error, TEXT("❌ CreateSocket FAILED"));
+        return;
+    }
+    
+    UE_LOG(LogTemp, Warning, TEXT("✅ Socket Created"));
 
-	if (bUseCompression)
-	{
-		if (!bFrameStarted)
-		{
-			bFrameStarted = true;
-			FrameStartTime = GetWorld()->GetTimeSeconds();
-			CurrentFrameBones.Reset();
-		}
+    ListenSocket->SetReuseAddr(true);
+    ListenSocket->SetNonBlocking(true);
+    ListenSocket->SetRecvErr();
 
-		FBoneData BoneData;
-		BoneData.Index = ControlIndex;
-		BoneData.Location = Location;
-		BoneData.Rotation = Rotation;
-		CurrentFrameBones.Add(BoneData);
+    TSharedRef<FInternetAddr> Addr = SocketSubsystem->CreateInternetAddr();
+    Addr->SetAnyAddress();
+    Addr->SetPort(ReceivePort);
 
-		if (CurrentFrameBones.Num() >= 50)
-		{
-			ProcessCompressedFrame();
-			CurrentFrameBones.Reset();
-			bFrameStarted = false;
-		}
-	}
-	else
-	{
-		FTransform ControlTransform(Rotation, Location, FVector::OneVector);
-		OnControlDataReceived.Broadcast(ControlIndex, ControlTransform);
+    bool bBindOk = ListenSocket->Bind(*Addr);
+    UE_LOG(LogTemp, Error, TEXT("🔥 Bind Result = %d"), bBindOk);
 
-		static int32 LogCount = 0;
-		if (LogCount++ < 10)
-		{
-			UE_LOG(LogTemp, Warning, TEXT("[MocapData #%d] Index:%d, Loc:(%.2f,%.2f,%.2f)"),
-				LogCount,
-				ControlIndex,
-				Location.X, Location.Y, Location.Z);
-		}
-	}
+    if (!bBindOk)
+    {
+        int32 Err = SocketSubsystem->GetLastErrorCode();
+        UE_LOG(LogTemp, Error, TEXT("❌ Bind FAILED Error=%d"), Err);
+        return;
+    }
+
+    SocketReceiver = MakeUnique<FUdpSocketReceiver>(
+        ListenSocket,
+        FTimespan::FromMilliseconds(10),
+        TEXT("MocapUDPReceiver")
+    );
+
+    SocketReceiver->OnDataReceived().BindUObject(
+        this, &UMocapDataComponent::OnDataReceived);
+
+    SocketReceiver->Start();
+
+    UE_LOG(LogTemp, Error,
+        TEXT("✅ UDP SOCKET LISTENING ON 0.0.0.0:%d"),
+        ReceivePort);
+}
+
+void UMocapDataComponent::ShutdownSocket()
+{
+    if (SocketReceiver)
+    {
+        SocketReceiver->Stop();
+        SocketReceiver.Reset();
+        // SocketReceiver = nullptr;
+    }
+
+    if (ListenSocket)
+    {
+        ListenSocket->Close();
+        ISocketSubsystem::Get(PLATFORM_SOCKETSUBSYSTEM)->DestroySocket(ListenSocket);
+        ListenSocket = nullptr;
+        UE_LOG(LogTemp, Warning, TEXT("[MocapData] UDP 소켓 종료"));
+    }
+}
+
+void UMocapDataComponent::OnDataReceived(const FArrayReaderPtr& Data, const FIPv4Endpoint& Endpoint)
+{
+    PRINTLOG(TEXT("데이터 리시브 받기 준비 완료 = %d"),Data->Num());
+    
+    if (!Data.IsValid() || Data->Num() == 0)
+    { 
+        return;
+    }
+
+    const uint8* RawData = Data->GetData();
+    int32 DataSize = Data->Num();
+
+    // OSC 번들 체크 ("#bundle")
+    if (DataSize >= 8 && RawData[0] == '#' && RawData[1] == 'b')
+    {
+        TArray<FOSCPacket> Packets;
+        if (ParseOSCBundle(RawData, DataSize, Packets))
+        {
+            for (const FOSCPacket& Packet : Packets)
+            {
+                if (Packet.Address.Contains(TEXT("Face")))
+                {
+                    ProcessFacePacket(Packet);
+                }
+                else
+                {
+                    ProcessControlPacket(Packet);
+                }
+            }
+        }
+    }
+    // OSC 메시지 (주소가 '/'로 시작)
+    else if (DataSize > 0 && RawData[0] == '/')
+    {
+        FOSCPacket Packet;
+        if (ParseOSCMessage(RawData, DataSize, Packet))
+        {
+            UE_LOG(LogTemp, Warning, TEXT("[MocapData] 📨 OSC 메시지: %s (Float:%d, Int:%d)"),
+                *Packet.Address, Packet.FloatArgs.Num(), Packet.IntArgs.Num());
+
+            if (Packet.Address.Contains(TEXT("Face")))
+            {
+                ProcessFacePacket(Packet);
+            }
+            else
+            {
+                ProcessControlPacket(Packet);
+            }
+        }
+    }
+}
+
+bool UMocapDataComponent::ParseOSCBundle(const uint8* Data, int32 Size, TArray<FOSCPacket>& OutPackets)
+{
+    // "#bundle" + TimeTag(8) + Messages...
+    if (Size < 16) return false;
+    
+    int32 Offset = 16; // "#bundle\0" + TimeTag
+    
+    while (Offset < Size)
+    {
+        if (Offset + 4 > Size) break;
+        
+        int32 MessageSize = ReadInt32BigEndian(&Data[Offset]);
+        Offset += 4;
+        
+        if (Offset + MessageSize > Size) break;
+        
+        FOSCPacket Packet;
+        if (ParseOSCMessage(&Data[Offset], MessageSize, Packet))
+        {
+            OutPackets.Add(Packet);
+        }
+        
+        Offset += MessageSize;
+    }
+    
+    return OutPackets.Num() > 0;
+}
+
+bool UMocapDataComponent::ParseOSCMessage(const uint8* Data, int32 Size, FOSCPacket& OutPacket)
+{
+    if (Size < 4) return false;
+    
+    int32 Offset = 0;
+    
+    // Address 읽기
+    int32 BytesRead = 0;
+    OutPacket.Address = ReadOSCString(Data, BytesRead);
+    Offset += BytesRead;
+    
+    if (Offset >= Size) return false;
+    
+    // Type Tags 읽기 (",iifffff" 같은 형식)
+    FString TypeTags = ReadOSCString(&Data[Offset], BytesRead);
+    Offset += BytesRead;
+    
+    if (!TypeTags.StartsWith(TEXT(",")))
+    {
+        return false;
+    }
+    
+    // 각 타입에 따라 파싱
+    for (int32 i = 1; i < TypeTags.Len(); ++i)
+    {
+        if (Offset + 4 > Size) break;
+        
+        TCHAR TypeChar = TypeTags[i];
+        
+        if (TypeChar == 'i') // Int32
+        {
+            int32 Value = ReadInt32BigEndian(&Data[Offset]);
+            OutPacket.IntArgs.Add(Value);
+            Offset += 4;
+        }
+        else if (TypeChar == 'f') // Float
+        {
+            float Value = ReadFloatBigEndian(&Data[Offset]);
+            OutPacket.FloatArgs.Add(Value);
+            Offset += 4;
+        }
+        else if (TypeChar == 's') // String
+        {
+            ReadOSCString(&Data[Offset], BytesRead);
+            Offset += BytesRead;
+        }
+    }
+    
+    return true;
+}
+
+void UMocapDataComponent::ProcessControlPacket(const FOSCPacket& Packet)
+{
+    // 기대 형식: Int(Index) + Float*7 (Loc XYZ, Quat XYZW)
+    if (Packet.IntArgs.Num() < 1 || Packet.FloatArgs.Num() < 7)
+    {
+        return;
+    }
+    
+    int32 ControlIndex = Packet.IntArgs[0];
+    
+    FVector Location(Packet.FloatArgs[0], Packet.FloatArgs[1], Packet.FloatArgs[2]);
+    FQuat Rotation(Packet.FloatArgs[3], Packet.FloatArgs[4], Packet.FloatArgs[5], Packet.FloatArgs[6]);
+    
+    if (bUseCompression)
+    {
+        if (!bFrameStarted)
+        {
+            bFrameStarted = true;
+            FrameStartTime = GetWorld()->GetTimeSeconds();
+            CurrentFrameBones.Reset();
+        }
+
+        FBoneData BoneData;
+        BoneData.Index = ControlIndex;
+        BoneData.Location = Location;
+        BoneData.Rotation = Rotation;
+        CurrentFrameBones.Add(BoneData);
+
+        if (CurrentFrameBones.Num() >= 50)
+        {
+            ProcessCompressedFrame();
+            CurrentFrameBones.Reset();
+            bFrameStarted = false;
+        }
+    }
+    else
+    {
+        FTransform ControlTransform(Rotation, Location, FVector::OneVector);
+        
+        static int32 LogCount = 0;
+        if (LogCount++ < 10)
+        {
+            UE_LOG(LogTemp, Warning, TEXT("[MocapData] 🔔 델리게이트 발동: Index=%d"), ControlIndex);
+        }
+        
+        OnControlDataReceived.Broadcast(ControlIndex, ControlTransform);
+    }
+}
+
+void UMocapDataComponent::ProcessFacePacket(const FOSCPacket& Packet)
+{
+    if (!bEnableFaceData || Packet.FloatArgs.Num() == 0)
+    {
+        return;
+    }
+    
+    OnFaceMorphDataReceived.Broadcast(Packet.FloatArgs);
+    
+    static int32 LogCount = 0;
+    if (LogCount++ < 5)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("[MocapData Face #%d] 모프 타겟: %d개"), 
+            LogCount, Packet.FloatArgs.Num());
+    }
 }
 
 void UMocapDataComponent::ProcessCompressedFrame()
 {
-	if (CurrentFrameBones.Num() == 0)
-	{
-		return;
-	}
+    if (CurrentFrameBones.Num() == 0)
+    {
+        return;
+    }
 
-	CurrentCompressedFrame.Bones.Reset();
-	CurrentCompressedFrame.Timestamp = GetWorld()->GetTimeSeconds();
-	CurrentCompressedFrame.bDeltaCompressed = bUseDeltaCompression;
+    const bool bIsKeyframeNow = IsKeyframe();
 
-	int32 OriginalSize = CurrentFrameBones.Num() * 32;
+    CurrentCompressedFrame.Bones.Reset();
+    CurrentCompressedFrame.Timestamp = GetWorld()->GetTimeSeconds();
+    CurrentCompressedFrame.bDeltaCompressed = bUseDeltaCompression && !bIsKeyframeNow;
 
-	for (const FBoneData& BoneData : CurrentFrameBones)
-	{
-		if (BoneData.Index >= 256)
-		{
-			continue;
-		}
+    int32 OriginalSize = CurrentFrameBones.Num() * 32;
 
-		FCompressedBoneTransform CompressedBone(
-			static_cast<uint8>(BoneData.Index),
-			BoneData.Location,
-			BoneData.Rotation
-		);
+    for (const FBoneData& BoneData : CurrentFrameBones)
+    {
+        if (BoneData.Index >= 256) continue;
 
-		if (bUseDeltaCompression)
-		{
-			if (ShouldSendBone(CompressedBone.BoneIndex, CompressedBone))
-			{
-				CurrentCompressedFrame.Bones.Add(CompressedBone);
-				BoneCache.Add(CompressedBone.BoneIndex, CompressedBone);
-			}
-		}
-		else
-		{
-			CurrentCompressedFrame.Bones.Add(CompressedBone);
-		}
-	}
+        FCompressedBoneTransform CompressedBone(
+            static_cast<uint8>(BoneData.Index),
+            BoneData.Location,
+            BoneData.Rotation
+        );
 
-	int32 CompressedSize = 6 + (CurrentCompressedFrame.Bones.Num() * 14);
+        // Keyframe이면 모든 본 전송
+        if (bIsKeyframeNow)
+        {
+            CurrentCompressedFrame.Bones.Add(CompressedBone);
+            BoneCache.Add(CompressedBone.BoneIndex, CompressedBone);
 
-	LastFrameBoneCount = CurrentCompressedFrame.Bones.Num();
-	CompressionRatio = OriginalSize > 0 ? ((float)CompressedSize / (float)OriginalSize) : 1.0f;
+            FTransform Transform = CompressedBone.Decompress();
+            OnControlDataReceived.Broadcast(CompressedBone.BoneIndex, Transform);
+        }
+        else if (bUseDeltaCompression)
+        {
+            // Delta 압축: 변경된 본만 전송 (LOD 기반 threshold 사용)
+            if (ShouldSendBone(CompressedBone.BoneIndex, CompressedBone))
+            {
+                CurrentCompressedFrame.Bones.Add(CompressedBone);
+                BoneCache.Add(CompressedBone.BoneIndex, CompressedBone);
 
-	OnCompressedFrameReceived.Broadcast(CurrentCompressedFrame);
+                FTransform Transform = CompressedBone.Decompress();
+                OnControlDataReceived.Broadcast(CompressedBone.BoneIndex, Transform);
+            }
+        }
+        else
+        {
+            CurrentCompressedFrame.Bones.Add(CompressedBone);
 
-	static int32 FrameCount = 0;
-	if (FrameCount++ % 30 == 0)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("[MocapData 압축] 프레임 #%d | 본:%d개/%d개 | 원본:%d bytes → 압축:%d bytes (%.1f%%)"),
-			FrameCount,
-			CurrentCompressedFrame.Bones.Num(),
-			CurrentFrameBones.Num(),
-			OriginalSize,
-			CompressedSize,
-			CompressionRatio * 100.0f);
-	}
+            FTransform Transform = CompressedBone.Decompress();
+            OnControlDataReceived.Broadcast(CompressedBone.BoneIndex, Transform);
+        }
+    }
+
+    int32 CompressedSize = 6 + (CurrentCompressedFrame.Bones.Num() * 14);
+    LastFrameBoneCount = CurrentCompressedFrame.Bones.Num();
+    CompressionRatio = OriginalSize > 0 ? ((float)CompressedSize / (float)OriginalSize) : 1.0f;
+
+    // 기존 델리게이트
+    OnCompressedFrameReceived.Broadcast(CurrentCompressedFrame);
+
+    // 네트워크 최적화된 패킹 프레임 생성 및 브로드캐스트
+    FPackedMotionFrame PackedFrame;
+    PackedFrame.PackFromCompressedFrame(CurrentCompressedFrame, bIsKeyframeNow, static_cast<uint8>(FrameCounter % 256));
+    PackedFrame.InterpolationDuration = CurrentFrameIntervalMs / 1000.0f;
+    LastPackedDataSize = PackedFrame.GetPackedSize();
+
+    OnPackedFrameReceived.Broadcast(PackedFrame);
+
+    // 디버그 로그 (30프레임마다)
+    if (FrameCounter % 30 == 0)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("[MocapData] 프레임 #%d | %s | 본:%d/%d | 압축률:%.1f%% | 패킹:%d bytes | 간격:%.1fms"),
+            FrameCounter,
+            bIsKeyframeNow ? TEXT("KEYFRAME") : TEXT("delta"),
+            CurrentCompressedFrame.Bones.Num(),
+            CurrentFrameBones.Num(),
+            CompressionRatio * 100.0f,
+            LastPackedDataSize,
+            CurrentFrameIntervalMs);
+    }
 }
 
 bool UMocapDataComponent::ShouldSendBone(uint8 BoneIndex, const FCompressedBoneTransform& NewTransform)
 {
-	FCompressedBoneTransform* CachedBone = BoneCache.Find(BoneIndex);
-	
-	if (!CachedBone)
-	{
-		return true;
-	}
-	
-	FVector OldLoc = CachedBone->Location.Decompress();
-	FVector NewLoc = NewTransform.Location.Decompress();
-	float LocDelta = FVector::DistSquared(OldLoc, NewLoc);
-	
-	if (LocDelta > DeltaThreshold * DeltaThreshold)
-	{
-		return true;
-	}
-	
-	FQuat OldRot = CachedBone->Rotation.Decompress();
-	FQuat NewRot = NewTransform.Rotation.Decompress();
-	float RotDelta = FQuat::Error(OldRot, NewRot);
-	
-	if (RotDelta > DeltaThreshold)
-	{
-		return true;
-	}
-	
-	return false;
+    FCompressedBoneTransform* CachedBone = BoneCache.Find(BoneIndex);
+
+    // 캐시에 없으면 무조건 전송
+    if (!CachedBone) return true;
+
+    // LOD 기반 threshold 결정
+    float CurrentThreshold = bUseLODSystem
+        ? LODConfig.GetThresholdForBone(BoneIndex)
+        : DeltaThreshold;
+
+    // 위치 변화 검사
+    FVector OldLoc = CachedBone->Location.Decompress();
+    FVector NewLoc = NewTransform.Location.Decompress();
+    float LocDelta = FVector::DistSquared(OldLoc, NewLoc);
+
+    if (LocDelta > CurrentThreshold * CurrentThreshold) return true;
+
+    // 회전 변화 검사
+    FQuat OldRot = CachedBone->Rotation.Decompress();
+    FQuat NewRot = NewTransform.Rotation.Decompress();
+    float RotDelta = FQuat::Error(OldRot, NewRot);
+
+    return RotDelta > CurrentThreshold;
 }
 
-void UMocapDataComponent::ProcessFaceMorphData(const TArray<FOscDataElemStruct>& Data)
+// 유틸리티 함수들
+int32 UMocapDataComponent::ReadInt32BigEndian(const uint8* Data)
 {
-	if (!bEnableFaceData)
-	{
-		return;
-	}
+    return (Data[0] << 24) | (Data[1] << 16) | (Data[2] << 8) | Data[3];
+}
 
-	TArray<float> MorphTargets;
-	MorphTargets.Reserve(52);
+float UMocapDataComponent::ReadFloatBigEndian(const uint8* Data)
+{
+    uint32 IntValue = (Data[0] << 24) | (Data[1] << 16) | (Data[2] << 8) | Data[3];
+    return *reinterpret_cast<float*>(&IntValue);
+}
 
-	for (const FOscDataElemStruct& Elem : Data)
-	{
-		if (Elem.IsFloat())
-		{
-			MorphTargets.Add(UOscFunctionLibrary::AsFloat(Elem));
-		}
-	}
-
-	OnFaceMorphDataReceived.Broadcast(MorphTargets);
+FString UMocapDataComponent::ReadOSCString(const uint8* Data, int32& OutBytesRead)
+{
+    int32 Len = 0;
+    while (Data[Len] != 0) Len++;
+    
+    FString Result = FString(UTF8_TO_TCHAR(reinterpret_cast<const char*>(Data)));
+    
+    // OSC는 4바이트 정렬
+    OutBytesRead = ((Len + 1) + 3) & ~3;
+    
+    return Result;
 }

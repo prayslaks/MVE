@@ -11,7 +11,7 @@ class MVE_API UMocapDataLibrary : public UBlueprintFunctionLibrary
 	GENERATED_BODY()
 
 public:
-	// 압축 프레임 → 인덱스 + Transform 배열로 변환
+	// 압축 프레임을 Index + Transform 배열로 변환
 	UFUNCTION(BlueprintCallable, Category = "Mocap")
 	static void DecompressFrame(const FCompressedMotionFrame& CompressedFrame, TArray<int32>& OutIndices, TArray<FTransform>& OutTransforms);
 
