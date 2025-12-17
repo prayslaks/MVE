@@ -17,18 +17,26 @@ struct FCustomizationData
 	GENERATED_BODY()
 
 	UPROPERTY()
-	FString GLBFilePath;
+	FString SocketName;
+	
+	UPROPERTY()
+	FVector RelativeLocation;
 
 	UPROPERTY()
-	FName SocketName;
+	FRotator RelativeRotation;
 
 	UPROPERTY()
-	FTransform RelativeTransform;
+	float RelativeScale;
+
+	UPROPERTY()
+	FString ModelUrl;
 
 	FCustomizationData()
-		: GLBFilePath(TEXT(""))
-		, SocketName(NAME_None)
-		, RelativeTransform(FTransform::Identity)
+		: SocketName(TEXT(""))
+		, RelativeLocation(FVector::ZeroVector)
+		, RelativeRotation(FRotator::ZeroRotator)
+		, RelativeScale(1.0f)
+		, ModelUrl(TEXT(""))
 	{}
 };
 
@@ -172,4 +180,33 @@ private:
 	// 저장된 Transform (나중에 "적용" 버튼 눌렀을 때 사용)
 	UPROPERTY()
 	TMap<AActor*, FTransform> SavedTransforms;
+
+	/**
+	 * 직렬화
+	 */
+
+public:
+	// JSON 직렬화/역직렬화
+	UFUNCTION(BlueprintCallable, Category = "Customization")
+	FString SerializeCustomizationData(const FCustomizationData& Data) const;
+	
+	UFUNCTION(BlueprintCallable, Category = "Customization")
+	FCustomizationData DeserializeCustomizationData(const FString& JsonString) const;
+	
+	// 중계서버에 프리셋 저장
+	UFUNCTION(BlueprintCallable, Category = "Customization")
+	void SavePresetToServer(const FString& UserID, const FCustomizationData& Data);
+	
+	// 중계서버에서 프리셋 로드
+	UFUNCTION(BlueprintCallable, Category = "Customization")
+	void LoadPresetFromServer(const FString& UserID);
+
+private:
+	// HTTP 응답 콜백
+	void OnSavePresetResponse(FHttpRequestPtr Request, FHttpResponsePtr Response, bool bSucceeded);
+	void OnLoadPresetResponse(FHttpRequestPtr Request, FHttpResponsePtr Response, bool bSucceeded);
+	
+	// 프리셋 로드 완료 델리게이트
+	DECLARE_DELEGATE_OneParam(FOnPresetLoaded, const FCustomizationData&);
+	FOnPresetLoaded OnPresetLoadedDelegate;
 };

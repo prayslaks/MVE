@@ -426,19 +426,26 @@ void UMVE_AUD_CustomizationManager::AttachMeshToSocket(const FName& SocketName)
         return;
     }
 
-    AttachedMesh = NewAccessory;
+	AttachedMesh = NewAccessory;
 
-    // 커스터마이징 데이터 저장
-    SavedCustomization.GLBFilePath = CurrentGLBFilePath;
-    SavedCustomization.SocketName = SocketName;
-    SavedCustomization.RelativeTransform = NewAccessory->GetTransform().GetRelativeTransform(SkelMesh->GetComponentTransform());
+	// 커스터마이징 데이터 저장 (수정된 부분)
+	SavedCustomization.ModelUrl = CurrentGLBFilePath;  // GLBFilePath → ModelUrl
+	SavedCustomization.SocketName = SocketName.ToString();  // FName → FString
+	
+	// Transform을 분해해서 저장
+	FTransform RelativeTransform = NewAccessory->GetTransform().GetRelativeTransform(SkelMesh->GetComponentTransform());
+	SavedCustomization.RelativeLocation = RelativeTransform.GetLocation();
+	SavedCustomization.RelativeRotation = RelativeTransform.GetRotation().Rotator();
+	SavedCustomization.RelativeScale = RelativeTransform.GetScale3D().X;  // Uniform Scale 가정
 
-    PRINTLOG(TEXT("✅ Customization data saved:"));
-    PRINTLOG(TEXT("   GLB Path: %s"), *SavedCustomization.GLBFilePath);
-    PRINTLOG(TEXT("   Socket: %s"), *SavedCustomization.SocketName.ToString());
-    PRINTLOG(TEXT("   Transform: %s"), *SavedCustomization.RelativeTransform.ToString());
+	PRINTLOG(TEXT("✅ Customization data saved:"));
+	PRINTLOG(TEXT("   Model URL: %s"), *SavedCustomization.ModelUrl);
+	PRINTLOG(TEXT("   Socket: %s"), *SavedCustomization.SocketName);
+	PRINTLOG(TEXT("   Location: %s"), *SavedCustomization.RelativeLocation.ToString());
+	PRINTLOG(TEXT("   Rotation: %s"), *SavedCustomization.RelativeRotation.ToString());
+	PRINTLOG(TEXT("   Scale: %.2f"), SavedCustomization.RelativeScale);
 
-    // ⭐ 자동으로 기즈모 모드 전환 (옵션 B: CameraPawn에서 처리)
+    // 자동으로 기즈모 모드 전환
     UWorld* CurrentWorld = GetWorld();
     if (CurrentWorld)
     {
@@ -899,4 +906,116 @@ FVector UMVE_AUD_CustomizationManager::GetCharacterSize() const
 
 	// 전체 크기 반환
 	return BoxExtent * 2.0f;
+}
+
+FString UMVE_AUD_CustomizationManager::SerializeCustomizationData(const FCustomizationData& Data) const
+{
+	// JSON 배열 생성 (단일 액세서리지만 배열 형식)
+	TArray<TSharedPtr<FJsonValue>> JsonArray;
+	
+	// JSON 객체 생성
+	TSharedPtr<FJsonObject> JsonObject = MakeShareable(new FJsonObject);
+	
+	// socketName
+	JsonObject->SetStringField(TEXT("socketName"), Data.SocketName);
+	
+	// relativeLocation
+	TSharedPtr<FJsonObject> LocationObj = MakeShareable(new FJsonObject);
+	LocationObj->SetNumberField(TEXT("x"), Data.RelativeLocation.X);
+	LocationObj->SetNumberField(TEXT("y"), Data.RelativeLocation.Y);
+	LocationObj->SetNumberField(TEXT("z"), Data.RelativeLocation.Z);
+	JsonObject->SetObjectField(TEXT("relativeLocation"), LocationObj);
+	
+	// relativeRotation
+	TSharedPtr<FJsonObject> RotationObj = MakeShareable(new FJsonObject);
+	RotationObj->SetNumberField(TEXT("pitch"), Data.RelativeRotation.Pitch);
+	RotationObj->SetNumberField(TEXT("yaw"), Data.RelativeRotation.Yaw);
+	RotationObj->SetNumberField(TEXT("roll"), Data.RelativeRotation.Roll);
+	JsonObject->SetObjectField(TEXT("relativeRotation"), RotationObj);
+	
+	// relativeScale
+	JsonObject->SetNumberField(TEXT("relativeScale"), Data.RelativeScale);
+	
+	// modelUrl
+	JsonObject->SetStringField(TEXT("modelUrl"), Data.ModelUrl);
+	
+	// 배열에 추가
+	JsonArray.Add(MakeShareable(new FJsonValueObject(JsonObject)));
+	
+	// JSON 문자열로 변환
+	FString OutputString;
+	TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&OutputString);
+	FJsonSerializer::Serialize(JsonArray, Writer);
+	
+	return OutputString;
+}
+
+FCustomizationData UMVE_AUD_CustomizationManager::DeserializeCustomizationData(const FString& JsonString) const
+{
+	FCustomizationData Result;
+	
+	// JSON 배열 파싱
+	TArray<TSharedPtr<FJsonValue>> JsonArray;
+	TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(JsonString);
+	
+	if (!FJsonSerializer::Deserialize(Reader, JsonArray) || JsonArray.Num() == 0)
+	{
+		PRINTLOG(TEXT("Failed to parse JSON array"));
+		return Result;
+	}
+	
+	// 객체 가져오기
+	TSharedPtr<FJsonObject> JsonObject = JsonArray[0]->AsObject();
+	if (!JsonObject.IsValid())
+	{
+		PRINTLOG(TEXT("Invalid JSON object"));
+		return Result;
+	}
+	
+	// socketName
+	Result.SocketName = JsonObject->GetStringField(TEXT("socketName"));
+	
+	// relativeLocation
+	const TSharedPtr<FJsonObject>* LocationObj;
+	if (JsonObject->TryGetObjectField(TEXT("relativeLocation"), LocationObj))
+	{
+		Result.RelativeLocation.X = (*LocationObj)->GetNumberField(TEXT("x"));
+		Result.RelativeLocation.Y = (*LocationObj)->GetNumberField(TEXT("y"));
+		Result.RelativeLocation.Z = (*LocationObj)->GetNumberField(TEXT("z"));
+	}
+	
+	// relativeRotation
+	const TSharedPtr<FJsonObject>* RotationObj;
+	if (JsonObject->TryGetObjectField(TEXT("relativeRotation"), RotationObj))
+	{
+		Result.RelativeRotation.Pitch = (*RotationObj)->GetNumberField(TEXT("pitch"));
+		Result.RelativeRotation.Yaw = (*RotationObj)->GetNumberField(TEXT("yaw"));
+		Result.RelativeRotation.Roll = (*RotationObj)->GetNumberField(TEXT("roll"));
+	}
+	
+	// relativeScale
+	Result.RelativeScale = JsonObject->GetNumberField(TEXT("relativeScale"));
+	
+	// modelUrl
+	Result.ModelUrl = JsonObject->GetStringField(TEXT("modelUrl"));
+	
+	return Result;
+}
+
+void UMVE_AUD_CustomizationManager::SavePresetToServer(const FString& UserID, const FCustomizationData& Data)
+{
+}
+
+void UMVE_AUD_CustomizationManager::LoadPresetFromServer(const FString& UserID)
+{
+}
+
+void UMVE_AUD_CustomizationManager::OnSavePresetResponse(FHttpRequestPtr Request, FHttpResponsePtr Response,
+	bool bSucceeded)
+{
+}
+
+void UMVE_AUD_CustomizationManager::OnLoadPresetResponse(FHttpRequestPtr Request, FHttpResponsePtr Response,
+	bool bSucceeded)
+{
 }

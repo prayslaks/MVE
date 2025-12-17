@@ -72,7 +72,8 @@ void UMVE_AUD_WidgetClass_GenerateMesh::OnSendPromptButtonClicked()
 		SetStatus(TEXT("시스템 오류"));
 		return;
 	}
-	
+
+	// 테스트 모드 (위젯 블루프린트에서 bTestMode 껐다가 켤 수 있음)
 	if (bTestMode)
 	{
 		FString ContentDir = FPaths::ProjectContentDir();
