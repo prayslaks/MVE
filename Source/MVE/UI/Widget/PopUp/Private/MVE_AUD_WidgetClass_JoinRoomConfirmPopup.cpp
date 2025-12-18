@@ -1,6 +1,7 @@
 
 #include "../Public/MVE_AUD_WidgetClass_JoinRoomConfirmPopup.h"
 #include "MVE.h"
+#include "MVE_AUD_CustomizationManager.h"
 #include "MVE_AUD_WidgetClass_GenerateMesh.h"
 #include "MVE_GIS_SessionManager.h"
 #include "UIManagerSubsystem.h"
@@ -40,6 +41,25 @@ void UMVE_AUD_WidgetClass_JoinRoomConfirmPopup::OnConfirmButtonClicked()
 	{
 		if (UMVE_GIS_SessionManager* SessionManager = GI->GetSubsystem<UMVE_GIS_SessionManager>())
 		{
+			// CustomizationManager 가져오기
+			UMVE_AUD_CustomizationManager* CustomizationManager = GetGameInstance()->GetSubsystem<UMVE_AUD_CustomizationManager>();
+			if (!CustomizationManager) return;
+				
+			// 메모리에서 커스터마이징 데이터 가져오기
+			FCustomizationData SavedData = CustomizationManager->GetSavedCustomization();
+	
+			if (SavedData.ModelUrl.IsEmpty())
+			{
+				PRINTLOG(TEXT("⚠️ No customization data. User will join without accessory."));
+			}
+			else
+			{
+				//서버에 저장 (비동기)
+				PRINTLOG(TEXT("Saving preset to server before joining..."));
+				CustomizationManager->SavePresetToServer(SavedData);
+			}
+			
+			// 방 참가
 			PRINTLOG(TEXT("Joining session: %s"), *CurrentRoomInfo.ConcertName);
 			SessionManager->JoinSessionByRoomId(CurrentRoomInfo.RoomId);
 		}

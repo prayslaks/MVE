@@ -5,6 +5,7 @@
 #include "HttpModule.h"
 #include "IDesktopPlatform.h"
 #include "MVE.h"
+#include "MVE_API_Helper.h"
 #include "MVE_AUD_PreviewCameraPawn.h"
 #include "MVE_AUD_PreviewCaptureActor.h"
 #include "MVE_AUD_WidgetClass_PreviewWidget.h"
@@ -426,19 +427,26 @@ void UMVE_AUD_CustomizationManager::AttachMeshToSocket(const FName& SocketName)
         return;
     }
 
-    AttachedMesh = NewAccessory;
+	AttachedMesh = NewAccessory;
 
-    // 커스터마이징 데이터 저장
-    SavedCustomization.GLBFilePath = CurrentGLBFilePath;
-    SavedCustomization.SocketName = SocketName;
-    SavedCustomization.RelativeTransform = NewAccessory->GetTransform().GetRelativeTransform(SkelMesh->GetComponentTransform());
+	// 커스터마이징 데이터 저장 (수정된 부분)
+	SavedCustomization.ModelUrl = CurrentRemoteURL;  // GLBFilePath → ModelUrl
+	SavedCustomization.SocketName = SocketName.ToString();  // FName → FString
+	
+	// Transform을 분해해서 저장
+	FTransform RelativeTransform = NewAccessory->GetTransform().GetRelativeTransform(SkelMesh->GetComponentTransform());
+	SavedCustomization.RelativeLocation = RelativeTransform.GetLocation();
+	SavedCustomization.RelativeRotation = RelativeTransform.GetRotation().Rotator();
+	SavedCustomization.RelativeScale = RelativeTransform.GetScale3D().X;  // Uniform Scale 가정
 
-    PRINTLOG(TEXT("✅ Customization data saved:"));
-    PRINTLOG(TEXT("   GLB Path: %s"), *SavedCustomization.GLBFilePath);
-    PRINTLOG(TEXT("   Socket: %s"), *SavedCustomization.SocketName.ToString());
-    PRINTLOG(TEXT("   Transform: %s"), *SavedCustomization.RelativeTransform.ToString());
+	PRINTLOG(TEXT("✅ Customization data saved:"));
+	PRINTLOG(TEXT("   Model URL: %s"), *SavedCustomization.ModelUrl);
+	PRINTLOG(TEXT("   Socket: %s"), *SavedCustomization.SocketName);
+	PRINTLOG(TEXT("   Location: %s"), *SavedCustomization.RelativeLocation.ToString());
+	PRINTLOG(TEXT("   Rotation: %s"), *SavedCustomization.RelativeRotation.ToString());
+	PRINTLOG(TEXT("   Scale: %.2f"), SavedCustomization.RelativeScale);
 
-    // ⭐ 자동으로 기즈모 모드 전환 (옵션 B: CameraPawn에서 처리)
+    // 자동으로 기즈모 모드 전환
     UWorld* CurrentWorld = GetWorld();
     if (CurrentWorld)
     {
@@ -899,4 +907,221 @@ FVector UMVE_AUD_CustomizationManager::GetCharacterSize() const
 
 	// 전체 크기 반환
 	return BoxExtent * 2.0f;
+}
+
+FString UMVE_AUD_CustomizationManager::SerializeCustomizationData(const FCustomizationData& Data) const
+{
+	// JSON 배열 생성 (단일 액세서리지만 배열 형식)
+	TArray<TSharedPtr<FJsonValue>> JsonArray;
+	
+	// JSON 객체 생성
+	TSharedPtr<FJsonObject> JsonObject = MakeShareable(new FJsonObject);
+	
+	// socketName
+	JsonObject->SetStringField(TEXT("socketName"), Data.SocketName);
+	
+	// relativeLocation
+	TSharedPtr<FJsonObject> LocationObj = MakeShareable(new FJsonObject);
+	LocationObj->SetNumberField(TEXT("x"), Data.RelativeLocation.X);
+	LocationObj->SetNumberField(TEXT("y"), Data.RelativeLocation.Y);
+	LocationObj->SetNumberField(TEXT("z"), Data.RelativeLocation.Z);
+	JsonObject->SetObjectField(TEXT("relativeLocation"), LocationObj);
+	
+	// relativeRotation
+	TSharedPtr<FJsonObject> RotationObj = MakeShareable(new FJsonObject);
+	RotationObj->SetNumberField(TEXT("pitch"), Data.RelativeRotation.Pitch);
+	RotationObj->SetNumberField(TEXT("yaw"), Data.RelativeRotation.Yaw);
+	RotationObj->SetNumberField(TEXT("roll"), Data.RelativeRotation.Roll);
+	JsonObject->SetObjectField(TEXT("relativeRotation"), RotationObj);
+	
+	// relativeScale
+	JsonObject->SetNumberField(TEXT("relativeScale"), Data.RelativeScale);
+	
+	// modelUrl
+	JsonObject->SetStringField(TEXT("modelUrl"), Data.ModelUrl);
+	
+	// 배열에 추가
+	JsonArray.Add(MakeShareable(new FJsonValueObject(JsonObject)));
+	
+	// JSON 문자열로 변환
+	FString OutputString;
+	TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&OutputString);
+	FJsonSerializer::Serialize(JsonArray, Writer);
+	
+	return OutputString;
+}
+
+FCustomizationData UMVE_AUD_CustomizationManager::DeserializeCustomizationData(const FString& JsonString) const
+{
+	FCustomizationData Result;
+	
+	// JSON 배열 파싱
+	TArray<TSharedPtr<FJsonValue>> JsonArray;
+	TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(JsonString);
+	
+	if (!FJsonSerializer::Deserialize(Reader, JsonArray) || JsonArray.Num() == 0)
+	{
+		PRINTLOG(TEXT("Failed to parse JSON array"));
+		return Result;
+	}
+	
+	// 객체 가져오기
+	TSharedPtr<FJsonObject> JsonObject = JsonArray[0]->AsObject();
+	if (!JsonObject.IsValid())
+	{
+		PRINTLOG(TEXT("Invalid JSON object"));
+		return Result;
+	}
+	
+	// socketName
+	Result.SocketName = JsonObject->GetStringField(TEXT("socketName"));
+	
+	// relativeLocation
+	const TSharedPtr<FJsonObject>* LocationObj;
+	if (JsonObject->TryGetObjectField(TEXT("relativeLocation"), LocationObj))
+	{
+		Result.RelativeLocation.X = (*LocationObj)->GetNumberField(TEXT("x"));
+		Result.RelativeLocation.Y = (*LocationObj)->GetNumberField(TEXT("y"));
+		Result.RelativeLocation.Z = (*LocationObj)->GetNumberField(TEXT("z"));
+	}
+	
+	// relativeRotation
+	const TSharedPtr<FJsonObject>* RotationObj;
+	if (JsonObject->TryGetObjectField(TEXT("relativeRotation"), RotationObj))
+	{
+		Result.RelativeRotation.Pitch = (*RotationObj)->GetNumberField(TEXT("pitch"));
+		Result.RelativeRotation.Yaw = (*RotationObj)->GetNumberField(TEXT("yaw"));
+		Result.RelativeRotation.Roll = (*RotationObj)->GetNumberField(TEXT("roll"));
+	}
+	
+	// relativeScale
+	Result.RelativeScale = JsonObject->GetNumberField(TEXT("relativeScale"));
+	
+	// modelUrl
+	Result.ModelUrl = JsonObject->GetStringField(TEXT("modelUrl"));
+	
+	return Result;
+}
+
+void UMVE_AUD_CustomizationManager::SavePresetToServer(const FCustomizationData& Data)
+{
+	PRINTLOG(TEXT("=== Saving Preset to Server ==="));
+
+	//FOnSavePresetComplete OnResult;
+	//OnResult.Bind
+	//UMVE_API_Helper::SaveAccessoryPreset()
+	
+	// JSON 직렬화 (배열 형태)
+	FString PresetJSON = SerializeCustomizationData(Data);
+	PRINTLOG(TEXT("Preset JSON: %s"), *PresetJSON);
+	
+	// HTTP 요청 생성
+	FHttpModule* HttpModule = &FHttpModule::Get();
+	TSharedRef<IHttpRequest> HttpRequest = HttpModule->CreateRequest();
+	
+	// 요청 설정
+	HttpRequest->SetURL(TEXT("http://YOUR_SERVER_URL/api/presets"));
+	HttpRequest->SetVerb(TEXT("POST"));
+	HttpRequest->SetHeader(TEXT("Content-Type"), TEXT("application/json"));
+	
+	// Body는 배열만 전송
+	HttpRequest->SetContentAsString(PresetJSON);
+	
+	// 응답 콜백 바인딩
+	HttpRequest->OnProcessRequestComplete().BindUObject(
+		this, &UMVE_AUD_CustomizationManager::OnSavePresetResponse);
+	
+	// 요청 전송
+	if (HttpRequest->ProcessRequest())
+	{
+		PRINTLOG(TEXT("Preset save request sent"));
+	}
+	else
+	{
+		PRINTLOG(TEXT("Failed to send preset save request"));
+	}
+}
+
+void UMVE_AUD_CustomizationManager::OnSavePresetResponse(FHttpRequestPtr Request, FHttpResponsePtr Response,
+	bool bSucceeded)
+{
+	if (!bSucceeded || !Response.IsValid())
+	{
+		PRINTLOG(TEXT("❌ Failed to save preset to server"));
+		return;
+	}
+	
+	int32 ResponseCode = Response->GetResponseCode();
+	FString ResponseContent = Response->GetContentAsString();
+	
+	PRINTLOG(TEXT("=== Save Preset Response ==="));
+	PRINTLOG(TEXT("Response Code: %d"), ResponseCode);
+	PRINTLOG(TEXT("Response Body: %s"), *ResponseContent);
+	
+	if (ResponseCode == 200 || ResponseCode == 201)
+	{
+		PRINTLOG(TEXT("✅ Preset saved successfully"));
+	}
+	else
+	{
+		PRINTLOG(TEXT("❌ Server error: %d - %s"), ResponseCode, *ResponseContent);
+	}
+}
+
+void UMVE_AUD_CustomizationManager::OnLoadPresetResponse(FHttpRequestPtr Request, FHttpResponsePtr Response,
+	bool bSucceeded)
+{
+	if (!bSucceeded || !Response.IsValid())
+	{
+		PRINTLOG(TEXT("❌ Failed to load preset from server"));
+		return;
+	}
+	
+	int32 ResponseCode = Response->GetResponseCode();
+	FString ResponseContent = Response->GetContentAsString();
+	
+	PRINTLOG(TEXT("=== Load Preset Response ==="));
+	PRINTLOG(TEXT("Response Code: %d"), ResponseCode);
+	PRINTLOG(TEXT("Response Body: %s"), *ResponseContent);
+	
+	if (ResponseCode == 200)
+	{
+		// ⭐ 서버가 배열을 직접 반환하므로 바로 역직렬화
+		// ResponseContent = [{"socketName":"head_socket",...}]
+		FCustomizationData LoadedData = DeserializeCustomizationData(ResponseContent);
+		
+		// 데이터 검증
+		if (LoadedData.ModelUrl.IsEmpty())
+		{
+			PRINTLOG(TEXT("⚠️ Loaded preset has no model URL (user might not have saved preset yet)"));
+			return;
+		}
+		
+		PRINTLOG(TEXT("✅ Preset loaded successfully"));
+		PRINTLOG(TEXT("   Model URL: %s"), *LoadedData.ModelUrl);
+		PRINTLOG(TEXT("   Socket: %s"), *LoadedData.SocketName);
+		PRINTLOG(TEXT("   Location: %s"), *LoadedData.RelativeLocation.ToString());
+		PRINTLOG(TEXT("   Rotation: %s"), *LoadedData.RelativeRotation.ToString());
+		PRINTLOG(TEXT("   Scale: %.2f"), LoadedData.RelativeScale);
+		
+		// 델리게이트 호출 (PlayerController에서 사용)
+		if (OnPresetLoadedDelegate.IsBound())
+		{
+			OnPresetLoadedDelegate.Execute(LoadedData);
+		}
+	}
+	else if (ResponseCode == 404)
+	{
+		PRINTLOG(TEXT("⚠️ No preset found for this user"));
+	}
+	else
+	{
+		PRINTLOG(TEXT("❌ Server error: %d - %s"), ResponseCode, *ResponseContent);
+	}
+}
+
+void UMVE_AUD_CustomizationManager::SetRemoteModelUrl(const FString& RemoteUrl)
+{
+	CurrentRemoteURL = RemoteUrl;
+	PRINTLOG(TEXT("✅ Remote URL saved: %s"), *CurrentRemoteURL);
 }

@@ -45,6 +45,7 @@ void AMVE_AUD_AudienceCharacter::SetupPlayerInputComponent(UInputComponent* Play
 
 void AMVE_AUD_AudienceCharacter::ApplyCustomization()
 {
+	/*
 	PRINTLOG(TEXT("=== ApplyCustomization called ==="));
 
 	// CustomizationManager 가져오기
@@ -66,7 +67,7 @@ void AMVE_AUD_AudienceCharacter::ApplyCustomization()
 	FCustomizationData SavedData = CustomizationManager->GetSavedCustomization();
 
 	// 데이터 유효성 확인
-	if (SavedData.GLBFilePath.IsEmpty() || SavedData.SocketName == NAME_None)
+	if (SavedData.ModelUrl.IsEmpty() || SavedData.SocketName == NAME_None)
 	{
 		PRINTLOG(TEXT("⚠️ No customization data saved"));
 		return;
@@ -139,6 +140,7 @@ void AMVE_AUD_AudienceCharacter::ApplyCustomization()
 
 	// 콜백 호출
 	OnCustomizationMeshLoaded(MeshActor, SavedData.SocketName, SavedData.RelativeTransform);
+	*/
 }
 
 void AMVE_AUD_AudienceCharacter::OnCustomizationMeshLoaded(AActor* LoadedActor, FName SocketName, FTransform RelativeTransform)
