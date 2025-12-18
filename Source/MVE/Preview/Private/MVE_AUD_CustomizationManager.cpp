@@ -264,11 +264,11 @@ void UMVE_AUD_CustomizationManager::OnGetModelStatusComplete(bool bSuccess, cons
 		PRINTLOG(TEXT("   Save path: %s"), *SavePath);
 
 		// 다운로드 콜백 설정
-		FOnGenericApiComplete OnDownloadComplete;
+		FOnGetModelDownloadUrlComplete OnDownloadComplete;
 		OnDownloadComplete.BindUObject(this, &UMVE_AUD_CustomizationManager::OnModelDownloadComplete);
 
 		// 모델 다운로드 시작
-		UMVE_API_Helper::DownloadModel(JobStatus.ModelId, SavePath, OnDownloadComplete);
+		UMVE_API_Helper::GetModelDownloadUrl(JobStatus.ModelId, OnDownloadComplete);
 	}
 	else if (JobStatus.Status.Equals(TEXT("failed"), ESearchCase::IgnoreCase))
 	{
@@ -294,7 +294,7 @@ void UMVE_AUD_CustomizationManager::OnGetModelStatusComplete(bool bSuccess, cons
 	}
 }
 
-void UMVE_AUD_CustomizationManager::OnModelDownloadComplete(bool bSuccess, const FString& SavedPath)
+void UMVE_AUD_CustomizationManager::OnModelDownloadComplete(bool bSuccess, const FGetModelDownloadUrlResponseData& Data,const FString& SavedPath)
 {
 	PRINTLOG(TEXT("=== OnModelDownloadComplete ==="));
 

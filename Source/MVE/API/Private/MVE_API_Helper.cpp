@@ -765,6 +765,7 @@ void UMVE_API_Helper::GenerateModel(const FString& Prompt, const FString& ImageP
             return;
         }
         FileName = FPaths::GetCleanFilename(ImagePath);
+        //FileName = FPaths::GetCleanFilename(ImagePath) + FDateTime::Now().ToString();
     }
     FMVE_HTTP_Client::SendMultipartRequest(URL, TEXT("image"), FileData, FileName, FormFields, GlobalAuthToken, HANDLE_RESPONSE_STRUCT(FGenerateModelResponseData, OnResult));
 }

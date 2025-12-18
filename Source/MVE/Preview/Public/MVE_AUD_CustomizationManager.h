@@ -88,7 +88,7 @@ private:
 	void OnGetModelStatusComplete(bool bSuccess, const FGetJobStatusResponseData& ResponseData, const FString& ErrorCode);
 
 	// 모델 다운로드
-	void OnModelDownloadComplete(bool bSuccess, const FString& SavedPath);
+	void OnModelDownloadComplete(bool bSuccess, const FGetModelDownloadUrlResponseData& Data, const FString& SavedPath);
 
 	// 현재 진행 중인 JobId
 	FString CurrentJobId;
