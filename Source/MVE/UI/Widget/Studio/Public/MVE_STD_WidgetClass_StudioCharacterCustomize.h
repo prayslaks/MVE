@@ -43,8 +43,6 @@ protected:
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UButton> AttachFileButton;
 
-	UPROPERTY(meta = (BindWidget))
-	TObjectPtr<UButton> NextButton;
 	
 	UPROPERTY(EditDefaultsOnly, Category = "Avatar")
 	TSubclassOf<UUserWidget> PresetButtonClass;
