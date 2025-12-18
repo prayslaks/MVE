@@ -99,8 +99,8 @@ void UMVE_AUD_WidgetClass_GenerateMesh::OnSendPromptButtonClicked()
 			return;
 		}
 		
-		// 참조 이미지 경로 (없으면 빈 문자열)
-		FString ImagePath = CustomizationManager->GetReferenceImageDataAsBase64();
+		// 참조 이미지 파일 경로 가져오기
+		FString ImagePath = CustomizationManager->GetReferenceImageFilePath();
 		if (ImagePath.IsEmpty())
 		{
 			SetStatus(TEXT("참조 이미지를 첨부해주세요"));
@@ -112,8 +112,10 @@ void UMVE_AUD_WidgetClass_GenerateMesh::OnSendPromptButtonClicked()
 		SetButtonsEnabled(false);
 
 		// 서버에 전송
-		USenderReceiver* SR = GetGameInstance()->GetSubsystem<USenderReceiver>();
-		SR->SendGenerationRequest(PromptText, TEXT("woals1375@naver.com"), ImagePath);
+		CustomizationManager->RequestModelGeneration(PromptText, ImagePath);
+		
+		//USenderReceiver* SR = GetGameInstance()->GetSubsystem<USenderReceiver>();
+		//SR->SendGenerationRequest(PromptText, TEXT("woals1375@naver.com"), ImagePath);
 	}
 }
 
@@ -182,6 +184,15 @@ void UMVE_AUD_WidgetClass_GenerateMesh::OnHeadButtonClicked()
 	else
 	{
 		SetStatus(TEXT("메시 설정 하세요"));
+	}
+}
+
+void UMVE_AUD_WidgetClass_GenerateMesh::OnSaveButtonClicked()
+{
+	if (UMVE_AUD_CustomizationManager* CustomizationManager = GetGameInstance()->GetSubsystem<UMVE_AUD_CustomizationManager>())
+	{
+		FDateTime Now = FDateTime::Now();
+		CustomizationManager->SaveAccessoryPresetToServer(Now.ToString());
 	}
 }
 

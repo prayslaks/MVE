@@ -5,13 +5,18 @@
 #include "HttpModule.h"
 #include "IDesktopPlatform.h"
 #include "MVE.h"
-#include "MVE_API_Helper.h"
+#include "API/Public/MVE_API_Helper.h"
+#include "API/Public/MVE_API_ResponseData.h"
 #include "MVE_AUD_PreviewCameraPawn.h"
 #include "MVE_AUD_PreviewCaptureActor.h"
 #include "MVE_AUD_WidgetClass_PreviewWidget.h"
 #include "MVE_GM_PreviewMesh.h"
 #include "Interfaces/IHttpResponse.h"
 #include "Engine/TextureRenderTarget2D.h"
+#include "TimerManager.h"
+#include "Engine/World.h"
+#include "HAL/FileManager.h"
+#include "Misc/Paths.h"
 
 
 void UMVE_AUD_CustomizationManager::Initialize(FSubsystemCollectionBase& Collection)
@@ -66,29 +71,36 @@ FString UMVE_AUD_CustomizationManager::OpenReferenceImageDialog()
 	return TEXT("");
 }
 
-void UMVE_AUD_CustomizationManager::RequestModelGeneration(const FString& PromptText)
+void UMVE_AUD_CustomizationManager::RequestModelGeneration(const FString& PromptText, const FString& ImagePath)
 {
-	
-	if (ReferenceImageData.Num() == 0)
+	PRINTLOG(TEXT("=== RequestModelGeneration ==="));
+	PRINTLOG(TEXT("Prompt: %s"), *PromptText);
+
+	// 프롬프트 검증
+	if (PromptText.IsEmpty())
 	{
-		PRINTLOG(TEXT("No reference image attached"));
+		PRINTLOG(TEXT("❌ Prompt text is empty"));
 		return;
 	}
-	
 
-	// 요청 데이터 생성
-	FInputPromptData Request;
-	Request.PromptMessageText = PromptText;
-	Request.ReferenceImageData = ReferenceImageData;
-	Request.ImageFormat = ReferenceImageFormat;
-	Request.UserID = GetWorld()->GetFirstPlayerController()->GetUniqueID();
+	// 이미지 경로 결정 (매개변수로 전달된 경로 우선, 없으면 저장된 경로 사용)
+	FString FinalImagePath = ImagePath.IsEmpty() ? ReferenceImageFilePath : ImagePath;
 
-	
-	SendToExternalServer(Request);
+	if (FinalImagePath.IsEmpty())
+	{
+		PRINTLOG(TEXT("⚠️ No reference image provided, generating without image"));
+	}
+	else
+	{
+		PRINTLOG(TEXT("Image Path: %s"), *FinalImagePath);
+	}
 
-	// 임시 데이터 클리어
-	ReferenceImageData.Empty();
-	ReferenceImageFormat.Empty();
+	// MVE_API_Helper::GenerateModel 호출
+	FOnGenerateModelComplete OnComplete;
+	OnComplete.BindUObject(this, &UMVE_AUD_CustomizationManager::OnGenerateModelComplete);
+
+	UMVE_API_Helper::GenerateModel(PromptText, FinalImagePath, OnComplete);
+	PRINTLOG(TEXT("✅ Model generation request sent via MVE_API_Helper"));
 }
 
 bool UMVE_AUD_CustomizationManager::LoadReferenceImage(const FString& FilePath)
@@ -97,6 +109,7 @@ bool UMVE_AUD_CustomizationManager::LoadReferenceImage(const FString& FilePath)
 	ReferenceImageData.Empty();
 	ReferenceImageFileName.Empty();
 	ReferenceImageFormat.Empty();
+	ReferenceImageFilePath.Empty();
 
 	// 파일을 바이트 배열로 읽기
 	if (!FFileHelper::LoadFileToArray(ReferenceImageData, *FilePath))
@@ -117,10 +130,11 @@ bool UMVE_AUD_CustomizationManager::LoadReferenceImage(const FString& FilePath)
 	// 파일명과 확장자 저장
 	ReferenceImageFileName = FPaths::GetCleanFilename(FilePath);
 	ReferenceImageFormat = FPaths::GetExtension(FilePath).ToLower();
+	ReferenceImageFilePath = FilePath;  // 파일 경로 저장
 
 	// 지원 포맷 확인
-	if (ReferenceImageFormat != TEXT("png") && 
-		ReferenceImageFormat != TEXT("jpg") && 
+	if (ReferenceImageFormat != TEXT("png") &&
+		ReferenceImageFormat != TEXT("jpg") &&
 		ReferenceImageFormat != TEXT("jpeg") &&
 		ReferenceImageFormat != TEXT("gif"))
 	{
@@ -128,187 +142,190 @@ bool UMVE_AUD_CustomizationManager::LoadReferenceImage(const FString& FilePath)
 		ReferenceImageData.Empty();
 		ReferenceImageFileName.Empty();
 		ReferenceImageFormat.Empty();
+		ReferenceImageFilePath.Empty();
 		return false;
 	}
 
 	return true;
 }
 
-void UMVE_AUD_CustomizationManager::SendToExternalServer(const FInputPromptData& Request)
+
+void UMVE_AUD_CustomizationManager::OnGenerateModelComplete(bool bSuccess, const FGenerateModelResponseData& ResponseData, const FString& ErrorCode)
 {
-	PRINTLOG(TEXT("=== Sending to AI Server ==="));
-    PRINTLOG(TEXT("Prompt: %s"), *Request.PromptMessageText);
-    PRINTLOG(TEXT("Image Format: %s"), *Request.ImageFormat);
-    PRINTLOG(TEXT("Image Size: %d bytes"), Request.ReferenceImageData.Num());
+	PRINTLOG(TEXT("=== OnGenerateModelComplete ==="));
 
-    // HTTP 모듈 가져오기
-    FHttpModule* HttpModule = &FHttpModule::Get();
-    TSharedRef<IHttpRequest> HttpRequest = HttpModule->CreateRequest();
-
-    // 요청 설정
-    HttpRequest->SetURL(TEXT("http://172.16.20.234:8001/generate_mesh"));
-    HttpRequest->SetVerb(TEXT("POST"));
-
-    // Boundary 생성
-    FString Boundary = FString::Printf(TEXT("----UnrealBoundary%d"), FDateTime::Now().GetTicks());
-    HttpRequest->SetHeader(TEXT("Content-Type"), 
-        FString::Printf(TEXT("multipart/form-data; boundary=%s"), *Boundary));
-
-    PRINTLOG(TEXT("Boundary: %s"), *Boundary);
-
-    TArray<uint8> BodyData;
-
-    // 1. JSON metadata 파트
-    {
-        // JSON 객체 생성
-        TSharedPtr<FJsonObject> JsonObject = MakeShareable(new FJsonObject);
-        JsonObject->SetStringField(TEXT("prompt"), Request.PromptMessageText);
-        JsonObject->SetStringField(TEXT("user_email"), TEXT("test_user@example.com"));
-        JsonObject->SetStringField(TEXT("request_id"), FGuid::NewGuid().ToString());
-
-        // JSON 직렬화
-        FString JsonString;
-        TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&JsonString);
-        FJsonSerializer::Serialize(JsonObject.ToSharedRef(), Writer);
-
-        PRINTLOG(TEXT("JSON Metadata: %s"), *JsonString);
-
-        // Multipart 헤더 + JSON 본문
-        FString Part;
-        Part += FString::Printf(TEXT("--%s\r\n"), *Boundary);
-        Part += TEXT("Content-Disposition: form-data; name=\"metadata\"\r\n");
-        Part += TEXT("Content-Type: application/json\r\n\r\n");
-        Part += JsonString;
-        Part += TEXT("\r\n");
-
-        // UTF-8로 변환하여 추가
-        FTCHARToUTF8 Converter(*Part);
-        BodyData.Append((const uint8*)Converter.Get(), Converter.Length());
-    }
-
-    // 2. 이미지 파일 파트
-    {
-        // MIME 타입 결정
-        FString MimeType = TEXT("image/png");
-        if (Request.ImageFormat == TEXT("png"))
-            MimeType = TEXT("image/png");
-        else if (Request.ImageFormat == TEXT("jpg") || Request.ImageFormat == TEXT("jpeg"))
-            MimeType = TEXT("image/jpeg");
-        else if (Request.ImageFormat == TEXT("gif"))
-            MimeType = TEXT("image/gif");
-        else if (Request.ImageFormat == TEXT("webp"))
-            MimeType = TEXT("image/webp");
-
-        // Multipart 헤더
-        FString Header;
-        Header += FString::Printf(TEXT("--%s\r\n"), *Boundary);
-        Header += FString::Printf(TEXT("Content-Disposition: form-data; name=\"image\"; filename=\"reference.%s\"\r\n"),
-            *Request.ImageFormat);
-        Header += FString::Printf(TEXT("Content-Type: %s\r\n\r\n"), *MimeType);
-
-        FTCHARToUTF8 HeaderConv(*Header);
-        BodyData.Append((uint8*)HeaderConv.Get(), HeaderConv.Length());
-
-        // 이미지 바이너리 데이터 추가
-        BodyData.Append(Request.ReferenceImageData);
-
-        // 줄바꿈 추가
-        FString LineBreak = TEXT("\r\n");
-        FTCHARToUTF8 LBConv(*LineBreak);
-        BodyData.Append((uint8*)LBConv.Get(), LBConv.Length());
-    }
-
-    // 3. 종료 boundary
-    {
-        FString Closing = FString::Printf(TEXT("--%s--\r\n"), *Boundary);
-        FTCHARToUTF8 Converter(*Closing);
-        BodyData.Append((const uint8*)Converter.Get(), Converter.Length());
-    }
-
-    PRINTLOG(TEXT("Total Body Size: %d bytes"), BodyData.Num());
-
-    // HTTP 요청에 본문 설정
-    HttpRequest->SetContent(BodyData);
-
-    // 응답 콜백 바인딩
-    HttpRequest->OnProcessRequestComplete().BindUObject(
-        this, &UMVE_AUD_CustomizationManager::OnModelGenerationResponse);
-
-    // 요청 전송
-    if (HttpRequest->ProcessRequest())
-    {
-        PRINTLOG(TEXT("✅ Model generation request sent to AI server"));
-    }
-    else
-    {
-        PRINTLOG(TEXT("❌ Failed to send HTTP request"));
-    }
-}
-
-void UMVE_AUD_CustomizationManager::OnModelGenerationResponse(FHttpRequestPtr Request, FHttpResponsePtr Response,
-	bool bSucceeded)
-{
-	if (!bSucceeded || !Response.IsValid())
+	if (bSuccess)
 	{
-		PRINTLOG(TEXT("❌ Failed to connect to AI server"));
-		return;
-	}
+		PRINTLOG(TEXT("✅ Model generation job created successfully"));
+		PRINTLOG(TEXT("   Job ID: %s"), *ResponseData.JobId);
+		PRINTLOG(TEXT("   Success: %s"), ResponseData.Success ? TEXT("true") : TEXT("false"));
+		PRINTLOG(TEXT("   Code: %s"), *ResponseData.Code);
+		PRINTLOG(TEXT("   Message: %s"), *ResponseData.Message);
 
-	int32 ResponseCode = Response->GetResponseCode();
-	FString ResponseContent = Response->GetContentAsString();
-    
-	PRINTLOG(TEXT("=== AI Server Response ==="));
-	PRINTLOG(TEXT("Response Code: %d"), ResponseCode);
-	PRINTLOG(TEXT("Response Body: %s"), *ResponseContent);
+		// JobId 저장
+		CurrentJobId = ResponseData.JobId;
 
-	if (ResponseCode == 200)
-	{
-		// JSON 응답 파싱
-		TSharedPtr<FJsonObject> JsonObject;
-		TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(ResponseContent);
-
-		if (FJsonSerializer::Deserialize(Reader, JsonObject))
+		// 기존 타이머가 있으면 중지
+		if (UWorld* World = GetWorld())
 		{
-			FString ModelID = JsonObject->GetStringField(TEXT("model_id"));
-			FString GLBFileURL = JsonObject->GetStringField(TEXT("glb_url"));
-            
-			PRINTLOG(TEXT("✅ Model generation queued: %s"), *ModelID);
-			PRINTLOG(TEXT("✅ GLB URL: %s"), *GLBFileURL);
-            
-			// 생성 완료 처리
-			OnModelGenerationComplete(ModelID, GLBFileURL);
+			if (ModelStatusCheckTimer.IsValid())
+			{
+				World->GetTimerManager().ClearTimer(ModelStatusCheckTimer);
+			}
+
+			// 상태 확인 타이머 시작 (2초마다)
+			World->GetTimerManager().SetTimer(
+				ModelStatusCheckTimer,
+				this,
+				&UMVE_AUD_CustomizationManager::CheckModelGenerationStatus,
+				StatusCheckInterval,
+				true  // 반복
+			);
+
+			PRINTLOG(TEXT("⏱️ Status check timer started (interval: %.1f seconds)"), StatusCheckInterval);
 		}
 		else
 		{
-			PRINTLOG(TEXT("❌ Failed to parse JSON response"));
-		}
-	}
-	else if (ResponseCode == 422)
-	{
-		PRINTLOG(TEXT("❌ Validation Error (422): %s"), *ResponseContent);
-        
-		// JSON 파싱해서 상세 에러 확인
-		TSharedPtr<FJsonObject> ErrorJson;
-		TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(ResponseContent);
-		if (FJsonSerializer::Deserialize(Reader, ErrorJson))
-		{
-			FString ErrorMsg = ErrorJson->GetStringField(TEXT("error"));
-			PRINTLOG(TEXT("Server Error Message: %s"), *ErrorMsg);
+			PRINTLOG(TEXT("❌ Failed to get World for timer"));
 		}
 	}
 	else
 	{
-		PRINTLOG(TEXT("❌ AI server error: %d - %s"), ResponseCode, *ResponseContent);
+		PRINTLOG(TEXT("❌ Model generation request failed"));
+		PRINTLOG(TEXT("   Error Code: %s"), *ErrorCode);
+		PRINTLOG(TEXT("   Message: %s"), *ResponseData.Message);
 	}
 }
 
-void UMVE_AUD_CustomizationManager::OnModelGenerationComplete(const FString& ModelID, const FString& GLBFileURL)
+void UMVE_AUD_CustomizationManager::CheckModelGenerationStatus()
 {
-	PRINTLOG(TEXT("Model generation complete: %s"), *ModelID);
+	PRINTLOG(TEXT("🔍 Checking model generation status for Job ID: %s"), *CurrentJobId);
 
-	// GLB 파일 다운로드 및 로딩
-	// glTFRuntime으로 런타임 로딩
-	// 기존 캐릭터에 악세서리 부착
+	if (CurrentJobId.IsEmpty())
+	{
+		PRINTLOG(TEXT("❌ No JobId to check"));
+		return;
+	}
+
+	// GetModelGenerationStatus API 호출
+	FOnGetJobStatusComplete OnComplete;
+	OnComplete.BindUObject(this, &UMVE_AUD_CustomizationManager::OnGetModelStatusComplete);
+
+	UMVE_API_Helper::GetModelGenerationStatus(CurrentJobId, OnComplete);
+}
+
+void UMVE_AUD_CustomizationManager::OnGetModelStatusComplete(bool bSuccess, const FGetJobStatusResponseData& ResponseData, const FString& ErrorCode)
+{
+	PRINTLOG(TEXT("=== OnGetModelStatusComplete ==="));
+
+	if (!bSuccess)
+	{
+		PRINTLOG(TEXT("❌ Failed to get job status"));
+		PRINTLOG(TEXT("   Error Code: %s"), *ErrorCode);
+
+		// 타이머 중지
+		if (UWorld* World = GetWorld())
+		{
+			World->GetTimerManager().ClearTimer(ModelStatusCheckTimer);
+			PRINTLOG(TEXT("⏹️ Status check timer stopped"));
+		}
+		return;
+	}
+
+	const FAIJobStatus& JobStatus = ResponseData.Data;
+	PRINTLOG(TEXT("📊 Job Status: %s"), *JobStatus.Status);
+	PRINTLOG(TEXT("   Job ID: %s"), *JobStatus.JobId);
+	PRINTLOG(TEXT("   Prompt: %s"), *JobStatus.Prompt);
+	PRINTLOG(TEXT("   Created At: %s"), *JobStatus.CreatedAt);
+
+	// 상태에 따라 처리
+	if (JobStatus.Status.Equals(TEXT("completed"), ESearchCase::IgnoreCase))
+	{
+		PRINTLOG(TEXT("✅ Model generation completed!"));
+		PRINTLOG(TEXT("   Model ID: %d"), JobStatus.ModelId);
+		PRINTLOG(TEXT("   Download URL: %s"), *JobStatus.DownloadUrl);
+
+		// 타이머 중지
+		if (UWorld* World = GetWorld())
+		{
+			World->GetTimerManager().ClearTimer(ModelStatusCheckTimer);
+			PRINTLOG(TEXT("⏹️ Status check timer stopped"));
+		}
+
+		// 다운로드 경로 설정 (Saved/DownloadedModels 폴더에 저장)
+		FString SaveDir = FPaths::ProjectSavedDir() / TEXT("DownloadedModels");
+		FString SavePath = SaveDir / FString::Printf(TEXT("Model_%d.glb"), JobStatus.ModelId);
+
+		PRINTLOG(TEXT("📥 Starting model download..."));
+		PRINTLOG(TEXT("   Save path: %s"), *SavePath);
+
+		// 다운로드 콜백 설정
+		FOnGenericApiComplete OnDownloadComplete;
+		OnDownloadComplete.BindUObject(this, &UMVE_AUD_CustomizationManager::OnModelDownloadComplete);
+
+		// 모델 다운로드 시작
+		UMVE_API_Helper::DownloadModel(JobStatus.ModelId, SavePath, OnDownloadComplete);
+	}
+	else if (JobStatus.Status.Equals(TEXT("failed"), ESearchCase::IgnoreCase))
+	{
+		PRINTLOG(TEXT("❌ Model generation failed"));
+		PRINTLOG(TEXT("   Error: %s"), *JobStatus.ErrorMessage);
+
+		// 타이머 중지
+		if (UWorld* World = GetWorld())
+		{
+			World->GetTimerManager().ClearTimer(ModelStatusCheckTimer);
+			PRINTLOG(TEXT("⏹️ Status check timer stopped"));
+		}
+	}
+	else if (JobStatus.Status.Equals(TEXT("pending"), ESearchCase::IgnoreCase) ||
+	         JobStatus.Status.Equals(TEXT("processing"), ESearchCase::IgnoreCase))
+	{
+		PRINTLOG(TEXT("⏳ Model is still being generated... (status: %s)"), *JobStatus.Status);
+		// 타이머가 계속 실행되어 다시 확인
+	}
+	else
+	{
+		PRINTLOG(TEXT("⚠️ Unknown status: %s"), *JobStatus.Status);
+	}
+}
+
+void UMVE_AUD_CustomizationManager::OnModelDownloadComplete(bool bSuccess, const FString& SavedPath)
+{
+	PRINTLOG(TEXT("=== OnModelDownloadComplete ==="));
+
+	if (bSuccess)
+	{
+		PRINTLOG(TEXT("✅ Model downloaded successfully!"));
+		PRINTLOG(TEXT("   File path: %s"), *SavedPath);
+
+		// 파일 존재 확인
+		if (FPaths::FileExists(SavedPath))
+		{
+			int64 FileSize = IFileManager::Get().FileSize(*SavedPath);
+			PRINTLOG(TEXT("   File size: %.2f MB"), FileSize / (1024.0f * 1024.0f));
+
+			// CurrentGLBFilePath에 저장 (다른 함수들에서 사용할 수 있도록)
+			CurrentGLBFilePath = SavedPath;
+
+			PRINTLOG(TEXT("🎉 Model is ready to use!"));
+			PRINTLOG(TEXT("   You can now call StartMeshPreview() to preview the model"));
+			
+			if (MeshPreviewWidget)
+			{
+			    StartMeshPreview(SavedPath, MeshPreviewWidget);
+			}
+		}
+		else
+		{
+			PRINTLOG(TEXT("⚠️ File exists check failed: %s"), *SavedPath);
+		}
+	}
+	else
+	{
+		PRINTLOG(TEXT("❌ Model download failed"));
+		PRINTLOG(TEXT("   Error: %s"), *SavedPath);  // SavedPath contains error message on failure
+	}
 }
 
 AActor* UMVE_AUD_CustomizationManager::GetPreviewCharacter() const
@@ -1003,68 +1020,80 @@ FCustomizationData UMVE_AUD_CustomizationManager::DeserializeCustomizationData(c
 	return Result;
 }
 
-void UMVE_AUD_CustomizationManager::SavePresetToServer(const FCustomizationData& Data)
+void UMVE_AUD_CustomizationManager::SaveAccessoryPresetToServer(const FString& PresetName)
 {
-	PRINTLOG(TEXT("=== Saving Preset to Server ==="));
-
-	//FOnSavePresetComplete OnResult;
-	//OnResult.Bind
-	//UMVE_API_Helper::SaveAccessoryPreset()
-	
-	// JSON 직렬화 (배열 형태)
-	FString PresetJSON = SerializeCustomizationData(Data);
-	PRINTLOG(TEXT("Preset JSON: %s"), *PresetJSON);
-	
-	// HTTP 요청 생성
-	FHttpModule* HttpModule = &FHttpModule::Get();
-	TSharedRef<IHttpRequest> HttpRequest = HttpModule->CreateRequest();
-	
-	// 요청 설정
-	HttpRequest->SetURL(TEXT("http://YOUR_SERVER_URL/api/presets"));
-	HttpRequest->SetVerb(TEXT("POST"));
-	HttpRequest->SetHeader(TEXT("Content-Type"), TEXT("application/json"));
-	
-	// Body는 배열만 전송
-	HttpRequest->SetContentAsString(PresetJSON);
-	
-	// 응답 콜백 바인딩
-	HttpRequest->OnProcessRequestComplete().BindUObject(
-		this, &UMVE_AUD_CustomizationManager::OnSavePresetResponse);
-	
-	// 요청 전송
-	if (HttpRequest->ProcessRequest())
-	{
-		PRINTLOG(TEXT("Preset save request sent"));
-	}
-	else
-	{
-		PRINTLOG(TEXT("Failed to send preset save request"));
-	}
+	PRINTLOG(TEXT("=== SaveAccessoryPresetToServer ==="));
+    
+    // 1. 저장된 커스터마이징 데이터 확인
+    if (SavedCustomization.ModelUrl.IsEmpty())
+    {
+        PRINTLOG(TEXT("⚠️ No customization data to save"));
+        return;
+    }
+    
+    PRINTLOG(TEXT("✅ Saved customization data found"));
+    PRINTLOG(TEXT("   Model URL: %s"), *SavedCustomization.ModelUrl);
+    PRINTLOG(TEXT("   Socket: %s"), *SavedCustomization.SocketName);
+    
+    // 2. Accessories 배열 생성 (API 형식)
+    TArray<TSharedPtr<FJsonValue>> AccessoriesArray;
+    
+    TSharedPtr<FJsonObject> AccessoryObject = MakeShareable(new FJsonObject);
+    AccessoryObject->SetStringField(TEXT("socketName"), SavedCustomization.SocketName);
+    
+    // RelativeLocation
+    TSharedPtr<FJsonObject> LocationObj = MakeShareable(new FJsonObject);
+    LocationObj->SetNumberField(TEXT("x"), SavedCustomization.RelativeLocation.X);
+    LocationObj->SetNumberField(TEXT("y"), SavedCustomization.RelativeLocation.Y);
+    LocationObj->SetNumberField(TEXT("z"), SavedCustomization.RelativeLocation.Z);
+    AccessoryObject->SetObjectField(TEXT("relativeLocation"), LocationObj);
+    
+    // RelativeRotation
+    TSharedPtr<FJsonObject> RotationObj = MakeShareable(new FJsonObject);
+    RotationObj->SetNumberField(TEXT("pitch"), SavedCustomization.RelativeRotation.Pitch);
+    RotationObj->SetNumberField(TEXT("yaw"), SavedCustomization.RelativeRotation.Yaw);
+    RotationObj->SetNumberField(TEXT("roll"), SavedCustomization.RelativeRotation.Roll);
+    AccessoryObject->SetObjectField(TEXT("relativeRotation"), RotationObj);
+    
+    // RelativeScale
+    AccessoryObject->SetNumberField(TEXT("relativeScale"), SavedCustomization.RelativeScale);
+    
+    // ModelUrl (PresignedURL)
+    AccessoryObject->SetStringField(TEXT("modelUrl"), SavedCustomization.ModelUrl);
+    
+    // 배열에 추가
+    AccessoriesArray.Add(MakeShareable(new FJsonValueObject(AccessoryObject)));
+    
+    PRINTLOG(TEXT("✅ Accessory data prepared for API"));
+    
+    // 3. API 호출 준비
+    FOnSavePresetComplete OnResult;
+    OnResult.BindUObject(this, &UMVE_AUD_CustomizationManager::HandleSavePresetComplete);
+    
+    // 4. ⭐ API Helper 호출
+    UMVE_API_Helper::SaveAccessoryPreset(
+        PresetName,              // PresetName
+        AccessoriesArray,        // Accessories (JSON 배열)
+        TEXT(""),                // Description (선택)
+        false,                   // bIsPublic (private)
+        OnResult                 // 콜백
+    );
+    
+    PRINTLOG(TEXT("✅ API call sent to save preset"));
 }
 
-void UMVE_AUD_CustomizationManager::OnSavePresetResponse(FHttpRequestPtr Request, FHttpResponsePtr Response,
-	bool bSucceeded)
+void UMVE_AUD_CustomizationManager::HandleSavePresetComplete(bool bSuccess, const FSavePresetResponseData& Data,
+	const FString& ErrorCode)
 {
-	if (!bSucceeded || !Response.IsValid())
+	if (bSuccess)
 	{
-		PRINTLOG(TEXT("❌ Failed to save preset to server"));
-		return;
-	}
-	
-	int32 ResponseCode = Response->GetResponseCode();
-	FString ResponseContent = Response->GetContentAsString();
-	
-	PRINTLOG(TEXT("=== Save Preset Response ==="));
-	PRINTLOG(TEXT("Response Code: %d"), ResponseCode);
-	PRINTLOG(TEXT("Response Body: %s"), *ResponseContent);
-	
-	if (ResponseCode == 200 || ResponseCode == 201)
-	{
-		PRINTLOG(TEXT("✅ Preset saved successfully"));
+		PRINTLOG(TEXT("✅ Preset saved successfully to server"));
+		PRINTLOG(TEXT("   Preset Description: %s"), *Data.Description);
+		PRINTLOG(TEXT("   Preset Name: %s"), *Data.PresetName);
 	}
 	else
 	{
-		PRINTLOG(TEXT("❌ Server error: %d - %s"), ResponseCode, *ResponseContent);
+		PRINTLOG(TEXT("❌ Failed to save preset: %s"), *ErrorCode);
 	}
 }
 
