@@ -1,7 +1,5 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
-
 #include "Test/AIGenerateRequestPollingWidget.h"
+
 #include "Components/TextBlock.h"
 #include "Components/Button.h"
 #include "TimerManager.h"
@@ -12,16 +10,6 @@
 void UAIGenerateRequestPollingWidget::NativeConstruct()
 {
     Super::NativeConstruct();
-
-    if (GetWorld())
-    {
-        ApiHelper = GetWorld()->GetGameInstance()->GetSubsystem<UMVE_API_Helper>();
-    }
-
-    if (!ApiHelper)
-    {
-        PRINTLOG(Error, TEXT("UAIGenerateRequestPollingWidget: UMVE_API_Helper subsystem not found!"));
-    }
     
     if (TestGenerateButton)
     {
@@ -43,34 +31,25 @@ void UAIGenerateRequestPollingWidget::NativeDestruct()
 
 void UAIGenerateRequestPollingWidget::StartModelGeneration(const FString& Prompt, const FString& ImagePath)
 {
-    if (!ApiHelper)
-    {
-        PRINTLOG(Error, TEXT("API Helper is not available."));
-        UpdateStatusText(TEXT("Error: API Helper not found."));
-        return;
-    }
-
-    UpdateStatusText(TEXT("Requesting model generation..."));
-
+    UpdateStatusText(TEXT("모델 생성 요청 중..."));
     FOnGenerateModelComplete OnResult;
     OnResult.BindUObject(this, &UAIGenerateRequestPollingWidget::OnModelGenerationRequested);
-    
-    ApiHelper->GenerateModel(Prompt, ImagePath, OnResult);
+    UMVE_API_Helper::GenerateModel(Prompt, ImagePath, OnResult);
 }
 
-void UAIGenerateRequestPollingWidget::OnModelGenerationRequested(bool bSuccess, FGenerateModelResponseData Response, const FString& Error)
+void UAIGenerateRequestPollingWidget::OnModelGenerationRequested(const bool bSuccess, const FGenerateModelResponseData& Response, const FString& Error)
 {
     if (bSuccess && Response.Success)
     {
         CurrentJobId = Response.JobId;
-        PRINTLOG(Log, TEXT("Model generation started. Job ID: %s"), *CurrentJobId);
+        PRINTLOG(TEXT("Model generation started. Job ID: %s"), *CurrentJobId);
         UpdateStatusText(FString::Printf(TEXT("Generation request sent. Job ID: %s"), *CurrentJobId));
         StartPollingStatus();
     }
     else
     {
         const FString ErrorMessage = FString::Printf(TEXT("Error starting generation: %s"), *Error);
-        PRINTLOG(Error, TEXT("%s"), *ErrorMessage);
+        PRINTLOG(TEXT("%s"), *ErrorMessage);
         UpdateStatusText(ErrorMessage);
         CurrentJobId.Empty();
     }
@@ -96,48 +75,30 @@ void UAIGenerateRequestPollingWidget::StartPollingStatus()
 
 void UAIGenerateRequestPollingWidget::PollStatus()
 {
-    if (!ApiHelper)
-    {
-        PRINTLOG(Error, TEXT("API Helper is not available."));
-        UpdateStatusText(TEXT("Error: API Helper not found."));
-        if (GetWorld()) GetWorld()->GetTimerManager().ClearTimer(PollingTimerHandle);
-        return;
-    }
-
     if (CurrentJobId.IsEmpty())
     {
-        PRINTLOG(Warning, TEXT("Attempted to poll status with an empty Job ID."));
+        PRINTLOG(TEXT("Attempted to poll status with an empty Job ID."));
         if (GetWorld()) GetWorld()->GetTimerManager().ClearTimer(PollingTimerHandle);
         return;
     }
     
-    PRINTLOG(Log, TEXT("Polling status for Job ID: %s"), *CurrentJobId);
+    PRINTLOG(TEXT("Polling status for Job ID: %s"), *CurrentJobId);
     UpdateStatusText(FString::Printf(TEXT("Polling status for Job ID: %s..."), *CurrentJobId));
     
     FOnGetJobStatusComplete OnResult;
     OnResult.BindUObject(this, &UAIGenerateRequestPollingWidget::OnStatusPolled);
     
-    ApiHelper->GetModelGenerationStatus(CurrentJobId, OnResult);
+    UMVE_API_Helper::GetModelGenerationStatus(CurrentJobId, OnResult);
 }
 
-void UAIGenerateRequestPollingWidget::OnStatusPolled(bool bSuccess, FGetJobStatusResponseData Response, const FString& Error)
+void UAIGenerateRequestPollingWidget::OnStatusPolled(const bool bSuccess, const FGetJobStatusResponseData& Response, const FString& Error)
 {
     if (bSuccess && Response.Success)
     {
-        CurrentStatus = Response.Status;
-        FString StatusMessage;
-
-        if (CurrentStatus.Equals(TEXT("processing"), ESearchCase::IgnoreCase))
-        {
-            StatusMessage = FString::Printf(TEXT("Status: %s (%.0f%%)"), *CurrentStatus, Response.Progress);
-        }
-        else
-        {
-            StatusMessage = FString::Printf(TEXT("Status: %s"), *CurrentStatus);
-        }
-        
+        CurrentStatus = Response.Data.Status;
+        const FString StatusMessage = FString::Printf(TEXT("Status: %s"), *CurrentStatus);
         UpdateStatusText(StatusMessage);
-        PRINTLOG(Log, TEXT("Job %s status: %s"), *CurrentJobId, *StatusMessage);
+        PRINTLOG(TEXT("Job %s status: %s"), *CurrentJobId, *StatusMessage);
 
         // Stop polling if the job is completed or has failed
         if (CurrentStatus.Equals(TEXT("completed"), ESearchCase::IgnoreCase) || CurrentStatus.Equals(TEXT("failed"), ESearchCase::IgnoreCase))
@@ -146,11 +107,11 @@ void UAIGenerateRequestPollingWidget::OnStatusPolled(bool bSuccess, FGetJobStatu
             
             if(CurrentStatus.Equals(TEXT("completed"), ESearchCase::IgnoreCase))
             {
-                UpdateStatusText(FString::Printf(TEXT("Generation complete! Model URL: %s"), *Response.ModelUrl));
+                UpdateStatusText(FString::Printf(TEXT("Generation complete! Model URL: %s"), *Response.Data.DownloadUrl));
             }
             else // failed
             {
-                 UpdateStatusText(FString::Printf(TEXT("Generation failed. Reason: %s"), *Response.Error));
+                 UpdateStatusText(FString::Printf(TEXT("Generation failed. Reason: %s"), *Response.Code));
             }
             CurrentJobId.Empty();
         }
@@ -158,15 +119,18 @@ void UAIGenerateRequestPollingWidget::OnStatusPolled(bool bSuccess, FGetJobStatu
     else
     {
         const FString ErrorMessage = FString::Printf(TEXT("Error polling status: %s"), *Error);
-        PRINTLOG(Error, TEXT("%s"), *ErrorMessage);
+        PRINTLOG(TEXT("%s"), *ErrorMessage);
         UpdateStatusText(ErrorMessage);
         // Stop polling on error
-        if (GetWorld()) GetWorld()->GetTimerManager().ClearTimer(PollingTimerHandle);
+        if (GetWorld())
+        {
+            GetWorld()->GetTimerManager().ClearTimer(PollingTimerHandle);
+        }
         CurrentJobId.Empty();
     }
 }
 
-void UAIGenerateRequestPollingWidget::UpdateStatusText(const FString& InStatus)
+void UAIGenerateRequestPollingWidget::UpdateStatusText(const FString& InStatus) const
 {
     if (StatusTextBlock)
     {
@@ -176,9 +140,9 @@ void UAIGenerateRequestPollingWidget::UpdateStatusText(const FString& InStatus)
 
 void UAIGenerateRequestPollingWidget::OnTestGenerateButtonClicked()
 {
-    if (!CurrentJobId.IsEmpty())
+    if (CurrentJobId.IsEmpty() == false)
     {
-        PRINTLOG(Warning, TEXT("A generation job is already in progress."));
+        PRINTLOG(TEXT("A generation job is already in progress."));
         return;
     }
     // For testing purposes, we can use a hardcoded prompt and no image.

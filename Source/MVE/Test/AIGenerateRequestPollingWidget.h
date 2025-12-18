@@ -25,14 +25,14 @@ protected:
     virtual void NativeDestruct() override;
 
 private:
-    void OnModelGenerationRequested(bool bSuccess, FGenerateModelResponseData Response, const FString& Error);
+    void OnModelGenerationRequested(const bool bSuccess, const FGenerateModelResponseData& Response, const FString& Error);
     
     void StartPollingStatus();
     void PollStatus();
     
-    void OnStatusPolled(bool bSuccess, FGetJobStatusResponseData Response, const FString& Error);
+    void OnStatusPolled(const bool bSuccess, const FGetJobStatusResponseData& Response, const FString& Error);
 
-    void UpdateStatusText(const FString& InStatus);
+    void UpdateStatusText(const FString& InStatus) const;
 
     // Bind this to a TextBlock widget in your UMG Designer to see the status.
     UPROPERTY(meta = (BindWidget))
@@ -53,7 +53,4 @@ private:
     // This property can be set from the Blueprint editor to configure the polling interval.
     UPROPERTY(EditAnywhere, Category = "AI Generate", meta=(ClampMin="1.0", UIMin="1.0"))
     float PollingInterval = 5.0f;
-
-    UPROPERTY()
-    TObjectPtr<UMVE_API_Helper> ApiHelper;
 };

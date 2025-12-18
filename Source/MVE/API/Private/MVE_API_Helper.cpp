@@ -757,9 +757,9 @@ void UMVE_API_Helper::GenerateModel(const FString& Prompt, const FString& ImageP
     FormFields.Add(TEXT("prompt"), Prompt);
     TArray<uint8> FileData;
     FString FileName;
-    if (!ImagePath.IsEmpty())
+    if (ImagePath.IsEmpty() == false)
     {
-        if (!FFileHelper::LoadFileToArray(FileData, *ImagePath))
+        if (FFileHelper::LoadFileToArray(FileData, *ImagePath) == false)
         {
             OnResult.ExecuteIfBound(false, FGenerateModelResponseData(), TEXT("FILE_READ_ERROR"));
             return;

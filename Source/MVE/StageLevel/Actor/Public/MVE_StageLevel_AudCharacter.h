@@ -24,14 +24,16 @@ enum class EAudienceControlMode : uint8
  	Default = 0 UMETA(DisplayName="기본"),
 	// 조준 상태. 캐릭터가 카메라 방향을 따라 회전, 에임 오프셋 사용                  
 	Throw = 1 UMETA(DisplayName="던지기"),
-	// 사진 촬영 상태. 조준 상태와 동일
+	// 사진 상태. 캐릭터가 카메라 방향을 따라 회전, 에임 오프셋 사용
 	Photo = 2 UMETA(DisplayName="사진"),
 	// 환호 상태. 캐릭터가 카메라 방향을 따라 회전
 	Cheer = 3 UMETA(DisplayName="환호"),
-	// 응원봉 흔들기 상태. 환호 상태와 동일
+	// 응원 상태. 캐릭터가 카메라 방향을 따라 회전
 	WaveLightStick = 4 UMETA(DisplayName="응원"),
+	// 박수 상태. 캐릭터가 카메라 방향을 따라 회전
+	Clap = 5 UMETA(DisplayName="박수"),
 	// 모드 선택 위젯이 활성화된 상태. 모든 입력이 중지됨
-	WidgetSelection = 5 UMETA(DisplayName="위젯 선택"),
+	WidgetSelection = 6 UMETA(DisplayName="위젯 선택"),
 };
 
 USTRUCT(BlueprintType)
@@ -95,12 +97,21 @@ public:
 	AMVE_StageLevel_AudCamera* GetAudCamera() const;
 	
 #pragma region 던지기 액션 관련 함수 & RPC 선언
+
+	UPROPERTY(EditDefaultsOnly, Category="Throw")
+	TSubclassOf<class AMVE_ThrowObject> ThrowObjectClass;
+
+	UPROPERTY(EditDefaultsOnly, Category="Throw")
+	float ThrowSpeed = 3000.f;
 	
 	UFUNCTION(Server, Reliable)
 	void Server_ExecuteThrow();
 	
 	UFUNCTION(NetMulticast, Reliable)
 	void Multicast_ExecuteThrow();
+
+	UFUNCTION()
+	void ThrowObject();
 	
 #pragma endregion
 	
@@ -133,6 +144,16 @@ public:
 	void Multicast_ExecuteSwingLightStick();
 	
 #pragma endregion
+	
+#pragma region 박수 액션 관련 함수 & RPC 선언
+	
+	UFUNCTION(Server, Reliable)
+	void Server_ExecuteClap();
+	
+	UFUNCTION(NetMulticast, Reliable)
+	void Multicast_ExecuteClap();
+	
+#pragma endregion 
 
 private:
 	// 플레이어 컨트롤러
@@ -150,26 +171,20 @@ private:
 	// IA_Look : 화면 전환
 	UFUNCTION()
 	void OnInputActionLookTriggered(const FInputActionValue& Value);
-	
 	// IA_Aim : 조준 시작
 	UFUNCTION()
 	void OnInputActionAimStarted(const FInputActionValue& Value);
-	
 	// IA_Aim : 조준 종료
 	UFUNCTION()
 	void OnInputActionAimCompleted(const FInputActionValue& Value);
-	
 	// IA_Execute : 실행 개시
 	UFUNCTION()
 	void OnInputActionExecuteStarted(const FInputActionValue& Value);
-	
 	// IA_SwitchAudienceMode : 래디얼 메뉴 표시
 	UFUNCTION()
 	void OnInputActionSwitchAudienceModeStarted();
-	
 	// IA_SwitchAudienceMode : 래디얼 메뉴 선택 확정
 	void OnInputActionSwitchAudienceModeCompleted();
-	
 	// 카메라 전환 타임라인의 업데이트
 	UFUNCTION()
 	void UpdateCameraTimeline(float Alpha) const;
@@ -273,21 +288,18 @@ private:
 	FMVE_StageLevel_AudCharacterCameraPosition CheerActionCameraPosition;
 	UPROPERTY(VisibleAnywhere, Category = "MVE|Control", meta = (AllowPrivateAccess = "true"))
 	FMVE_StageLevel_AudCharacterCameraPosition WaveLightStickActionCameraPosition;
+	UPROPERTY(VisibleAnywhere, Category = "MVE|Control", meta = (AllowPrivateAccess = "true"))
+	FMVE_StageLevel_AudCharacterCameraPosition ClapActionCameraPosition;
 	
 #pragma endregion
 	
-	
-	
-	// 상호작용 오브젝트 제어
 	UPROPERTY(VisibleAnywhere, Category = "MVE|Objects", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<AMVE_StageLevel_AudObject> CurrentAudObject;
 	UPROPERTY(VisibleAnywhere, Category = "MVE|Objects", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UChildActorComponent> AudCameraChildActorComp;
 	UPROPERTY(VisibleAnywhere, Category = "MVE|Objects", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UChildActorComponent> AudLightStickChildActorComp;
-	
-	
-	
+
 #pragma region 상호작용 애니메이션 & VFX & SFX
 	
 	UPROPERTY(EditAnywhere, Category = "MVE|Interactions", meta = (AllowPrivateAccess = "true"))
@@ -297,9 +309,9 @@ private:
 	UPROPERTY(EditAnywhere, Category = "MVE|Interactions", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UAnimMontage> AudWaveLightStickAnimMontage;
 	UPROPERTY(EditAnywhere, Category = "MVE|Interactions", meta = (AllowPrivateAccess = "true"))
-	TObjectPtr<USoundBase> AudCheerUpSound;
+	TObjectPtr<UAnimMontage> AudClapAnimMontage;
 	UPROPERTY(EditAnywhere, Category = "MVE|Interactions", meta = (AllowPrivateAccess = "true"))
-	TObjectPtr<USoundBase> AudWaveLightStickSound;
+	TObjectPtr<USoundBase> AudCheerUpSound;
 	
 #pragma endregion
 };

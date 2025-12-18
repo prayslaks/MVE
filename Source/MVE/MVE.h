@@ -46,7 +46,13 @@ FORCEINLINE FString GetNetModeString(const UObject* WorldContextObject)
 
 // 호출 위치가 포함된 포매팅
 #define PRINTLOG(fmt, ...) \
+UE_LOG(LogMVE, Log, TEXT("%s : %s"), *CALLINFO, *FString::Printf(fmt, ##__VA_ARGS__))
+
+#define PRINTWARNING(fmt, ...) \
 UE_LOG(LogMVE, Warning, TEXT("%s : %s"), *CALLINFO, *FString::Printf(fmt, ##__VA_ARGS__))
+
+#define PRINTERROR(fmt, ...) \
+UE_LOG(LogMVE, Error, TEXT("%s : %s"), *CALLINFO, *FString::Printf(fmt, ##__VA_ARGS__))
 
 #define SESSIONPRINTLOG(fmt, ...) \
 UE_LOG(SessionLogMVE, Warning, TEXT("%s : %s"), *CALLINFO, *FString::Printf(fmt, ##__VA_ARGS__))

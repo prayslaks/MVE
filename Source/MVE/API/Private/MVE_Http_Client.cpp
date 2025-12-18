@@ -90,7 +90,7 @@ void FMVE_HTTP_Client::SendDeleteRequest(const FString& URL, const FString& Json
 void FMVE_HTTP_Client::SendMultipartRequest(const FString& URL, const FString& FileFieldName, const TArray<uint8>& FileData, const FString& FileName,
     const TMap<FString, FString>& FormFields, const FString& AuthToken, FOnHttpResponse OnComplete)
 {
-    FString Boundary = FString::Printf(TEXT("----UnrealBoundary%d"), FMath::RandRange(100000, 999999));
+    const FString Boundary = FString::Printf(TEXT("----UnrealBoundary%d"), FMath::RandRange(100000, 999999));
 
     TArray<uint8> CombinedContent;
     
