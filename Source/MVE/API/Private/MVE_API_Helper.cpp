@@ -360,41 +360,20 @@ void UMVE_API_Helper::GetProfile(const FOnGetProfileComplete& OnResult)
 
 // 리소스 서버 관련 API
 void UMVE_API_Helper::SaveAccessoryPreset(const FString& PresetName, const TArray<TSharedPtr<FJsonValue>>& Accessories, const FString& Description, const bool bIsPublic, const FOnSavePresetComplete& OnResult)
-
 {
-
     const FString URL = FString::Printf(TEXT("%s/api/presets/save"), *ResourceServerURL);
-
-    
-
     TSharedPtr<FJsonObject> JsonObject = MakeShareable(new FJsonObject);
-
     JsonObject->SetStringField(TEXT("presetName"), PresetName);
-
     JsonObject->SetArrayField(TEXT("accessories"), Accessories);
-
     if (!Description.IsEmpty())
-
     {
-
         JsonObject->SetStringField(TEXT("description"), Description);
-
     }
-
     JsonObject->SetBoolField(TEXT("isPublic"), bIsPublic);
-
-    
-
     FString JsonBody;
-
     TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&JsonBody);
-
     FJsonSerializer::Serialize(JsonObject.ToSharedRef(), Writer);
-
-
-
     FMVE_HTTP_Client::SendPostRequest(URL, JsonBody, GlobalAuthToken, HANDLE_RESPONSE_STRUCT(FSavePresetResponseData, OnResult));
-
 }
 
 void UMVE_API_Helper::GetPresetList(const bool bIncludePublic, const FOnGetPresetListComplete& OnResult)
@@ -795,71 +774,79 @@ void UMVE_API_Helper::UploadModel(const FString& ModelPath, const FString& Thumb
     FMVE_HTTP_Client::SendMultipartRequest(URL, TEXT("model"), ModelData, FileName, FormFields, GlobalAuthToken, HANDLE_RESPONSE_STRUCT(FUploadModelResponseData, OnResult));
 }
 
-void UMVE_API_Helper::DownloadModel(int32 ModelId, const FString& SavePath, const FOnGenericApiComplete& OnResult)
+// 경고 : 이거 안씀
+// void UMVE_API_Helper::DownloadModel(int32 ModelId, const FString& SavePath, const FOnGenericApiComplete& OnResult)
+// {
+//     const FString URL = FString::Printf(TEXT("%s/api/models/%d/download"), *ResourceServerURL, ModelId);
+//     auto HandleDownloadResponse = FOnHttpDownloadResult::CreateLambda([SavePath, ModelId, OnResult](bool bSuccess, const TArray<uint8>& FileData, const FString& ErrorMessage)
+//
+//     {
+//
+//         PRINTLOG(TEXT("Download Response: Success=%d, ErrorMessage=%s"), bSuccess, *ErrorMessage);
+//
+//         if (bSuccess && FileData.Num() > 0)
+//
+//         {
+//
+//             FString FinalPath = SavePath;
+//
+//             if (FinalPath.IsEmpty())
+//
+//             {
+//
+//                 FinalPath = FPaths::ProjectSavedDir() / TEXT("DownloadedModels");
+//
+//                 IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
+//
+//                 if (!PlatformFile.DirectoryExists(*FinalPath))
+//
+//                 {
+//
+//                     PlatformFile.CreateDirectoryTree(*FinalPath);
+//
+//                 }
+//
+//                 FinalPath /= FString::Printf(TEXT("Model_%d.glb"), ModelId);
+//
+//             }
+//
+//
+//
+//             if (FFileHelper::SaveArrayToFile(FileData, *FinalPath))
+//
+//             {
+//
+//                 OnResult.ExecuteIfBound(true, FinalPath);
+//
+//             }
+//
+//             else
+//
+//             {
+//
+//                 OnResult.ExecuteIfBound(false, TEXT("FILE_SAVE_ERROR"));
+//
+//             }
+//
+//         }
+//
+//         else
+//
+//         {
+//             FString ErrorCode, _;
+//             UMVE_API_Helper::ParseError(ErrorMessage, ErrorCode, _);
+//             OnResult.ExecuteIfBound(false, ErrorCode);
+//         }
+//
+//     });
+//     FMVE_HTTP_Client::DownloadFile(URL, GlobalAuthToken, HandleDownloadResponse);
+// }
+
+// 이거를 써요
+void UMVE_API_Helper::GetModelDownloadUrl(const int32 ModelId, const FOnGetModelDownloadUrlComplete& OnResult)
 {
-    const FString URL = FString::Printf(TEXT("%s/api/models/%d/download"), *ResourceServerURL, ModelId);
-    auto HandleDownloadResponse = FOnHttpDownloadResult::CreateLambda([SavePath, ModelId, OnResult](bool bSuccess, const TArray<uint8>& FileData, const FString& ErrorMessage)
-
-    {
-
-        PRINTLOG(TEXT("Download Response: Success=%d, ErrorMessage=%s"), bSuccess, *ErrorMessage);
-
-        if (bSuccess && FileData.Num() > 0)
-
-        {
-
-            FString FinalPath = SavePath;
-
-            if (FinalPath.IsEmpty())
-
-            {
-
-                FinalPath = FPaths::ProjectSavedDir() / TEXT("DownloadedModels");
-
-                IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
-
-                if (!PlatformFile.DirectoryExists(*FinalPath))
-
-                {
-
-                    PlatformFile.CreateDirectoryTree(*FinalPath);
-
-                }
-
-                FinalPath /= FString::Printf(TEXT("Model_%d.glb"), ModelId);
-
-            }
-
-
-
-            if (FFileHelper::SaveArrayToFile(FileData, *FinalPath))
-
-            {
-
-                OnResult.ExecuteIfBound(true, FinalPath);
-
-            }
-
-            else
-
-            {
-
-                OnResult.ExecuteIfBound(false, TEXT("FILE_SAVE_ERROR"));
-
-            }
-
-        }
-
-        else
-
-        {
-            FString ErrorCode, _;
-            UMVE_API_Helper::ParseError(ErrorMessage, ErrorCode, _);
-            OnResult.ExecuteIfBound(false, ErrorCode);
-        }
-
-    });
-    FMVE_HTTP_Client::DownloadFile(URL, GlobalAuthToken, HandleDownloadResponse);
+    const FString URL = FString::Printf(TEXT("%s/api/models/%d/download-url"), *ResourceServerURL, ModelId);
+    FMVE_HTTP_Client::SendGetRequest(URL, GlobalAuthToken, HANDLE_RESPONSE_STRUCT(FGetModelDownloadUrlResponseData, OnResult));
 }
 
 void UMVE_API_Helper::DeleteModel(const int32 ModelId, const FOnDeleteModelComplete& OnResult)
@@ -1086,6 +1073,12 @@ void UMVE_API_Helper::DownloadModelBP(UObject* WorldContextObject, const int32 M
 {
     WRAP_DELEGATE(OnGenericApiComplete, OnResultBP);
     DownloadModel(ModelId, SavePath, OnResult);
+}
+
+void UMVE_API_Helper::GetModelDownloadUrlBP(UObject* WorldContextObject, const int32 ModelId, const FOnGetModelDownloadUrlCompleteBP& OnResultBP)
+{
+    WRAP_DELEGATE(OnGetModelDownloadUrlComplete, OnResultBP);
+    GetModelDownloadUrl(ModelId, OnResult);
 }
 
 void UMVE_API_Helper::DeleteModelBP(UObject* WorldContextObject, const int32 ModelId, const FOnDeleteModelCompleteBP& OnResultBP)

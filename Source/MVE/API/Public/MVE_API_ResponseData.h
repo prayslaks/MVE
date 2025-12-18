@@ -560,6 +560,24 @@ struct FDeleteModelResponseData
 DECLARE_DELEGATE_ThreeParams(FOnDeleteModelComplete, bool, const FDeleteModelResponseData&, const FString&);
 DECLARE_DYNAMIC_DELEGATE_ThreeParams(FOnDeleteModelCompleteBP, bool, bSuccess, const FDeleteModelResponseData&, ResponseData, const FString&, ErrorCode);
 
+/**
+ * @MveApiResponse GET /api/models/{modelId}/download-url
+ */
+USTRUCT(BlueprintType)
+struct FGetModelDownloadUrlResponseData
+{
+    GENERATED_BODY()
+    MVE_API_RESPONSE_BASE()
+    UPROPERTY(BlueprintReadOnly, Category="MVE|API Response")
+    FString Url;
+    UPROPERTY(BlueprintReadOnly, Category="MVE|API Response")
+    FString StorageType;
+    UPROPERTY(BlueprintReadOnly, Category="MVE|API Response")
+    int32 ExpiresIn = 0;
+};
+DECLARE_DELEGATE_ThreeParams(FOnGetModelDownloadUrlComplete, bool, const FGetModelDownloadUrlResponseData&, const FString&);
+DECLARE_DYNAMIC_DELEGATE_ThreeParams(FOnGetModelDownloadUrlCompleteBP, bool, bSuccess, const FGetModelDownloadUrlResponseData&, ResponseData, const FString&, ErrorCode);
+
 /*
  *********************************************************************************
  * [스키마 전용] 데이터 없는 기본 응답 구조체
