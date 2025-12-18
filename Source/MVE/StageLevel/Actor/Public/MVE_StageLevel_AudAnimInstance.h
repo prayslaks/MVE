@@ -41,4 +41,7 @@ protected:
 	
 	UFUNCTION()
 	void AnimNotify_EndExecute() const;
+	
+	UFUNCTION()
+	void AnimNotify_OnThrow() const;
 };

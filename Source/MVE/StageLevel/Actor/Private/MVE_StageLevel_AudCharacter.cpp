@@ -12,9 +12,11 @@
 #include "StageLevel/Actor/Public/MVE_StageLevel_AudCharacterShooterComponent.h"
 #include "StageLevel/Default/Public/MVE_PC_StageLevel.h"
 #include "Curves/CurveFloat.h"
+#include "GameFramework/ProjectileMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "Net/UnrealNetwork.h"
 #include "StageLevel/Actor/Public/MVE_StageLevel_AudCamera.h"
+#include "StageLevel/Actor/Public/MVE_ThrowObject.h"
 
 AMVE_StageLevel_AudCharacter::AMVE_StageLevel_AudCharacter()
 {
@@ -115,7 +117,7 @@ void AMVE_StageLevel_AudCharacter::SetupPlayerInputComponent(UInputComponent* Pl
 	}
 }
 
-void AMVE_StageLevel_AudCharacter::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
+void AMVE_StageLevel_AudCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	DOREPLIFETIME(AMVE_StageLevel_AudCharacter, bIsAiming);
@@ -329,6 +331,15 @@ void AMVE_StageLevel_AudCharacter::OnRep_ControlMode()
 			CameraMode2();
 			break;
 		}
+	case EAudienceControlMode::Clap:
+		{
+			// 카메라 보간 위치
+			CameraInterpStartPosition.Copy(SpringArm);
+			CameraInterpEndPosition = ClapActionCameraPosition;
+			SetAudObject(nullptr, TEXT("오디언스 오브젝트 해제!"));
+			CameraMode2();
+			break;
+		}
 	case EAudienceControlMode::Default:
 		{
 			// 카메라 보간 위치
@@ -443,6 +454,37 @@ void AMVE_StageLevel_AudCharacter::Multicast_ExecuteThrow_Implementation()
 	PlayAnimMontage(AudThrowAnimMontage);	
 }
 
+void AMVE_StageLevel_AudCharacter::ThrowObject()
+{
+	if (ThrowObjectClass)
+	{
+		const FVector HandLocation = GetMesh()->GetSocketLocation(TEXT("HandGrip_R"));
+		// 던지는 방향은 카메라가 바라보는 방향으로
+		const FRotator ThrowRotation = GetControlRotation();
+		
+		FActorSpawnParameters SpawnParams;
+		SpawnParams.Owner = this;
+		SpawnParams.Instigator = GetInstigator();
+		SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+		
+		if (AMVE_ThrowObject* SpawnedObject = GetWorld()->SpawnActor<AMVE_ThrowObject>(ThrowObjectClass, HandLocation, ThrowRotation, SpawnParams))
+		{
+			// 초기 속도 설정
+			if (auto* ProjectileComp = SpawnedObject->FindComponentByClass<UProjectileMovementComponent>())
+			{
+				
+				ProjectileComp->InitialSpeed = ThrowSpeed;
+				ProjectileComp->MaxSpeed = ThrowSpeed;
+			}
+			
+			// 발사
+			const FVector LaunchDirection = ThrowRotation.Vector();
+			SpawnedObject->FireInDirection(LaunchDirection);
+		}
+	}
+}
+
+
 #pragma endregion
 
 #pragma region 환호 액션 관련 함수 & RPC 구현
@@ -474,7 +516,22 @@ void AMVE_StageLevel_AudCharacter::Server_ExecuteSwingLightStick_Implementation(
 void AMVE_StageLevel_AudCharacter::Multicast_ExecuteSwingLightStick_Implementation()
 {
 	PlayAnimMontage(AudWaveLightStickAnimMontage);
-	UGameplayStatics::PlaySoundAtLocation(GetWorld(), AudWaveLightStickSound, GetActorLocation());
+}
+
+#pragma endregion
+
+#pragma region 박수 액션 관련 함수 & RPC 구현
+
+void AMVE_StageLevel_AudCharacter::Server_ExecuteClap_Implementation()
+{
+	//조건 확인
+	
+	Multicast_ExecuteClap();
+}
+
+void AMVE_StageLevel_AudCharacter::Multicast_ExecuteClap_Implementation()
+{
+	PlayAnimMontage(AudClapAnimMontage);
 }
 
 #pragma endregion
@@ -501,9 +558,12 @@ void AMVE_StageLevel_AudCharacter::OnInputActionExecuteStarted(const FInputActio
 	case EAudienceControlMode::Throw:
 		{
 			PRINTNETLOG(this, TEXT("던지기 입력 액션!"))
-			const float Length = AudThrowAnimMontage->GetPlayLength();
-			Server_ActiveExecuteTimer(Length + Delay);
-			Server_ExecuteThrow();
+			if(AudThrowAnimMontage)
+			{
+				const float Length = AudThrowAnimMontage->GetPlayLength();
+				Server_ActiveExecuteTimer(Length + Delay);
+				Server_ExecuteThrow();
+			}
 			break;
 		}
 	case EAudienceControlMode::Photo:
@@ -516,17 +576,34 @@ void AMVE_StageLevel_AudCharacter::OnInputActionExecuteStarted(const FInputActio
 	case EAudienceControlMode::Cheer:
 		{
 			PRINTNETLOG(this, TEXT("환호 입력 액션!"));
-			const float Length = AudCheerUpAnimMontage->GetPlayLength();
-			Server_ActiveExecuteTimer(Length + Delay);
-			Server_ExecuteCheerUp();
+			if(AudCheerUpAnimMontage)
+			{
+				const float Length = AudCheerUpAnimMontage->GetPlayLength();
+				Server_ActiveExecuteTimer(Length + Delay);
+				Server_ExecuteCheerUp();
+			}
 			break;
 		}
 	case EAudienceControlMode::WaveLightStick:
 		{
 			PRINTNETLOG(this, TEXT("응원 입력 액션"));
-			const float Length = AudWaveLightStickAnimMontage->GetPlayLength();
-			Server_ActiveExecuteTimer(Length + Delay);
-			Server_ExecuteSwingLightStick();
+			if(AudWaveLightStickAnimMontage)
+			{
+				const float Length = AudWaveLightStickAnimMontage->GetPlayLength();
+				Server_ActiveExecuteTimer(Length + Delay);
+				Server_ExecuteSwingLightStick();
+			}
+			break;
+		}
+	case EAudienceControlMode::Clap:
+		{
+			PRINTNETLOG(this, TEXT("박수 입력 액션"));
+			if(AudClapAnimMontage)
+			{
+				const float Length = AudClapAnimMontage->GetPlayLength();
+				Server_ActiveExecuteTimer(Length + Delay);
+				Server_ExecuteClap();
+			}
 			break;
 		}
 	case EAudienceControlMode::Default:
@@ -576,6 +653,3 @@ void AMVE_StageLevel_AudCharacter::Server_SetUseControllerRotationYaw_Implementa
 {
 	bUseControllerRotationYaw = Value;
 }
-
-
-
