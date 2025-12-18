@@ -186,6 +186,11 @@ private:
 	 */
 
 public:
+
+	// 프리셋 로드 완료 델리게이트
+	DECLARE_DELEGATE_OneParam(FOnPresetLoaded, const FCustomizationData&);
+	FOnPresetLoaded OnPresetLoadedDelegate;
+	
 	// JSON 직렬화/역직렬화
 	UFUNCTION(BlueprintCallable, Category = "Customization")
 	FString SerializeCustomizationData(const FCustomizationData& Data) const;
@@ -195,18 +200,19 @@ public:
 	
 	// 중계서버에 프리셋 저장
 	UFUNCTION(BlueprintCallable, Category = "Customization")
-	void SavePresetToServer(const FString& UserID, const FCustomizationData& Data);
-	
-	// 중계서버에서 프리셋 로드
-	UFUNCTION(BlueprintCallable, Category = "Customization")
-	void LoadPresetFromServer(const FString& UserID);
+	void SavePresetToServer(const FCustomizationData& Data);
 
 private:
 	// HTTP 응답 콜백
 	void OnSavePresetResponse(FHttpRequestPtr Request, FHttpResponsePtr Response, bool bSucceeded);
 	void OnLoadPresetResponse(FHttpRequestPtr Request, FHttpResponsePtr Response, bool bSucceeded);
+
+public:
+	UFUNCTION(BlueprintCallable, Category = "Customization")
+	void SetRemoteModelUrl(const FString& RemoteUrl);
+    
+private:
+	FString CurrentRemoteURL;        // PresignedURL (네트워크 동기화용)
 	
-	// 프리셋 로드 완료 델리게이트
-	DECLARE_DELEGATE_OneParam(FOnPresetLoaded, const FCustomizationData&);
-	FOnPresetLoaded OnPresetLoadedDelegate;
+	
 };

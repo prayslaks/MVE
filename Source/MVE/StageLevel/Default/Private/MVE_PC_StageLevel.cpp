@@ -15,7 +15,11 @@
 #include "StageLevel/Default/Public/MVE_StageLevel_ChatManager.h"
 #include "EngineUtils.h"
 #include "MVE_API_Helper.h"
+#include "MVE_AUD_CustomizationManager.h"
+#include "MVE_GM_StageLevel.h"
 #include "GameFramework/PlayerState.h"
+
+class UMVE_AUD_CustomizationManager;
 
 AMVE_PC_StageLevel::AMVE_PC_StageLevel()
 {
@@ -24,6 +28,25 @@ AMVE_PC_StageLevel::AMVE_PC_StageLevel()
 
 	// 스튜디오(Studio) 역할을 수행하는 플레이어의 기능을 처리하는 컴포넌트입니다.
 	StdComponent = CreateDefaultSubobject<UMVE_PC_StageLevel_StudioComponent>(TEXT("StdComponent"));
+}
+
+void AMVE_PC_StageLevel::BeginPlay()
+{
+	Super::BeginPlay();
+
+	// 로컬 플레이어 컨트롤러
+	if (!IsLocalController()) return;
+
+	// 유저 정보가 저장이 완료되면 호출할 콜백 함수 바인딩
+	OnSetUserInfoFinished.BindUObject(this, &AMVE_PC_StageLevel::Initialize);
+
+	// 위젯 생성
+	CreateWidgets();
+
+	// 유저 정보 저장
+	FOnGetProfileComplete OnGetProfileComplete;
+	OnGetProfileComplete.BindUObject(this, &AMVE_PC_StageLevel::SetUserInfo);
+	UMVE_API_Helper::GetProfile(OnGetProfileComplete);
 }
 
 void AMVE_PC_StageLevel::SetUserInfo(bool bSuccess, const FProfileResponseData& Data, const FString& ErrorCode)
@@ -54,6 +77,9 @@ void AMVE_PC_StageLevel::SetUserInfo(bool bSuccess, const FProfileResponseData& 
 	// 서버에 PlayerName 설정 요청 (Server RPC)
 	ServerSetPlayerName(UserName);
 	PRINTNETLOG(this, TEXT("Requesting server to set PlayerName: %s"), *UserName);
+
+	// 브로드캐스트
+	OnSetUserInfoFinished.ExecuteIfBound();
 }
 
 UAudioComponent* AMVE_PC_StageLevel::GetAudioComponent() const
@@ -89,20 +115,34 @@ void AMVE_PC_StageLevel::SetupChatUI(UMVE_WC_Chat* InWidget)
 	}
 }
 
-void AMVE_PC_StageLevel::BeginPlay()
+void AMVE_PC_StageLevel::Initialize()
 {
-	Super::BeginPlay();
+	// CustomizationManager 가져오기
+	UMVE_AUD_CustomizationManager* CustomizationManager = GetGameInstance()->GetSubsystem<UMVE_AUD_CustomizationManager>();
 
-	// 로컬 플레이어 컨트롤러인 경우에만 위젯 생성
-	if (IsLocalPlayerController())
+	if (CustomizationManager)
 	{
-		CreateWidgets();
-	}
+		// 메모리에서 직접 가져오기
+		FCustomizationData SavedData = CustomizationManager->GetSavedCustomization();
 
-	// 유저 정보 저장
-	FOnGetProfileComplete OnGetProfileComplete;
-	OnGetProfileComplete.BindUObject(this, &AMVE_PC_StageLevel::SetUserInfo);
-	UMVE_API_Helper::GetProfile(OnGetProfileComplete);
+		if (SavedData.ModelUrl.IsEmpty())
+		{
+			PRINTLOG(TEXT("⚠️ No saved customization data (user hasn't customized yet)"));
+			return;
+		}
+
+		PRINTLOG(TEXT("✅ Using saved customization from memory"));
+		PRINTLOG(TEXT("   Model URL: %s"), *SavedData.ModelUrl);
+		PRINTLOG(TEXT("   Socket: %s"), *SavedData.SocketName);
+	
+		// JSON 직렬화
+		FString PresetJSON = CustomizationManager->SerializeCustomizationData(SavedData);
+		PRINTLOG(TEXT("PresetJSON: %s"), *PresetJSON);
+	
+		// 서버에 등록 요청
+		PRINTLOG(TEXT("Calling ServerRPC_RegisterAccessory..."));
+		ServerRPC_RegisterAccessory(UserName, PresetJSON);
+	}
 }
 
 void AMVE_PC_StageLevel::OnPossess(APawn* InPawn)
@@ -117,6 +157,67 @@ void AMVE_PC_StageLevel::OnPossess(APawn* InPawn)
 AMVE_StageLevel_AudCharacter* AMVE_PC_StageLevel::GetBindingAudCharacter() const
 {
 	return Cast<AMVE_StageLevel_AudCharacter>(GetPawn());
+}
+
+// 서버에 액세서리 정보 등록
+void AMVE_PC_StageLevel::ServerRPC_RegisterAccessory_Implementation(const FString& UserID, const FString& PresetJSON)
+{
+	PRINTLOG(TEXT("=== ServerRPC_RegisterAccessory (Server) ==="));
+	PRINTLOG(TEXT("UserID: %s"), *UserID);
+	PRINTLOG(TEXT("PresetJSON: %s"), *PresetJSON);
+	
+	if (!HasAuthority())
+	{
+		PRINTLOG(TEXT("❌ Not server authority"));
+		return;
+	}
+	
+	// GameMode 가져오기
+	AMVE_GM_StageLevel* StageGM = Cast<AMVE_GM_StageLevel>(GetWorld()->GetAuthGameMode());
+	if (!StageGM)
+	{
+		PRINTLOG(TEXT("❌ StageGameMode not found"));
+		return;
+	}
+	
+	// GameMode에 액세서리 정보 전달
+	StageGM->RegisterPlayerAccessory(UserID, PresetJSON);
+	
+	PRINTLOG(TEXT("✅ Accessory registered to GameMode"));
+}
+
+// 신규 입장 시 기존 참여자들의 액세서리 정보 받기
+void AMVE_PC_StageLevel::ClientRPC_ReceiveExistingAccessories_Implementation(
+	const TArray<FPlayerAccessoryInfo>& ExistingAccessories)
+{
+	PRINTLOG(TEXT("=== ClientRPC_ReceiveExistingAccessories ==="));
+	PRINTLOG(TEXT("Received %d existing accessories"), ExistingAccessories.Num());
+	
+	// CustomizationManager 가져오기
+	UMVE_AUD_CustomizationManager* CustomizationManager = 
+		GetGameInstance()->GetSubsystem<UMVE_AUD_CustomizationManager>();
+	
+	if (!CustomizationManager)
+	{
+		PRINTLOG(TEXT("❌ CustomizationManager not found"));
+		return;
+	}
+	
+	// 각 기존 참여자의 액세서리 적용
+	for (const FPlayerAccessoryInfo& Info : ExistingAccessories)
+	{
+		const FString& UserID = Info.UserID;
+		const FString& PresetJSON = Info.PresetJSON;
+		
+		PRINTLOG(TEXT("Applying existing accessory for UserID: %s"), *UserID);
+		
+		// JSON 역직렬화
+		FCustomizationData Data = CustomizationManager->DeserializeCustomizationData(PresetJSON);
+		
+		// TODO: 다음 Step에서 구현
+		// 해당 UserID의 Character 찾기 → 액세서리 적용
+		PRINTLOG(TEXT("TODO: Find character and apply accessory"));
+	}
 }
 
 void AMVE_PC_StageLevel::ToggleRadialMenu(const bool bShow)
@@ -277,4 +378,5 @@ void AMVE_PC_StageLevel::ServerSetPlayerName_Implementation(const FString& InPla
 		PlayerState->SetPlayerName(InPlayerName);
 		PRINTNETLOG(this, TEXT("Server set PlayerName to: %s"), *InPlayerName);
 	}
+	
 }

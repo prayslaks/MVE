@@ -5,10 +5,14 @@
 #include "GameFramework/PlayerController.h"
 #include "MVE_PC_StageLevel.generated.h"
 
+struct FPlayerAccessoryInfo;
+struct FCustomizationData;
 class AMVE_StageLevel_AudCharacter;
 class UMVE_StageLevel_WidgetController_Chat;
 class UMVE_WC_StageLevel_AudRadialMenu;
 class UMVE_WC_Chat;
+
+DECLARE_DELEGATE(FOnSetUserInfoFinished);
 
 UCLASS()
 class MVE_API AMVE_PC_StageLevel : public APlayerController
@@ -19,11 +23,19 @@ public:
 	AMVE_PC_StageLevel();
 	
 	virtual void BeginPlay() override;
-
 	virtual void OnPossess(APawn* InPawn) override;
 	
 	UFUNCTION()
 	AMVE_StageLevel_AudCharacter* GetBindingAudCharacter() const;
+
+public:
+	// 서버에 액세서리 정보 등록
+	UFUNCTION(Server, Reliable)
+	void ServerRPC_RegisterAccessory(const FString& UserID, const FString& PresetJSON);
+	
+	// 신규 입장 시 기존 참여자들의 액세서리 정보 받기
+	UFUNCTION(Client, Reliable)
+	void ClientRPC_ReceiveExistingAccessories(const TArray<FPlayerAccessoryInfo>& ExistingAccessories);
 	
 	// 래디얼 메뉴의 표시 여부를 토글하고 마우스 커서 및 입력 모드를 설정한다
 	void ToggleRadialMenu(const bool bShow);
@@ -103,4 +115,10 @@ private:
 	
 	FString UserEmail;
 	FString UserName;
+	
+	void Initialize();
+
+
+	FOnSetUserInfoFinished OnSetUserInfoFinished;
+
 };

@@ -5,6 +5,7 @@
 #include "HttpModule.h"
 #include "IDesktopPlatform.h"
 #include "MVE.h"
+#include "MVE_API_Helper.h"
 #include "MVE_AUD_PreviewCameraPawn.h"
 #include "MVE_AUD_PreviewCaptureActor.h"
 #include "MVE_AUD_WidgetClass_PreviewWidget.h"
@@ -429,7 +430,7 @@ void UMVE_AUD_CustomizationManager::AttachMeshToSocket(const FName& SocketName)
 	AttachedMesh = NewAccessory;
 
 	// 커스터마이징 데이터 저장 (수정된 부분)
-	SavedCustomization.ModelUrl = CurrentGLBFilePath;  // GLBFilePath → ModelUrl
+	SavedCustomization.ModelUrl = CurrentRemoteURL;  // GLBFilePath → ModelUrl
 	SavedCustomization.SocketName = SocketName.ToString();  // FName → FString
 	
 	// Transform을 분해해서 저장
@@ -1002,20 +1003,125 @@ FCustomizationData UMVE_AUD_CustomizationManager::DeserializeCustomizationData(c
 	return Result;
 }
 
-void UMVE_AUD_CustomizationManager::SavePresetToServer(const FString& UserID, const FCustomizationData& Data)
+void UMVE_AUD_CustomizationManager::SavePresetToServer(const FCustomizationData& Data)
 {
-}
+	PRINTLOG(TEXT("=== Saving Preset to Server ==="));
 
-void UMVE_AUD_CustomizationManager::LoadPresetFromServer(const FString& UserID)
-{
+	//FOnSavePresetComplete OnResult;
+	//OnResult.Bind
+	//UMVE_API_Helper::SaveAccessoryPreset()
+	
+	// JSON 직렬화 (배열 형태)
+	FString PresetJSON = SerializeCustomizationData(Data);
+	PRINTLOG(TEXT("Preset JSON: %s"), *PresetJSON);
+	
+	// HTTP 요청 생성
+	FHttpModule* HttpModule = &FHttpModule::Get();
+	TSharedRef<IHttpRequest> HttpRequest = HttpModule->CreateRequest();
+	
+	// 요청 설정
+	HttpRequest->SetURL(TEXT("http://YOUR_SERVER_URL/api/presets"));
+	HttpRequest->SetVerb(TEXT("POST"));
+	HttpRequest->SetHeader(TEXT("Content-Type"), TEXT("application/json"));
+	
+	// Body는 배열만 전송
+	HttpRequest->SetContentAsString(PresetJSON);
+	
+	// 응답 콜백 바인딩
+	HttpRequest->OnProcessRequestComplete().BindUObject(
+		this, &UMVE_AUD_CustomizationManager::OnSavePresetResponse);
+	
+	// 요청 전송
+	if (HttpRequest->ProcessRequest())
+	{
+		PRINTLOG(TEXT("Preset save request sent"));
+	}
+	else
+	{
+		PRINTLOG(TEXT("Failed to send preset save request"));
+	}
 }
 
 void UMVE_AUD_CustomizationManager::OnSavePresetResponse(FHttpRequestPtr Request, FHttpResponsePtr Response,
 	bool bSucceeded)
 {
+	if (!bSucceeded || !Response.IsValid())
+	{
+		PRINTLOG(TEXT("❌ Failed to save preset to server"));
+		return;
+	}
+	
+	int32 ResponseCode = Response->GetResponseCode();
+	FString ResponseContent = Response->GetContentAsString();
+	
+	PRINTLOG(TEXT("=== Save Preset Response ==="));
+	PRINTLOG(TEXT("Response Code: %d"), ResponseCode);
+	PRINTLOG(TEXT("Response Body: %s"), *ResponseContent);
+	
+	if (ResponseCode == 200 || ResponseCode == 201)
+	{
+		PRINTLOG(TEXT("✅ Preset saved successfully"));
+	}
+	else
+	{
+		PRINTLOG(TEXT("❌ Server error: %d - %s"), ResponseCode, *ResponseContent);
+	}
 }
 
 void UMVE_AUD_CustomizationManager::OnLoadPresetResponse(FHttpRequestPtr Request, FHttpResponsePtr Response,
 	bool bSucceeded)
 {
+	if (!bSucceeded || !Response.IsValid())
+	{
+		PRINTLOG(TEXT("❌ Failed to load preset from server"));
+		return;
+	}
+	
+	int32 ResponseCode = Response->GetResponseCode();
+	FString ResponseContent = Response->GetContentAsString();
+	
+	PRINTLOG(TEXT("=== Load Preset Response ==="));
+	PRINTLOG(TEXT("Response Code: %d"), ResponseCode);
+	PRINTLOG(TEXT("Response Body: %s"), *ResponseContent);
+	
+	if (ResponseCode == 200)
+	{
+		// ⭐ 서버가 배열을 직접 반환하므로 바로 역직렬화
+		// ResponseContent = [{"socketName":"head_socket",...}]
+		FCustomizationData LoadedData = DeserializeCustomizationData(ResponseContent);
+		
+		// 데이터 검증
+		if (LoadedData.ModelUrl.IsEmpty())
+		{
+			PRINTLOG(TEXT("⚠️ Loaded preset has no model URL (user might not have saved preset yet)"));
+			return;
+		}
+		
+		PRINTLOG(TEXT("✅ Preset loaded successfully"));
+		PRINTLOG(TEXT("   Model URL: %s"), *LoadedData.ModelUrl);
+		PRINTLOG(TEXT("   Socket: %s"), *LoadedData.SocketName);
+		PRINTLOG(TEXT("   Location: %s"), *LoadedData.RelativeLocation.ToString());
+		PRINTLOG(TEXT("   Rotation: %s"), *LoadedData.RelativeRotation.ToString());
+		PRINTLOG(TEXT("   Scale: %.2f"), LoadedData.RelativeScale);
+		
+		// 델리게이트 호출 (PlayerController에서 사용)
+		if (OnPresetLoadedDelegate.IsBound())
+		{
+			OnPresetLoadedDelegate.Execute(LoadedData);
+		}
+	}
+	else if (ResponseCode == 404)
+	{
+		PRINTLOG(TEXT("⚠️ No preset found for this user"));
+	}
+	else
+	{
+		PRINTLOG(TEXT("❌ Server error: %d - %s"), ResponseCode, *ResponseContent);
+	}
+}
+
+void UMVE_AUD_CustomizationManager::SetRemoteModelUrl(const FString& RemoteUrl)
+{
+	CurrentRemoteURL = RemoteUrl;
+	PRINTLOG(TEXT("✅ Remote URL saved: %s"), *CurrentRemoteURL);
 }

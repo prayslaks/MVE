@@ -295,6 +295,9 @@ void UMVE_AUD_WidgetClass_GenerateMesh::HandleAssetLoaded(UObject* Asset, const 
 					{
 						CustomizationManager->StartMeshPreview(LocalPath, PreviewWidget);
 						UE_LOG(LogMVE, Log, TEXT("[GenerateMesh] 프리뷰 적용 완료 - 경로: %s"), *LocalPath);
+
+						// Presigned URL 별도 저장
+						CustomizationManager->SetRemoteModelUrl(Metadata.RemotePath);
 					}
 					else
 					{
