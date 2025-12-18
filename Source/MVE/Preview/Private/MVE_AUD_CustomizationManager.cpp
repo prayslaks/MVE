@@ -252,6 +252,10 @@ void UMVE_AUD_CustomizationManager::OnGetModelStatusComplete(bool bSuccess, cons
 			PRINTLOG(TEXT("⏹️ Status check timer stopped"));
 		}
 
+		// ⭐ 중요: 원격 URL 저장 (서버에 저장할 때 사용)
+		CurrentRemoteURL = JobStatus.DownloadUrl;
+		PRINTLOG(TEXT("💾 Remote URL saved: %s"), *CurrentRemoteURL);
+
 		// 다운로드 경로 설정 (Saved/DownloadedModels 폴더에 저장)
 		FString SaveDir = FPaths::ProjectSavedDir() / TEXT("DownloadedModels");
 		FString SavePath = SaveDir / FString::Printf(TEXT("Model_%d.glb"), JobStatus.ModelId);

@@ -84,6 +84,7 @@ void UMVE_WidgetClass_MainLevel_Login::OnLoginResultReceived(const bool bSuccess
 {
 	if (bSuccess)
 	{
+		PRINTLOG(TEXT("OnLoginResultReceived Success"));
 		// JWT 토큰 설정
 		UMVE_API_Helper::SetAuthToken(ResponseData.Token);
 		
@@ -100,6 +101,7 @@ void UMVE_WidgetClass_MainLevel_Login::OnLoginResultReceived(const bool bSuccess
 	}
 	else
 	{
+		PRINTLOG(TEXT("OnLoginResultReceived Fail"));
 		FText TranslatedErrorMessage;
 		if (const UMVE_GIS_API* Subsystem = UMVE_GIS_API::Get(this))
 		{

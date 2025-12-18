@@ -101,7 +101,8 @@ void FMVE_HTTP_Client::SendMultipartRequest(const FString& URL, const FString& F
             TEXT("--%s\r\nContent-Disposition: form-data; name=\"%s\"\r\n\r\n%s\r\n"),
             *Boundary, *Field.Key, *Field.Value
         );
-        CombinedContent.Append((uint8*)TCHAR_TO_UTF8(*FieldHeader), FieldHeader.Len());
+        FTCHARToUTF8 FieldConverter(*FieldHeader);
+        CombinedContent.Append((uint8*)FieldConverter.Get(), FieldConverter.Length());
     }
     
     // 파일 필드 추가 (파일 데이터가 있는 경우)
@@ -111,14 +112,16 @@ void FMVE_HTTP_Client::SendMultipartRequest(const FString& URL, const FString& F
             TEXT("--%s\r\nContent-Disposition: form-data; name=\"%s\"; filename=\"%s\"\r\nContent-Type: application/octet-stream\r\n\r\n"),
             *Boundary, *FileFieldName, *FileName
         );
-        CombinedContent.Append((uint8*)TCHAR_TO_UTF8(*FileHeader), FileHeader.Len());
+        FTCHARToUTF8 FileConverter(*FileHeader);
+        CombinedContent.Append((uint8*)FileConverter.Get(), FileConverter.Length());
         CombinedContent.Append(FileData);
         CombinedContent.Append((uint8*)TCHAR_TO_UTF8(TEXT("\r\n")), 2);
     }
     
     // 종료 Boundary
     FString EndBoundary = FString::Printf(TEXT("--%s--\r\n"), *Boundary);
-    CombinedContent.Append((uint8*)TCHAR_TO_UTF8(*EndBoundary), EndBoundary.Len());
+    FTCHARToUTF8 EndConverter(*EndBoundary);
+    CombinedContent.Append((uint8*)EndConverter.Get(), EndConverter.Length());
     
     TSharedRef<IHttpRequest> Request = FHttpModule::Get().CreateRequest();
     Request->SetVerb("POST");

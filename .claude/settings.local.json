@@ -7,7 +7,10 @@
       "Bash(findstr:*)",
       "Bash(echo:*)",
       "Bash(\"C:\\Program Files\\Epic Games\\UE_5.6\\Engine\\Build\\BatchFiles\\Build.bat\" MVEEditor Win64 Development \"C:\\Users\\user\\Documents\\UnrealProjects\\MVE\\MVE.uproject\" -waitmutex)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(if not exist \"ClaudeLog\" mkdir ClaudeLog)",
+      "Bash(cmd /c \"if not exist ClaudeLog mkdir ClaudeLog\")",
+      "Bash(cmd /c \"dir /s /b C:\\Users\\user\\Documents\\UnrealProjects\\MVE\\Source\\MVE\\API | findstr /i HTTP\")"
     ],
     "deny": [],
     "ask": []

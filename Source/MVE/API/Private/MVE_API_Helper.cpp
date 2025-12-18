@@ -271,34 +271,34 @@ void UMVE_API_Helper::Login(const FString& Email, const FString& Password, const
     TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&JsonBody);
     FJsonSerializer::Serialize(JsonObject.ToSharedRef(), Writer);
 
-    auto HandleResponseLambda = [OnResult](const bool bSuccess, const FString& ResponseBody)
-    {
-        PRINTLOG(TEXT("Response: %s"), *ResponseBody);
-        if (bSuccess)
-        {
-            FLoginResponseData ParsedData;
-            if (FJsonObjectConverter::JsonObjectStringToUStruct(ResponseBody, &ParsedData, 0, 0) && ParsedData.Success)
-            {
-                GlobalAuthToken = ParsedData.Token;
-                PRINTLOG(TEXT("로그인 성공. 인증 토큰 : %s"), *GlobalAuthToken);
-                OnResult.ExecuteIfBound(true, ParsedData, TEXT(""));
-            }
-            else
-            {
-                FString ErrorCode, ErrorMessage;
-                UMVE_API_Helper::ParseError(ResponseBody, ErrorCode, ErrorMessage);
-                OnResult.ExecuteIfBound(false, FLoginResponseData(), ErrorCode);
-            }
-        }
-        else
-        {
-            FString ErrorCode, ErrorMessage;
-            UMVE_API_Helper::ParseError(ResponseBody, ErrorCode, ErrorMessage);
-            OnResult.ExecuteIfBound(false, FLoginResponseData(), ErrorCode);
-        }
-    };
+    // auto HandleResponseLambda = [OnResult](const bool bSuccess, const FString& ResponseBody)
+    // {
+    //     PRINTLOG(TEXT("Response: %s"), *ResponseBody);
+    //     if (bSuccess)
+    //     {
+    //         FLoginResponseData ParsedData;
+    //         if (FJsonObjectConverter::JsonObjectStringToUStruct(ResponseBody, &ParsedData, 0, 0) && ParsedData.Success)
+    //         {
+    //             GlobalAuthToken = ParsedData.Token;
+    //             PRINTLOG(TEXT("로그인 성공. 인증 토큰 : %s"), *GlobalAuthToken);
+    //             OnResult.ExecuteIfBound(true, ParsedData, TEXT(""));
+    //         }
+    //         else
+    //         {
+    //             FString ErrorCode, ErrorMessage;
+    //             UMVE_API_Helper::ParseError(ResponseBody, ErrorCode, ErrorMessage);
+    //             OnResult.ExecuteIfBound(false, FLoginResponseData(), ErrorCode);
+    //         }
+    //     }
+    //     else
+    //     {
+    //         FString ErrorCode, ErrorMessage;
+    //         UMVE_API_Helper::ParseError(ResponseBody, ErrorCode, ErrorMessage);
+    //         OnResult.ExecuteIfBound(false, FLoginResponseData(), ErrorCode);
+    //     }
+    // };
     
-    FMVE_HTTP_Client::SendPostRequest(URL, JsonBody, "", FOnHttpResponse::CreateLambda(HandleResponseLambda));
+    FMVE_HTTP_Client::SendPostRequest(URL, JsonBody, "", HANDLE_RESPONSE_STRUCT(FLoginResponseData, OnResult));
 }
 
 void UMVE_API_Helper::Logout(const FOnGenericApiComplete& OnResult)
