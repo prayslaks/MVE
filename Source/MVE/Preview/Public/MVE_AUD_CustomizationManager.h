@@ -1,6 +1,7 @@
 
 #pragma once
 #include "CoreMinimal.h"
+#include "MVE_API_ResponseData.h"
 #include "Data/InputPromptData.h"
 #include "Interfaces/IHttpRequest.h"
 #include "Subsystems/GameInstanceSubsystem.h"
@@ -54,12 +55,19 @@ public:
 
 	// 생성 요청
 	UFUNCTION(BlueprintCallable)
-	void RequestModelGeneration(const FString& PromptText);
+	void RequestModelGeneration(const FString& PromptText, const FString& ImagePath);
 	
 	UFUNCTION(BlueprintCallable)
-	FString GetReferenceImageDataAsBase64() const 
-	{ 
-		return FBase64::Encode(ReferenceImageData); 
+	FString GetReferenceImageDataAsBase64() const
+	{
+		return FBase64::Encode(ReferenceImageData);
+	}
+
+	// 참조 이미지 파일 경로 반환
+	UFUNCTION(BlueprintCallable)
+	FString GetReferenceImageFilePath() const
+	{
+		return ReferenceImageFilePath;
 	}
 	
 private:
@@ -67,21 +75,31 @@ private:
 	TArray<uint8> ReferenceImageData;
 	FString ReferenceImageFormat;
 	FString ReferenceImageFileName;
+	FString ReferenceImageFilePath;  // 이미지 파일 경로 저장
 
 	// 이미지 파일 로드
 	bool LoadReferenceImage(const FString& FilePath);
 
-	// HTTP 요청으로 서버에 전송
-	void SendToExternalServer(const FInputPromptData& Request);
+	// AI 모델 생성 응답 콜백
+	void OnGenerateModelComplete(bool bSuccess, const FGenerateModelResponseData& ResponseData, const FString& ErrorCode);
 
-	// HTTP 응답 콜백
-	void OnModelGenerationResponse(FHttpRequestPtr Request, FHttpResponsePtr Response, bool bSucceeded);
+	// 모델 생성 상태 폴링
+	void CheckModelGenerationStatus();
+	void OnGetModelStatusComplete(bool bSuccess, const FGetJobStatusResponseData& ResponseData, const FString& ErrorCode);
 
-	// 생성 완료 처리
-	void OnModelGenerationComplete(const FString& ModelID, const FString& GLBFileURL);
+	// 모델 다운로드
+	void OnModelDownloadComplete(bool bSuccess, const FString& SavedPath);
+
+	// 현재 진행 중인 JobId
+	FString CurrentJobId;
+
+	// 상태 확인 타이머
+	FTimerHandle ModelStatusCheckTimer;
+
+	// 상태 확인 주기 (초 단위)
+	float StatusCheckInterval = 2.0f;
 
 
-	
 	/*
 	 * 프리뷰 위젯
 	 */
@@ -186,7 +204,6 @@ private:
 	 */
 
 public:
-
 	// 프리셋 로드 완료 델리게이트
 	DECLARE_DELEGATE_OneParam(FOnPresetLoaded, const FCustomizationData&);
 	FOnPresetLoaded OnPresetLoadedDelegate;
@@ -198,13 +215,13 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Customization")
 	FCustomizationData DeserializeCustomizationData(const FString& JsonString) const;
 	
-	// 중계서버에 프리셋 저장
 	UFUNCTION(BlueprintCallable, Category = "Customization")
-	void SavePresetToServer(const FCustomizationData& Data);
+	void SaveAccessoryPresetToServer(const FString& PresetName = TEXT("MyAccessory"));
 
+	void HandleSavePresetComplete(bool bSuccess, const FSavePresetResponseData& Data, const FString& ErrorCode);
+	
 private:
 	// HTTP 응답 콜백
-	void OnSavePresetResponse(FHttpRequestPtr Request, FHttpResponsePtr Response, bool bSucceeded);
 	void OnLoadPresetResponse(FHttpRequestPtr Request, FHttpResponsePtr Response, bool bSucceeded);
 
 public:

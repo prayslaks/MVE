@@ -799,65 +799,37 @@ void UMVE_API_Helper::DownloadModel(int32 ModelId, const FString& SavePath, cons
 {
     const FString URL = FString::Printf(TEXT("%s/api/models/%d/download"), *ResourceServerURL, ModelId);
     auto HandleDownloadResponse = FOnHttpDownloadResult::CreateLambda([SavePath, ModelId, OnResult](bool bSuccess, const TArray<uint8>& FileData, const FString& ErrorMessage)
-
     {
-
         PRINTLOG(TEXT("Download Response: Success=%d, ErrorMessage=%s"), bSuccess, *ErrorMessage);
-
         if (bSuccess && FileData.Num() > 0)
-
         {
-
             FString FinalPath = SavePath;
-
             if (FinalPath.IsEmpty())
-
             {
-
                 FinalPath = FPaths::ProjectSavedDir() / TEXT("DownloadedModels");
-
                 IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
-
                 if (!PlatformFile.DirectoryExists(*FinalPath))
-
                 {
-
                     PlatformFile.CreateDirectoryTree(*FinalPath);
-
                 }
-
                 FinalPath /= FString::Printf(TEXT("Model_%d.glb"), ModelId);
-
             }
-
-
 
             if (FFileHelper::SaveArrayToFile(FileData, *FinalPath))
-
             {
-
                 OnResult.ExecuteIfBound(true, FinalPath);
-
             }
-
             else
-
             {
-
                 OnResult.ExecuteIfBound(false, TEXT("FILE_SAVE_ERROR"));
-
             }
-
         }
-
         else
-
         {
             FString ErrorCode, _;
             UMVE_API_Helper::ParseError(ErrorMessage, ErrorCode, _);
             OnResult.ExecuteIfBound(false, ErrorCode);
         }
-
     });
     FMVE_HTTP_Client::DownloadFile(URL, GlobalAuthToken, HandleDownloadResponse);
 }

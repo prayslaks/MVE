@@ -52,12 +52,6 @@ void UMVE_AUD_WidgetClass_JoinRoomConfirmPopup::OnConfirmButtonClicked()
 			{
 				PRINTLOG(TEXT("⚠️ No customization data. User will join without accessory."));
 			}
-			else
-			{
-				//서버에 저장 (비동기)
-				PRINTLOG(TEXT("Saving preset to server before joining..."));
-				CustomizationManager->SavePresetToServer(SavedData);
-			}
 			
 			// 방 참가
 			PRINTLOG(TEXT("Joining session: %s"), *CurrentRoomInfo.ConcertName);
