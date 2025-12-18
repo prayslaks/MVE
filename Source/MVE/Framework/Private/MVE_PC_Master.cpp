@@ -22,7 +22,7 @@ void AMVE_PC_Master::BeginPlay()
 	UUIManagerSubsystem* UIManager = UUIManagerSubsystem::Get(this);
 	if (UIManager)
 	{
-		UIManager->ShowScreen(EUIScreen::Main);
+		UIManager->ShowScreen(EUIScreen::Intro);
 	}
 	
 }

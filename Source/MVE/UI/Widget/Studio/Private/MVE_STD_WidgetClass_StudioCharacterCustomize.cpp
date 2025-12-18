@@ -36,11 +36,6 @@ void UMVE_STD_WidgetClass_StudioCharacterCustomize::NativeConstruct()
 		AttachFileButton->OnClicked.AddDynamic(this, &UMVE_STD_WidgetClass_StudioCharacterCustomize::OnAttachFileClicked);
 	}
 
-	if (NextButton)
-	{
-		NextButton->OnClicked.AddDynamic(this, &UMVE_STD_WidgetClass_StudioCharacterCustomize::OnNextClicked);
-	}
-
 	// 초기 텍스트
 	if (FileNameText)
 	{
