@@ -11,6 +11,7 @@ UENUM(BlueprintType)
 enum class EUIScreen : uint8
 {
 	None,
+	Intro,
 	Main,
 	Login,
 	Register,
