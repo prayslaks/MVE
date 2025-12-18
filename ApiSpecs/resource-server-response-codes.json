@@ -1,10 +1,10 @@
 {
   "summary": {
-    "totalCodes": 173,
-    "uniqueCodes": 63,
+    "totalCodes": 177,
+    "uniqueCodes": 64,
     "filesWithCodes": 7,
     "totalFilesScanned": 15,
-    "generatedAt": "2025-12-17T17:45:49.636Z"
+    "generatedAt": "2025-12-18T08:40:39.169Z"
   },
   "statistics": [
     {
@@ -161,13 +161,13 @@
         },
         {
           "file": "routes\\models.js",
-          "line": 2059
+          "line": 2302
         }
       ]
     },
     {
       "code": "INTERNAL_SERVER_ERROR",
-      "count": 15,
+      "count": 16,
       "locations": [
         {
           "file": "routes\\audio.js",
@@ -219,21 +219,25 @@
         },
         {
           "file": "routes\\models.js",
-          "line": 1806
+          "line": 1889
         },
         {
           "file": "routes\\models.js",
-          "line": 1940
+          "line": 2049
         },
         {
           "file": "routes\\models.js",
-          "line": 2086
+          "line": 2183
+        },
+        {
+          "file": "routes\\models.js",
+          "line": 2329
         }
       ]
     },
     {
       "code": "DATABASE_ERROR",
-      "count": 14,
+      "count": 15,
       "locations": [
         {
           "file": "routes\\audio.js",
@@ -281,15 +285,19 @@
         },
         {
           "file": "routes\\models.js",
-          "line": 1798
+          "line": 1882
         },
         {
           "file": "routes\\models.js",
-          "line": 1932
+          "line": 2042
         },
         {
           "file": "routes\\models.js",
-          "line": 2078
+          "line": 2175
+        },
+        {
+          "file": "routes\\models.js",
+          "line": 2321
         }
       ]
     },
@@ -379,7 +387,7 @@
     },
     {
       "code": "MODEL_NOT_FOUND",
-      "count": 6,
+      "count": 7,
       "locations": [
         {
           "file": "routes\\models.js",
@@ -395,15 +403,19 @@
         },
         {
           "file": "routes\\models.js",
-          "line": 1758
+          "line": 1821
         },
         {
           "file": "routes\\models.js",
-          "line": 1881
+          "line": 2002
         },
         {
           "file": "routes\\models.js",
-          "line": 2019
+          "line": 2124
+        },
+        {
+          "file": "routes\\models.js",
+          "line": 2262
         }
       ]
     },
@@ -465,11 +477,11 @@
         },
         {
           "file": "routes\\models.js",
-          "line": 1774
+          "line": 2018
         },
         {
           "file": "routes\\models.js",
-          "line": 1909
+          "line": 2152
         }
       ]
     },
@@ -1028,12 +1040,22 @@
       ]
     },
     {
+      "code": "DOWNLOAD_URL_SUCCESS",
+      "count": 1,
+      "locations": [
+        {
+          "file": "routes\\models.js",
+          "line": 1864
+        }
+      ]
+    },
+    {
       "code": "THUMBNAIL_NOT_FOUND",
       "count": 1,
       "locations": [
         {
           "file": "routes\\models.js",
-          "line": 1894
+          "line": 2137
         }
       ]
     },

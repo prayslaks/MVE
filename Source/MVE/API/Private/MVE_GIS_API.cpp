@@ -45,9 +45,11 @@ void UMVE_GIS_API::MapResponseCodeToText()
 {
 	ResponseCodeToTextMap.Empty();
 
+	// @MVE_RESPONSE_CODE_CHECKER:START
     // --- 공통 응답 코드 ---
     ResponseCodeToTextMap.Emplace(TEXT("SUCCESS"), LOCTEXT("SUCCESS", "요청이 성공적으로 처리되었습니다."));
     ResponseCodeToTextMap.Emplace(TEXT("INTERNAL_SERVER_ERROR"), LOCTEXT("INTERNAL_SERVER_ERROR", "서버에 문제가 발생했습니다. 잠시 후 다시 시도해 주세요."));
+    ResponseCodeToTextMap.Emplace(TEXT("ERROR_CODE"), LOCTEXT("ERROR_CODE", "요청 처리 중 오류가 발생했습니다."));
     ResponseCodeToTextMap.Emplace(TEXT("DATABASE_ERROR"), LOCTEXT("DATABASE_ERROR", "데이터베이스 처리 중 오류가 발생했습니다."));
     ResponseCodeToTextMap.Emplace(TEXT("INVALID_INPUT_TYPE"), LOCTEXT("INVALID_INPUT_TYPE", "입력값이 올바르지 않습니다. 다시 확인해 주세요."));
     ResponseCodeToTextMap.Emplace(TEXT("MISSING_FIELDS"), LOCTEXT("MISSING_FIELDS", "필수 입력 항목이 누락되었습니다."));
@@ -58,6 +60,7 @@ void UMVE_GIS_API::MapResponseCodeToText()
     ResponseCodeToTextMap.Emplace(TEXT("TOKEN_EXPIRED"), LOCTEXT("TOKEN_EXPIRED", "로그인 세션이 만료되었습니다. 다시 로그인해 주세요."));
     ResponseCodeToTextMap.Emplace(TEXT("INVALID_TOKEN"), LOCTEXT("INVALID_TOKEN", "유효하지 않은 로그인 토큰입니다. 다시 로그인해 주세요."));
     ResponseCodeToTextMap.Emplace(TEXT("TOKEN_VERIFICATION_FAILED"), LOCTEXT("TOKEN_VERIFICATION_FAILED", "토큰 검증에 실패했습니다."));
+    ResponseCodeToTextMap.Emplace(TEXT("UNAUTHORIZED"), LOCTEXT("UNAUTHORIZED", "인증이 필요하거나 유효하지 않습니다."));
     ResponseCodeToTextMap.Emplace(TEXT("REDIS_UNAVAILABLE"), LOCTEXT("REDIS_UNAVAILABLE", "캐시 서버에 접속할 수 없습니다. 일시적인 문제일 수 있습니다."));
     ResponseCodeToTextMap.Emplace(TEXT("HEALTH_CHECK_OK"), LOCTEXT("HEALTH_CHECK_OK", "서버 상태가 정상입니다."));
     ResponseCodeToTextMap.Emplace(TEXT("HEALTH_CHECK_FAILED"), LOCTEXT("HEALTH_CHECK_FAILED", "서버 상태가 좋지 않습니다. 잠시 후 다시 시도해 주세요."));
@@ -67,6 +70,7 @@ void UMVE_GIS_API::MapResponseCodeToText()
     ResponseCodeToTextMap.Emplace(TEXT("LOGOUT_SUCCESS"), LOCTEXT("LOGOUT_SUCCESS", "로그아웃되었습니다."));
     ResponseCodeToTextMap.Emplace(TEXT("MISSING_EMAIL"), LOCTEXT("MISSING_EMAIL", "이메일 주소를 입력해 주세요."));
     ResponseCodeToTextMap.Emplace(TEXT("INVALID_EMAIL_FORMAT"), LOCTEXT("INVALID_EMAIL_FORMAT", "올바른 이메일 형식이 아닙니다."));
+    ResponseCodeToTextMap.Emplace(TEXT("EMAIL_AVAILABLE"), LOCTEXT("EMAIL_AVAILABLE", "사용 가능한 이메일입니다."));
     ResponseCodeToTextMap.Emplace(TEXT("EMAIL_ALREADY_EXISTS"), LOCTEXT("EMAIL_ALREADY_EXISTS", "이미 가입된 이메일 주소입니다."));
     ResponseCodeToTextMap.Emplace(TEXT("TOO_MANY_REQUESTS"), LOCTEXT("TOO_MANY_REQUESTS", "요청 횟수가 너무 많습니다. 잠시 후 다시 시도해 주세요."));
     ResponseCodeToTextMap.Emplace(TEXT("VERIFICATION_CODE_SENT"), LOCTEXT("VERIFICATION_CODE_SENT", "인증 코드가 이메일로 전송되었습니다."));
@@ -74,11 +78,9 @@ void UMVE_GIS_API::MapResponseCodeToText()
     ResponseCodeToTextMap.Emplace(TEXT("INVALID_CODE_FORMAT"), LOCTEXT("INVALID_CODE_FORMAT", "인증 코드 형식이 올바르지 않습니다."));
     ResponseCodeToTextMap.Emplace(TEXT("CODE_NOT_FOUND"), LOCTEXT("CODE_NOT_FOUND", "인증 코드를 찾을 수 없습니다. 다시 요청해 주세요."));
     ResponseCodeToTextMap.Emplace(TEXT("INVALID_CODE"), LOCTEXT("INVALID_CODE", "인증 코드가 일치하지 않습니다."));
-    ResponseCodeToTextMap.Emplace(TEXT("CODE_EXPIRED"), LOCTEXT("CODE_EXPIRED", "인증 코드가 만료되었습니다. 다시 요청해 주세요."));
     ResponseCodeToTextMap.Emplace(TEXT("TOO_MANY_ATTEMPTS"), LOCTEXT("TOO_MANY_ATTEMPTS", "인증 시도 횟수를 초과했습니다. 새로운 코드를 요청해 주세요."));
     ResponseCodeToTextMap.Emplace(TEXT("EMAIL_VERIFIED"), LOCTEXT("EMAIL_VERIFIED", "이메일 인증이 완료되었습니다."));
     ResponseCodeToTextMap.Emplace(TEXT("WEAK_PASSWORD"), LOCTEXT("WEAK_PASSWORD", "보안을 위해 비밀번호는 6자 이상으로 설정해 주세요."));
-    ResponseCodeToTextMap.Emplace(TEXT("INVALID_USERNAME_LENGTH"), LOCTEXT("INVALID_USERNAME_LENGTH", "사용자명은 3자에서 20자 사이여야 합니다."));
     ResponseCodeToTextMap.Emplace(TEXT("USER_ALREADY_EXISTS"), LOCTEXT("USER_ALREADY_EXISTS", "이미 존재하는 사용자 이름입니다."));
     ResponseCodeToTextMap.Emplace(TEXT("USER_CREATED"), LOCTEXT("USER_CREATED", "회원가입이 완료되었습니다. 환영합니다!"));
     ResponseCodeToTextMap.Emplace(TEXT("DUPLICATE_ENTRY"), LOCTEXT("DUPLICATE_ENTRY", "중복된 정보가 존재합니다."));
@@ -138,6 +140,8 @@ void UMVE_GIS_API::MapResponseCodeToText()
     ResponseCodeToTextMap.Emplace(TEXT("NO_UPDATE_FIELDS"), LOCTEXT("NO_UPDATE_FIELDS", "업데이트할 항목이 없습니다."));
     ResponseCodeToTextMap.Emplace(TEXT("MISSING_THUMBNAIL_FILE"), LOCTEXT("MISSING_THUMBNAIL_FILE", "썸네일 파일이 필요합니다."));
     ResponseCodeToTextMap.Emplace(TEXT("THUMBNAIL_NOT_FOUND"), LOCTEXT("THUMBNAIL_NOT_FOUND", "썸네일을 찾을 수 없습니다."));
+	ResponseCodeToTextMap.Emplace(TEXT("DOWNLOAD_URL_SUCCESS"), LOCTEXT("DOWNLOAD_URL_SUCCESS", "다운로드 URL을 성공적으로 가져왔습니다."));
+	// @MVE_RESPONSE_CODE_CHECKER:END
 }
 
 #undef LOCTEXT_NAMESPACE

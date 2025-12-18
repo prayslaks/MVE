@@ -63,6 +63,7 @@ AMVE_StageLevel_AudCharacter::AMVE_StageLevel_AudCharacter()
 	ThrowActionCameraPosition = FMVE_StageLevel_AudCharacterCameraPosition(150.0f, { 0.0f, 70.0f, 70.0f });
 	CheerActionCameraPosition = FMVE_StageLevel_AudCharacterCameraPosition(180.0f, { 0.0f, 40.0f, 40.0f });
 	WaveLightStickActionCameraPosition = FMVE_StageLevel_AudCharacterCameraPosition(200.0f, { 0.0f, 60.0f, 60.0f });
+	ClapActionCameraPosition = FMVE_StageLevel_AudCharacterCameraPosition(190.0f, { 0.0f, 80.0f, 80.0f });
 }
 
 void AMVE_StageLevel_AudCharacter::BeginPlay()
@@ -186,6 +187,12 @@ void AMVE_StageLevel_AudCharacter::OnInputActionSwitchAudienceModeCompleted()
 		// 선택한 메뉴 섹션 번호로 모드를 변경
 		const int32 Selection = PC->GetRadialMenuSelection();
 		PC->ToggleRadialMenu(false);
+		
+		// 선택한 메뉴 섹션이 없다면 취소
+		if (Selection == -1)
+		{
+			return;
+		}
 		RequestSetControlMode(static_cast<EAudienceControlMode>(Selection));
 	}
 	else
@@ -484,7 +491,6 @@ void AMVE_StageLevel_AudCharacter::ThrowObject()
 	}
 }
 
-
 #pragma endregion
 
 #pragma region 환호 액션 관련 함수 & RPC 구현
@@ -545,7 +551,7 @@ void AMVE_StageLevel_AudCharacter::OnInputActionExecuteStarted(const FInputActio
 	}
 	
 	// 실행 완료 후 재입력 딜레이
-	constexpr float Delay = 0.25f;
+	constexpr float Delay = -0.1;
 	
 	// 현재 모드에 따라서 다른 도구, 애니메이션, 사운드 사용
 	switch (CurrentControlMode)
@@ -557,10 +563,14 @@ void AMVE_StageLevel_AudCharacter::OnInputActionExecuteStarted(const FInputActio
 		}
 	case EAudienceControlMode::Throw:
 		{
-			PRINTNETLOG(this, TEXT("던지기 입력 액션!"))
-			if(AudThrowAnimMontage)
+			if (GetIsAiming() == false)
 			{
-				const float Length = AudThrowAnimMontage->GetPlayLength();
+				return;
+			}
+			PRINTNETLOG(this, TEXT("던지기 입력 액션!"))
+			if (AudThrowAnimMontage)
+			{
+				const float Length = AudThrowAnimMontage->GetPlayLength() / AudThrowAnimMontage->RateScale;
 				Server_ActiveExecuteTimer(Length + Delay);
 				Server_ExecuteThrow();
 			}
@@ -568,6 +578,10 @@ void AMVE_StageLevel_AudCharacter::OnInputActionExecuteStarted(const FInputActio
 		}
 	case EAudienceControlMode::Photo:
 		{
+			if (GetIsAiming() == false)
+			{
+				return;
+			}
 			PRINTNETLOG(this, TEXT("카메라 입력 액션!"))
 			Server_ActiveExecuteTimer(1.0f);
 			Server_ExecutePhoto();
@@ -576,9 +590,9 @@ void AMVE_StageLevel_AudCharacter::OnInputActionExecuteStarted(const FInputActio
 	case EAudienceControlMode::Cheer:
 		{
 			PRINTNETLOG(this, TEXT("환호 입력 액션!"));
-			if(AudCheerUpAnimMontage)
+			if (AudCheerUpAnimMontage)
 			{
-				const float Length = AudCheerUpAnimMontage->GetPlayLength();
+				const float Length = AudCheerUpAnimMontage->GetPlayLength() / AudCheerUpAnimMontage->RateScale;
 				Server_ActiveExecuteTimer(Length + Delay);
 				Server_ExecuteCheerUp();
 			}
@@ -587,9 +601,9 @@ void AMVE_StageLevel_AudCharacter::OnInputActionExecuteStarted(const FInputActio
 	case EAudienceControlMode::WaveLightStick:
 		{
 			PRINTNETLOG(this, TEXT("응원 입력 액션"));
-			if(AudWaveLightStickAnimMontage)
+			if (AudWaveLightStickAnimMontage)
 			{
-				const float Length = AudWaveLightStickAnimMontage->GetPlayLength();
+				const float Length = AudWaveLightStickAnimMontage->GetPlayLength() / AudWaveLightStickAnimMontage->RateScale;
 				Server_ActiveExecuteTimer(Length + Delay);
 				Server_ExecuteSwingLightStick();
 			}
@@ -598,9 +612,9 @@ void AMVE_StageLevel_AudCharacter::OnInputActionExecuteStarted(const FInputActio
 	case EAudienceControlMode::Clap:
 		{
 			PRINTNETLOG(this, TEXT("박수 입력 액션"));
-			if(AudClapAnimMontage)
+			if (AudClapAnimMontage)
 			{
-				const float Length = AudClapAnimMontage->GetPlayLength();
+				const float Length = AudClapAnimMontage->GetPlayLength() / AudClapAnimMontage->RateScale;
 				Server_ActiveExecuteTimer(Length + Delay);
 				Server_ExecuteClap();
 			}
