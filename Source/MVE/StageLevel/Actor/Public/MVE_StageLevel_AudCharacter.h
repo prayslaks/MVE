@@ -102,7 +102,7 @@ public:
 	TSubclassOf<class AMVE_ThrowObject> ThrowObjectClass;
 
 	UPROPERTY(EditDefaultsOnly, Category="Throw")
-	float ThrowSpeed = 3000.f;
+	float ThrowSpeed = 1000.0f;
 	
 	UFUNCTION(Server, Reliable)
 	void Server_ExecuteThrow();

@@ -5,6 +5,7 @@
 #include "Components/SpotLightComponent.h"
 #include "Components/TimelineComponent.h"
 #include "Curves/CurveFloat.h"
+#include "StageLevel/Default/Public/MVE_GM_StageLevel.h"
 
 AMVE_StageLevel_AudCamera::AMVE_StageLevel_AudCamera()
 {
@@ -49,21 +50,32 @@ void AMVE_StageLevel_AudCamera::BeginPlay()
 	}
 }
 
-void AMVE_StageLevel_AudCamera::TakePhoto() const
+void AMVE_StageLevel_AudCamera::TakePhoto(const AController* FlashMan)
 {
 	PRINTNETLOG(this, TEXT("사진 촬영 효과 실행!"));
 	
-	// 타임라인 재생 시작
+	// 모든 클라이언트에서 시각/청각 효과 재생
 	if (FlashTimelineComp)
 	{
 		FlashTimelineComp->PlayFromStart();
 	}
 	
-	// 사진 찍기 사운드 재생
 	if (AudioComp)
 	{
 		AudioComp->Play();
-	}	
+	}
+
+	// 게임플레이 로직은 서버에서만 실행
+	if (HasAuthority())
+	{
+		if (AMVE_GM_StageLevel* GM = GetWorld()->GetAuthGameMode<AMVE_GM_StageLevel>())
+		{
+			TArray<AActor*> IgnoreActors;
+			IgnoreActors.Emplace(this);
+			// 게임모드에 플래시 효과 처리를 요청하고, 누가 플래시를 터뜨렸는지 알림
+			GM->HandleFlashEffect(FlashMan, IgnoreActors, GetActorLocation(), GetActorForwardVector(), FlashEffectiveDistance, FlashAngleDotThreshold);
+		}
+	}
 }
 
 void AMVE_StageLevel_AudCamera::OnFlashUpdate(const float Value) const

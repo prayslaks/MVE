@@ -437,7 +437,10 @@ void AMVE_StageLevel_AudCharacter::Multicast_ExecutePhoto_Implementation()
 	PRINTNETLOG(this, TEXT("카메라 멀티캐스트!"));
 	
 	// 카메라에 접근해서 이펙트 실행
-	GetAudCamera()->TakePhoto();	
+	if (AMVE_StageLevel_AudCamera* AudCamera = GetAudCamera())
+	{
+		AudCamera->TakePhoto(GetController());	
+	}
 }
 
 #pragma endregion
@@ -464,11 +467,22 @@ void AMVE_StageLevel_AudCharacter::Multicast_ExecuteThrow_Implementation()
 
 void AMVE_StageLevel_AudCharacter::ThrowObject()
 {
+	if (HasAuthority() == false)
+	{
+		return;
+	}
+	
 	if (ThrowObjectClass)
 	{
 		// 소켓을 통해 던지는 위치 획득
-		const FVector HandLocation = GetMesh()->GetSocketLocation(FName("ThrowGrip_R"));
-		const FRotator HandRotation = GetMesh()->GetSocketRotation(FName("ThrowGrip_R"));
+		GetMesh()->RefreshBoneTransforms();
+		const FVector ThrowLocation = GetMesh()->GetSocketLocation(FName("ThrowGrip_R"));
+		const FRotator ThrowRotation = GetMesh()->GetSocketRotation(FName("ThrowGrip_R"));
+		
+		// 투척
+		const FVector ThrowDirection = ThrowRotation.Vector();
+		DrawDebugPoint(GetWorld(), ThrowLocation, 10.f, FColor::Yellow, false, 3.0f);
+		DrawDebugDirectionalArrow(GetWorld(), ThrowLocation, ThrowDirection * 100, 10, FColor::Red, false, 3.0f);
 		
 		// 스폰 조건
 		FActorSpawnParameters SpawnParams;
@@ -476,11 +490,7 @@ void AMVE_StageLevel_AudCharacter::ThrowObject()
 		SpawnParams.Instigator = GetInstigator();
 		SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
 		
-		FVector CameraLocation;
-		FRotator CameraRotation;
-		GetWorld()->GetFirstPlayerController()->GetPlayerViewPoint(CameraLocation, CameraRotation);
-		
-		if (AMVE_ThrowObject* SpawnedObject = GetWorld()->SpawnActor<AMVE_ThrowObject>(ThrowObjectClass, HandLocation, CameraRotation, SpawnParams))
+		if (AMVE_ThrowObject* SpawnedObject = GetWorld()->SpawnActor<AMVE_ThrowObject>(ThrowObjectClass, ThrowLocation, ThrowRotation, SpawnParams))
 		{
 			// 초기 속도 설정
 			if (auto* ProjectileComp = SpawnedObject->FindComponentByClass<UProjectileMovementComponent>())
@@ -489,11 +499,8 @@ void AMVE_StageLevel_AudCharacter::ThrowObject()
 				ProjectileComp->MaxSpeed = ThrowSpeed;
 			}
 			
-			// 발사
-			const FVector LaunchDirection = CameraRotation.Vector();
-			
 			// 위치 이동
-			SpawnedObject->FireInDirection(LaunchDirection);
+			SpawnedObject->FireInDirection(ThrowDirection);
 		}
 	}
 }

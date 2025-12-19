@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "Curves/CurveFloat.h"
 #include "MVE_ThrowObject.generated.h"
 
 class USphereComponent;
@@ -17,12 +18,20 @@ class MVE_API AMVE_ThrowObject : public AActor
 	
 public:	
 	AMVE_ThrowObject();
+
+	virtual void Tick(float DeltaTime) override;
 	
 	virtual void BeginPlay() override;
 
 	void FireInDirection(const FVector& ShootDirection);
 
 protected:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Projectile", meta = (ClampMin = "0.0"))
+	float DragCoefficient = 0.05f; // 저항 값
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Projectile")
+	TObjectPtr<UCurveFloat> LiftCurve;
+	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Components")
 	TObjectPtr<USphereComponent> SphereComp;
 	

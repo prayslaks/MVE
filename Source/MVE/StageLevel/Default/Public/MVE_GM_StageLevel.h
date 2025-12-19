@@ -69,9 +69,20 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "MVE|Audio")
 	void SendStopCommandToAllClients();
 
-	
+	/**
+	 * 카메라 플래시 효과를 처리합니다.
+	 * @param InstigatorController 플래시를 터뜨린 플레이어의 컨트롤러
+	 * @param IgnoreActors
+	 * @param FlashLocation 플래시 위치
+	 * @param FlashDirection 플래시 방향
+	 * @param EffectiveDistance 유효 거리
+	 * @param FlashAngleDotThreshold 플래시 유효 각도의 Dot Product 값
+	 */
+	void HandleFlashEffect(const AController* InstigatorController, const TArray<AActor*>& IgnoreActors, const FVector& FlashLocation, const FVector& FlashDirection, float EffectiveDistance, float FlashAngleDotThreshold) const;
 
 protected:
+	UPROPERTY(EditDefaultsOnly, Category = "Flash Effect")
+	float PlayerLookAtFlashDotThreshold = 0.8f;
 	
 	virtual void OnPostLogin(AController* NewPlayer) override;
 	

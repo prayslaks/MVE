@@ -1,5 +1,6 @@
 #include "StageLevel/Default/Public/MVE_PC_StageLevel.h"
 
+#include "Components/TimelineComponent.h"
 #include "UObject/ConstructorHelpers.h"
 #include "Blueprint/UserWidget.h"
 #include "MVE.h"
@@ -8,6 +9,10 @@
 #include "MVE_STU_WC_ConcertStudioPanel.h"
 #include "MVE_WC_Chat.h"
 #include "UIManagerSubsystem.h"
+#include "Camera/PlayerCameraManager.h"
+#include "Components/PostProcessComponent.h"
+#include "Engine/PostProcessVolume.h"
+#include "Materials/MaterialInstanceDynamic.h"
 #include "StageLevel/Actor/Public/MVE_StageLevel_AudCharacter.h"
 #include "StageLevel/Default/Public/MVE_PC_StageLevel_AudienceComponent.h"
 #include "StageLevel/Default/Public/MVE_PC_StageLevel_StudioComponent.h"
@@ -28,6 +33,9 @@ AMVE_PC_StageLevel::AMVE_PC_StageLevel()
 
 	// 스튜디오(Studio) 역할을 수행하는 플레이어의 기능을 처리하는 컴포넌트입니다.
 	StdComponent = CreateDefaultSubobject<UMVE_PC_StageLevel_StudioComponent>(TEXT("StdComponent"));
+
+	// 플래시 효과를 위한 타임라인 컴포넌트 생성
+	FlashPostProcessTimelineComp = CreateDefaultSubobject<UTimelineComponent>(TEXT("FlashPostProcessTimelineComp"));
 }
 
 void AMVE_PC_StageLevel::BeginPlay()
@@ -36,6 +44,43 @@ void AMVE_PC_StageLevel::BeginPlay()
 
 	// 로컬 플레이어 컨트롤러
 	if (!IsLocalController()) return;
+
+	// --- 플래시 포스트 프로세스 효과 초기화 ---
+	if (FlashPostProcessCurve && FlashPostProcessMaterialBase)
+	{
+		// 1. 타임라인 콜백 바인딩
+		FOnTimelineFloat FlashUpdateCallback;
+		FlashUpdateCallback.BindUFunction(this, FName("OnFlashPostProcessUpdate"));
+		FlashPostProcessTimelineComp->AddInterpFloat(FlashPostProcessCurve, FlashUpdateCallback);
+
+		// 2. 동적 머티리얼 인스턴스(MID) 생성
+		FlashMID = UMaterialInstanceDynamic::Create(FlashPostProcessMaterialBase, this);
+
+		// 3. 포스트 프로세스 볼륨 찾아서 MID 적용
+		bool bVolumeFound = false;
+		for (TActorIterator<APostProcessVolume> It(GetWorld()); It; ++It)
+		{
+			if (APostProcessVolume* PPVolume = *It)
+			{
+				if (PPVolume->ActorHasTag(FName("FlashPPVolume")))
+				{
+					PPVolume->Settings.AddBlendable(FlashMID, 1.0f);
+					bVolumeFound = true;
+					PRINTLOG(TEXT("Flash Post Process Volume 찾음, 동적 머티리얼 적용 완료."));
+					break;
+				}
+			}
+		}
+		if (!bVolumeFound)
+		{
+			PRINTLOG(TEXT("경고: 'FlashPPVolume' 태그를 가진 PostProcessVolume을 찾을 수 없습니다."));
+		}
+	}
+	else
+	{
+		PRINTLOG(TEXT("경고: FlashPostProcessCurve 또는 FlashPostProcessMaterialBase가 설정되지 않았습니다."));
+	}
+	// ------------------------------------
 
 	// 유저 정보가 저장이 완료되면 호출할 콜백 함수 바인딩
 	OnSetUserInfoFinished.BindUObject(this, &AMVE_PC_StageLevel::Initialize);
@@ -47,6 +92,23 @@ void AMVE_PC_StageLevel::BeginPlay()
 	FOnGetProfileComplete OnGetProfileComplete;
 	OnGetProfileComplete.BindUObject(this, &AMVE_PC_StageLevel::SetUserInfo);
 	UMVE_API_Helper::GetProfile(OnGetProfileComplete);
+}
+
+void AMVE_PC_StageLevel::Client_TriggerFlashPostProcess_Implementation()
+{
+	if (FlashPostProcessTimelineComp)
+	{
+		FlashPostProcessTimelineComp->PlayFromStart();
+		PRINTNETLOG(this, TEXT("타임라인으로 플래시 포스트 프로세스!"))
+	}
+}
+
+void AMVE_PC_StageLevel::OnFlashPostProcessUpdate(const float Value) const
+{
+	if (FlashMID)
+	{
+		FlashMID->SetScalarParameterValue(FName("Strength"), Value);
+	}
 }
 
 void AMVE_PC_StageLevel::SetUserInfo(bool bSuccess, const FProfileResponseData& Data, const FString& ErrorCode)
@@ -81,6 +143,7 @@ void AMVE_PC_StageLevel::SetUserInfo(bool bSuccess, const FProfileResponseData& 
 	// 브로드캐스트
 	OnSetUserInfoFinished.ExecuteIfBound();
 }
+
 
 UAudioComponent* AMVE_PC_StageLevel::GetAudioComponent() const
 {
