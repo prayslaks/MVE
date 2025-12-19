@@ -268,7 +268,7 @@ void UMVE_AUD_CustomizationManager::OnGetModelStatusComplete(bool bSuccess, cons
 		OnDownloadComplete.BindUObject(this, &UMVE_AUD_CustomizationManager::OnModelDownloadComplete);
 
 		// 모델 다운로드 시작
-		UMVE_API_Helper::DownloadModel(JobStatus.ModelId, SavePath, OnDownloadComplete);
+		//UMVE_API_Helper::DownloadModel(JobStatus.ModelId, SavePath, OnDownloadComplete);
 	}
 	else if (JobStatus.Status.Equals(TEXT("failed"), ESearchCase::IgnoreCase))
 	{

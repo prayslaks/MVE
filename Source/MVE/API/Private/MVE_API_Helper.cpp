@@ -5,6 +5,7 @@
 #include "JsonUtilities.h"
 #include "SocketSubsystem.h" // For ISocketSubsystem
 #include "IPAddress.h"     // For FInternetAddr
+#include "LegacyScreenPercentageDriver.h"
 #include "Engine/World.h"   // For UWorld
 
 #pragma region 네이티브 & 블루프린트 리스폰스 핸들러 매크로 
@@ -270,58 +271,13 @@ void UMVE_API_Helper::Login(const FString& Email, const FString& Password, const
     FString JsonBody;
     TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&JsonBody);
     FJsonSerializer::Serialize(JsonObject.ToSharedRef(), Writer);
-
-    // auto HandleResponseLambda = [OnResult](const bool bSuccess, const FString& ResponseBody)
-    // {
-    //     PRINTLOG(TEXT("Response: %s"), *ResponseBody);
-    //     if (bSuccess)
-    //     {
-    //         FLoginResponseData ParsedData;
-    //         if (FJsonObjectConverter::JsonObjectStringToUStruct(ResponseBody, &ParsedData, 0, 0) && ParsedData.Success)
-    //         {
-    //             GlobalAuthToken = ParsedData.Token;
-    //             PRINTLOG(TEXT("로그인 성공. 인증 토큰 : %s"), *GlobalAuthToken);
-    //             OnResult.ExecuteIfBound(true, ParsedData, TEXT(""));
-    //         }
-    //         else
-    //         {
-    //             FString ErrorCode, ErrorMessage;
-    //             UMVE_API_Helper::ParseError(ResponseBody, ErrorCode, ErrorMessage);
-    //             OnResult.ExecuteIfBound(false, FLoginResponseData(), ErrorCode);
-    //         }
-    //     }
-    //     else
-    //     {
-    //         FString ErrorCode, ErrorMessage;
-    //         UMVE_API_Helper::ParseError(ResponseBody, ErrorCode, ErrorMessage);
-    //         OnResult.ExecuteIfBound(false, FLoginResponseData(), ErrorCode);
-    //     }
-    // };
-    
     FMVE_HTTP_Client::SendPostRequest(URL, JsonBody, "", HANDLE_RESPONSE_STRUCT(FLoginResponseData, OnResult));
 }
 
 void UMVE_API_Helper::Logout(const FOnGenericApiComplete& OnResult)
 {
     const FString URL = FString::Printf(TEXT("%s/api/auth/logout"), *LoginServerURL);
-    
-    auto HandleResponseLambda = [OnResult](bool bSuccess, const FString& ResponseBody)
-    {
-        PRINTLOG(TEXT("Response: %s"), *ResponseBody);
-        if (bSuccess)
-        {
-            GlobalAuthToken.Empty();
-            OnResult.ExecuteIfBound(true, TEXT("Logged out successfully."));
-        }
-        else
-        {
-            FString ErrorCode, ErrorMessage;
-            UMVE_API_Helper::ParseError(ResponseBody, ErrorCode, ErrorMessage);
-            OnResult.ExecuteIfBound(false, ErrorCode);
-        }
-    };
-    
-    FMVE_HTTP_Client::SendPostRequest(URL, "", GlobalAuthToken, FOnHttpResponse::CreateLambda(HandleResponseLambda));
+    FMVE_HTTP_Client::SendPostRequest(URL, "", GlobalAuthToken, HANDLE_GENERIC_RESPONSE(OnResult));
 }
 
 void UMVE_API_Helper::Withdraw(const FString& Password, const FOnGenericApiComplete& OnResult)
@@ -332,24 +288,7 @@ void UMVE_API_Helper::Withdraw(const FString& Password, const FOnGenericApiCompl
     FString JsonBody;
     TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&JsonBody);
     FJsonSerializer::Serialize(JsonObject.ToSharedRef(), Writer);
-    
-    auto HandleResponseLambda = [OnResult](bool bSuccess, const FString& ResponseBody)
-    {
-        PRINTLOG(TEXT("Response: %s"), *ResponseBody);
-        if (bSuccess)
-        {
-            GlobalAuthToken.Empty();
-            OnResult.ExecuteIfBound(true, TEXT("Withdrawal successful."));
-        }
-        else
-        {
-            FString ErrorCode, ErrorMessage;
-            UMVE_API_Helper::ParseError(ResponseBody, ErrorCode, ErrorMessage);
-            OnResult.ExecuteIfBound(false, ErrorCode);
-        }
-    };
-
-    FMVE_HTTP_Client::SendDeleteRequest(URL, JsonBody, GlobalAuthToken, FOnHttpResponse::CreateLambda(HandleResponseLambda));
+    FMVE_HTTP_Client::SendDeleteRequest(URL, JsonBody, GlobalAuthToken, HANDLE_GENERIC_RESPONSE(OnResult));
 }
 
 void UMVE_API_Helper::GetProfile(const FOnGetProfileComplete& OnResult)
@@ -360,41 +299,20 @@ void UMVE_API_Helper::GetProfile(const FOnGetProfileComplete& OnResult)
 
 // 리소스 서버 관련 API
 void UMVE_API_Helper::SaveAccessoryPreset(const FString& PresetName, const TArray<TSharedPtr<FJsonValue>>& Accessories, const FString& Description, const bool bIsPublic, const FOnSavePresetComplete& OnResult)
-
 {
-
     const FString URL = FString::Printf(TEXT("%s/api/presets/save"), *ResourceServerURL);
-
-    
-
     TSharedPtr<FJsonObject> JsonObject = MakeShareable(new FJsonObject);
-
     JsonObject->SetStringField(TEXT("presetName"), PresetName);
-
     JsonObject->SetArrayField(TEXT("accessories"), Accessories);
-
     if (!Description.IsEmpty())
-
     {
-
         JsonObject->SetStringField(TEXT("description"), Description);
-
     }
-
     JsonObject->SetBoolField(TEXT("isPublic"), bIsPublic);
-
-    
-
     FString JsonBody;
-
     TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&JsonBody);
-
     FJsonSerializer::Serialize(JsonObject.ToSharedRef(), Writer);
-
-
-
     FMVE_HTTP_Client::SendPostRequest(URL, JsonBody, GlobalAuthToken, HANDLE_RESPONSE_STRUCT(FSavePresetResponseData, OnResult));
-
 }
 
 void UMVE_API_Helper::GetPresetList(const bool bIncludePublic, const FOnGetPresetListComplete& OnResult)
@@ -412,17 +330,14 @@ void UMVE_API_Helper::GetPresetDetail(const int32 PresetId, const FOnGetPresetDe
 void UMVE_API_Helper::UpdatePreset(const int32 PresetId, const FString& PresetName, const TArray<TSharedPtr<FJsonValue>>& Accessories, const FString& Description, const bool bIsPublic, const FOnGenericApiComplete& OnResult)
 {
     const FString URL = FString::Printf(TEXT("%s/api/presets/%d"), *ResourceServerURL, PresetId);
-    
     TSharedPtr<FJsonObject> JsonObject = MakeShareable(new FJsonObject);
     if(!PresetName.IsEmpty()) JsonObject->SetStringField(TEXT("presetName"), PresetName);
     if(Accessories.Num() > 0) JsonObject->SetArrayField(TEXT("accessories"), Accessories);
     if(!Description.IsEmpty()) JsonObject->SetStringField(TEXT("description"), Description);
     JsonObject->SetBoolField(TEXT("isPublic"), bIsPublic);
-    
     FString JsonBody;
     TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&JsonBody);
     FJsonSerializer::Serialize(JsonObject.ToSharedRef(), Writer);
-
     FMVE_HTTP_Client::SendPutRequest(URL, JsonBody, GlobalAuthToken, HANDLE_GENERIC_RESPONSE(OnResult));
 }
 
@@ -434,13 +349,9 @@ void UMVE_API_Helper::DeletePreset(const int32 PresetId, const FOnGenericApiComp
 
 // 음원 관련 API
 void UMVE_API_Helper::GetAudioList(const FOnGetAudioListComplete& OnResult)
-
 {
-
     const FString URL = FString::Printf(TEXT("%s/api/audio/list"), *ResourceServerURL);
-
     FMVE_HTTP_Client::SendGetRequest(URL, GlobalAuthToken, HANDLE_RESPONSE_STRUCT(FAudioListResponseData, OnResult));
-
 }
 
 void UMVE_API_Helper::StreamAudio(const int32 AudioId, const FOnStreamAudioComplete& OnResult)
@@ -450,53 +361,29 @@ void UMVE_API_Helper::StreamAudio(const int32 AudioId, const FOnStreamAudioCompl
 }
 
 void UMVE_API_Helper::UploadAudio(const FString& FilePath, const FString& Title, const FString& Artist, const float Duration, const FOnUploadAudioComplete& OnResult)
-
 {
-
     const FString URL = FString::Printf(TEXT("%s/api/audio/upload"), *ResourceServerURL);
-
-    
-
     TMap<FString, FString> FormFields;
-
     FormFields.Add(TEXT("title"), Title);
-
     if (!Artist.IsEmpty())
-
     {
-
         FormFields.Add(TEXT("artist"), Artist);
-
     }
-
+    
     if (Duration > 0)
-
     {
-
         FormFields.Add(TEXT("duration"), FString::SanitizeFloat(Duration));
-
     }
-
-
 
     TArray<uint8> FileData;
-
     if (!FFileHelper::LoadFileToArray(FileData, *FilePath))
-
     {
-
         OnResult.ExecuteIfBound(false, FUploadAudioResponseData(), TEXT("FILE_READ_ERROR"));
-
         return;
-
     }
 
-    
-
     const FString FileName = FPaths::GetCleanFilename(FilePath);
-
     FMVE_HTTP_Client::SendMultipartRequest(URL, TEXT("audio"), FileData, FileName, FormFields, GlobalAuthToken, HANDLE_RESPONSE_STRUCT(FUploadAudioResponseData, OnResult));
-
 }
 
 void UMVE_API_Helper::SearchAudio(const FString& Query, const FOnSearchAudioComplete& OnResult)
@@ -514,7 +401,6 @@ void UMVE_API_Helper::GetAudioDetail(const int32 AudioId, const FOnGetAudioDetai
 void UMVE_API_Helper::DownloadAudioFile(int32 AudioId, const FString& SavePath, const FOnGenericApiComplete& OnResult)
 {
     const FString URL = FString::Printf(TEXT("%s/api/audio/file/%d"), *ResourceServerURL, AudioId);
-
     auto HandleDownloadResponse = FOnHttpDownloadResult::CreateLambda([SavePath, AudioId, OnResult](bool bSuccess, const TArray<uint8>& FileData, const FString& ErrorMessage)
     {
         PRINTLOG(TEXT("Download Response: Success=%d, ErrorMessage=%s"), bSuccess, *ErrorMessage);
@@ -551,7 +437,6 @@ void UMVE_API_Helper::DownloadAudioFile(int32 AudioId, const FString& SavePath, 
             OnResult.ExecuteIfBound(false, ErrorCode);
         }
     });
-
     FMVE_HTTP_Client::DownloadFile(URL, GlobalAuthToken, HandleDownloadResponse);
 }
 
@@ -584,38 +469,7 @@ void UMVE_API_Helper::CreateConcert(const FString& ConcertName, const TArray<FCo
     FString JsonBody;
     TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&JsonBody);
     FJsonSerializer::Serialize(JsonObject.ToSharedRef(), Writer);
-    
-    auto HandleResponseLambda = [OnResult](const bool bSuccess, const FString& ResponseBody)
-    {
-        PRINTLOG(TEXT("CreateConcert Response: %s"), *ResponseBody);
-        if (bSuccess)
-        {
-            FConcertCreationData ParsedData;
-            if (FJsonObjectConverter::JsonObjectStringToUStruct(ResponseBody, &ParsedData, 0, 0))
-            {
-                if(ParsedData.Success)
-                {
-                    PRINTLOG(TEXT("%s"), *ParsedData.RoomId);
-                    OnResult.ExecuteIfBound(true, ParsedData, TEXT(""));
-                }
-                else
-                {
-                    OnResult.ExecuteIfBound(false, FConcertCreationData(), TEXT("CREATE_FAILED"));
-                }
-            }
-            else
-            {
-                OnResult.ExecuteIfBound(false, FConcertCreationData(), TEXT("JSON_PARSE_ERROR"));
-            }
-        }
-        else
-        {
-            FString ErrorCode, ErrorMessage;
-            UMVE_API_Helper::ParseError(ResponseBody, ErrorCode, ErrorMessage);
-            OnResult.ExecuteIfBound(false, FConcertCreationData(), ErrorCode);
-        }
-    };
-    FMVE_HTTP_Client::SendPostRequest(URL, JsonBody, GlobalAuthToken, FOnHttpResponse::CreateLambda(HandleResponseLambda));
+    FMVE_HTTP_Client::SendPostRequest(URL, JsonBody, GlobalAuthToken, HANDLE_RESPONSE_STRUCT(FConcertCreationData, OnResult));
 }
 
 void UMVE_API_Helper::GetConcertInfo(const FString& RoomId, const FOnGetConcertInfoComplete& OnResult)
@@ -627,36 +481,7 @@ void UMVE_API_Helper::GetConcertInfo(const FString& RoomId, const FOnGetConcertI
 void UMVE_API_Helper::GetConcertList(const FOnGetConcertListComplete& OnResult)
 {
     const FString URL = FString::Printf(TEXT("%s/api/concert/list"), *ResourceServerURL);
-    auto HandleResponseLambda = [OnResult](const bool bSuccess, const FString& ResponseBody)
-    {
-        PRINTLOG(TEXT("GetConcertList Response: %s"), *ResponseBody);
-        if (bSuccess)
-        {
-            FGetConcertListData ParsedData;
-            if (FJsonObjectConverter::JsonObjectStringToUStruct(ResponseBody, &ParsedData, 0, 0))
-            {
-                if(ParsedData.Success)
-                {
-                    OnResult.ExecuteIfBound(true, ParsedData, TEXT(""));
-                }
-                else
-                {
-                    OnResult.ExecuteIfBound(false, FGetConcertListData(), TEXT("GET_CONCERT_LIST_FAILED"));
-                }
-            }
-            else
-            {
-                OnResult.ExecuteIfBound(false, FGetConcertListData(), TEXT("JSON_PARSE_ERROR"));
-            }
-        }
-        else
-        {
-            FString ErrorCode, ErrorMessage;
-            UMVE_API_Helper::ParseError(ResponseBody, ErrorCode, ErrorMessage);
-            OnResult.ExecuteIfBound(false, FGetConcertListData(), ErrorCode);
-        }
-    };
-    FMVE_HTTP_Client::SendGetRequest(URL, GlobalAuthToken, FOnHttpResponse::CreateLambda(HandleResponseLambda));
+    FMVE_HTTP_Client::SendGetRequest(URL, GlobalAuthToken, HANDLE_RESPONSE_STRUCT(FGetConcertListData, OnResult));
 }
 
 void UMVE_API_Helper::JoinConcert(const FString& RoomId, const int32 ClientId, const FOnGenericApiComplete& OnResult)
@@ -698,38 +523,7 @@ void UMVE_API_Helper::RegisterListenServer(const FString& RoomId, const FString&
     FString JsonBody;
     TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&JsonBody);
     FJsonSerializer::Serialize(JsonObject.ToSharedRef(), Writer);
-
-    auto HandleResponseLambda = [OnResult](bool bSuccess, const FString& ResponseBody)
-    {
-        PRINTLOG(TEXT("RegisterListenServer Response: %s"), *ResponseBody);
-        if (bSuccess)
-        {
-            FRegisterListenServerData ParsedData;
-            if (FJsonObjectConverter::JsonObjectStringToUStruct(ResponseBody, &ParsedData, 0, 0))
-            {
-                if(ParsedData.Success)
-                {
-                    OnResult.ExecuteIfBound(true, ParsedData, TEXT(""));
-                }
-                else
-                {
-                    OnResult.ExecuteIfBound(false, FRegisterListenServerData(), TEXT("REGISTER_LISTEN_SERVER_FAILED"));
-                }
-            }
-            else
-            {
-                OnResult.ExecuteIfBound(false, FRegisterListenServerData(), TEXT("JSON_PARSE_ERROR"));
-            }
-        }
-        else
-        {
-            FString ErrorCode, ErrorMessage;
-            UMVE_API_Helper::ParseError(ResponseBody, ErrorCode, ErrorMessage);
-            OnResult.ExecuteIfBound(false, FRegisterListenServerData(), ErrorCode);
-        }
-    };
-    
-    FMVE_HTTP_Client::SendPostRequest(URL, JsonBody, GlobalAuthToken, FOnHttpResponse::CreateLambda(HandleResponseLambda));
+    FMVE_HTTP_Client::SendPostRequest(URL, JsonBody, GlobalAuthToken, HANDLE_RESPONSE_STRUCT(FRegisterListenServerData, OnResult));
 }
 
 void UMVE_API_Helper::ToggleConcertOpen(const FString& RoomId, const bool bIsOpen, const FOnGenericApiComplete& OnResult)
@@ -794,74 +588,6 @@ void UMVE_API_Helper::UploadModel(const FString& ModelPath, const FString& Thumb
     const FString FileName = FPaths::GetCleanFilename(ModelPath);
     FMVE_HTTP_Client::SendMultipartRequest(URL, TEXT("model"), ModelData, FileName, FormFields, GlobalAuthToken, HANDLE_RESPONSE_STRUCT(FUploadModelResponseData, OnResult));
 }
-
-// 경고 : 이거 안씀
-// void UMVE_API_Helper::DownloadModel(int32 ModelId, const FString& SavePath, const FOnGenericApiComplete& OnResult)
-// {
-//     const FString URL = FString::Printf(TEXT("%s/api/models/%d/download"), *ResourceServerURL, ModelId);
-//     auto HandleDownloadResponse = FOnHttpDownloadResult::CreateLambda([SavePath, ModelId, OnResult](bool bSuccess, const TArray<uint8>& FileData, const FString& ErrorMessage)
-//
-//     {
-//
-//         PRINTLOG(TEXT("Download Response: Success=%d, ErrorMessage=%s"), bSuccess, *ErrorMessage);
-//
-//         if (bSuccess && FileData.Num() > 0)
-//
-//         {
-//
-//             FString FinalPath = SavePath;
-//
-//             if (FinalPath.IsEmpty())
-//
-//             {
-//
-//                 FinalPath = FPaths::ProjectSavedDir() / TEXT("DownloadedModels");
-//
-//                 IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
-//
-//                 if (!PlatformFile.DirectoryExists(*FinalPath))
-//
-//                 {
-//
-//                     PlatformFile.CreateDirectoryTree(*FinalPath);
-//
-//                 }
-//
-//                 FinalPath /= FString::Printf(TEXT("Model_%d.glb"), ModelId);
-//
-//             }
-//
-//
-//
-//             if (FFileHelper::SaveArrayToFile(FileData, *FinalPath))
-//
-//             {
-//
-//                 OnResult.ExecuteIfBound(true, FinalPath);
-//
-//             }
-//
-//             else
-//
-//             {
-//
-//                 OnResult.ExecuteIfBound(false, TEXT("FILE_SAVE_ERROR"));
-//
-//             }
-//
-//         }
-//
-//         else
-//
-//         {
-//             FString ErrorCode, _;
-//             UMVE_API_Helper::ParseError(ErrorMessage, ErrorCode, _);
-//             OnResult.ExecuteIfBound(false, ErrorCode);
-//         }
-//
-//     });
-//     FMVE_HTTP_Client::DownloadFile(URL, GlobalAuthToken, HandleDownloadResponse);
-// }
 
 // 이거를 써요
 void UMVE_API_Helper::GetModelDownloadUrl(const int32 ModelId, const FOnGetModelDownloadUrlComplete& OnResult)
@@ -1089,12 +815,6 @@ void UMVE_API_Helper::UploadModelBP(UObject* WorldContextObject, const FString& 
     WRAP_DELEGATE(OnUploadModelComplete, OnResultBP);
     UploadModel(ModelPath, ThumbnailPath, ModelName, OnResult);
 }
-
-// void UMVE_API_Helper::DownloadModelBP(UObject* WorldContextObject, const int32 ModelId, const FString& SavePath, const FOnGenericApiCompleteBP& OnResultBP)
-// {
-//     WRAP_DELEGATE(OnGenericApiComplete, OnResultBP);
-//     DownloadModel(ModelId, SavePath, OnResult);
-// }
 
 void UMVE_API_Helper::GetModelDownloadUrlBP(UObject* WorldContextObject, const int32 ModelId, const FOnGetModelDownloadUrlCompleteBP& OnResultBP)
 {
