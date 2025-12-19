@@ -488,3 +488,94 @@ void AMVE_GM_StageLevel::OnAccessoryLoaded(UObject* Asset, const FAssetMetadata&
 	// 정리
 	PendingAccessories.Remove(UserID);
 }
+
+void AMVE_GM_StageLevel::HandleFlashEffect(const AController* InstigatorController,
+	const TArray<AActor*>& IgnoreActors, const FVector& FlashLocation, const FVector& FlashDirection, const float EffectiveDistance, const float FlashAngleDotThreshold) const
+{
+	// 서버 전용 로직
+	if (HasAuthority() == false)
+	{
+		return;
+	}
+	
+	PRINTNETLOG(this, TEXT("플래시 포스트 프로세스 효과를 받을 대상을 걸러내겠습니다!"));
+
+	// 모든 플레이어 컨트롤러를 순회
+	for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
+	{
+		// 유효하지 않거나, 플래시를 터뜨린 자신이면 건너뜀
+		APlayerController* PC = It->Get();
+		if (PC == nullptr || PC == InstigatorController)
+		{
+			continue; 
+		}
+
+		// 목표 폰의 유효성 검증
+		const APawn* TargetPawn = PC->GetPawn();
+		if (TargetPawn == nullptr)
+		{
+			continue;
+		}
+
+		// 유효 거리 확인
+		FVector PlayerCamLocation;
+		FRotator PlayerCamRotation;
+		PC->GetPlayerViewPoint(PlayerCamLocation, PlayerCamRotation);
+		if (FVector::DistSquared(FlashLocation, PlayerCamLocation) > FMath::Square(EffectiveDistance))
+		{
+			PRINTNETLOG(this, TEXT("플래시의 유효 사정 거리 벗어남!"));
+			continue;
+		}
+
+		// 플래시 각도 체크
+		const FVector VectorToPlayer = (PlayerCamLocation - FlashLocation).GetSafeNormal();
+		if (FVector::DotProduct(FlashDirection, VectorToPlayer) < FlashAngleDotThreshold)
+		{
+			PRINTNETLOG(this, TEXT("플래시의 유효 입사 각도 벗어남!"));
+			continue;
+		}
+
+		// 플레이어가 플래시를 향해 보고 있는가?
+		const FVector PlayerCamDirection = PlayerCamRotation.Vector();
+		const FVector VectorToFlash = (FlashLocation - PlayerCamLocation).GetSafeNormal();
+		if (FVector::DotProduct(PlayerCamDirection, VectorToFlash) < PlayerLookAtFlashDotThreshold)
+		{
+			PRINTNETLOG(this, TEXT("대상이 플래시를 바라보고 있지 않음!"));
+			continue;
+		}
+
+		// 플래시를 터뜨린 폰과, 대상 폰 사이에 장애물 확인
+		FHitResult HitResult;
+		FCollisionQueryParams CollisionParams;
+		CollisionParams.AddIgnoredActor(TargetPawn);
+		for (const auto Temp : IgnoreActors)
+		{
+			CollisionParams.AddIgnoredActor(Temp);
+		}
+		if (InstigatorController)
+		{
+			CollisionParams.AddIgnoredActor(InstigatorController->GetPawn());
+		}
+		
+		const bool bHit = GetWorld()->LineTraceSingleByChannel(
+			HitResult,
+			FlashLocation,
+			PlayerCamLocation,
+			ECC_Visibility,
+			CollisionParams
+		);
+
+		if (bHit)
+		{
+			PRINTNETLOG(this, TEXT("대상과 플래시 사이에 장애물 확인!"));
+			continue;
+		}
+
+		// 모든 조건을 통과: 이 플레이어는 눈뽕 효과를 받음
+		if (AMVE_PC_StageLevel* TargetPC = Cast<AMVE_PC_StageLevel>(PC))
+		{
+			PRINTNETLOG(this, TEXT("플레이어 %s가 플래시 효과에 맞았습니다!"), *TargetPC->GetName());
+			TargetPC->Client_TriggerFlashPostProcess();
+		}
+	}
+}

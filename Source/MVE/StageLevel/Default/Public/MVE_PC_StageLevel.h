@@ -5,12 +5,14 @@
 #include "GameFramework/PlayerController.h"
 #include "MVE_PC_StageLevel.generated.h"
 
+class UMVE_StageLevel_WidgetController_Chat;
 struct FPlayerAccessoryInfo;
 struct FCustomizationData;
 class AMVE_StageLevel_AudCharacter;
-class UMVE_StageLevel_WidgetController_Chat;
 class UMVE_WC_StageLevel_AudRadialMenu;
 class UMVE_WC_Chat;
+class UTimelineComponent;
+class UCurveFloat;
 
 DECLARE_DELEGATE(FOnSetUserInfoFinished);
 
@@ -28,7 +30,10 @@ public:
 	UFUNCTION()
 	AMVE_StageLevel_AudCharacter* GetBindingAudCharacter() const;
 
-public:
+	// 플래시 포스트 프로세스 효과를 클라이언트에서 트리거합니다.
+	UFUNCTION(Client, Reliable)
+	void Client_TriggerFlashPostProcess();
+	
 	// 서버에 액세서리 정보 등록
 	UFUNCTION(Server, Reliable)
 	void ServerRPC_RegisterAccessory(const FString& UserID, const FString& PresetJSON);
@@ -42,6 +47,23 @@ public:
 
 	// 래디얼 메뉴에서 현재 선택된 섹터의 인덱스를 반환한다
 	int32 GetRadialMenuSelection() const;
+protected:
+	UPROPERTY(EditDefaultsOnly, Category = "MVE|Flash Effect")
+	TObjectPtr<UMaterialInterface> FlashPostProcessMaterialBase;
+
+	UPROPERTY(EditDefaultsOnly, Category = "MVE|Flash Effect")
+	TObjectPtr<UCurveFloat> FlashPostProcessCurve;
+
+	UPROPERTY()
+	TObjectPtr<UMaterialInstanceDynamic> FlashMID;
+
+private:
+	UPROPERTY()
+	TObjectPtr<UTimelineComponent> FlashPostProcessTimelineComp;
+
+	UFUNCTION()
+	void OnFlashPostProcessUpdate(float Value) const;
+	
 protected:
 	// 호스트용 위젯 클래스
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "MVE|UI")
