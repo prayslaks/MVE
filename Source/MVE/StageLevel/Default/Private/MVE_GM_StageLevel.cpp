@@ -5,10 +5,8 @@
 #include "GameFramework/PlayerController.h"
 #include "GameFramework/PlayerStart.h"
 #include "EngineUtils.h"
-#include "MVE_AUD_CustomizationManager.h"
 #include "MVE_GIS_SessionManager.h"
 #include "MVE_StageLevel_ChatManager.h"
-#include "SenderReceiver.h"
 #include "GameFramework/GameStateBase.h"
 #include "GameFramework/PlayerState.h"
 #include "StageLevel/Default/Public/MVE_PC_StageLevel_StudioComponent.h"
@@ -92,18 +90,6 @@ void AMVE_GM_StageLevel::BeginPlay()
 		true,
 		0.f // 즉시 한 번 실행
 	);
-
-	// SenderReceiver 델리게이트 바인딩
-	USenderReceiver* SR = GetGameInstance()->GetSubsystem<USenderReceiver>();
-	if (SR)
-	{
-		SR->OnAssetLoaded.AddDynamic(this, &AMVE_GM_StageLevel::OnAccessoryLoaded);
-		PRINTLOG(TEXT("✅ SenderReceiver OnAssetLoaded delegate bound"));
-	}
-	else
-	{
-		PRINTLOG(TEXT("❌ SenderReceiver not found"));
-	}
 }
 
 UClass* AMVE_GM_StageLevel::GetDefaultPawnClassForController_Implementation(AController* InController)
@@ -352,81 +338,27 @@ void AMVE_GM_StageLevel::RegisterPlayerAccessory(const FString& UserID, const FS
 {
 	PRINTLOG(TEXT("=== RegisterPlayerAccessory (Server) ==="));
 	PRINTLOG(TEXT("UserID: %s"), *UserID);
-	
+
 	if (!HasAuthority())
 	{
 		PRINTLOG(TEXT("❌ Not server authority"));
 		return;
 	}
-	
+
 	// TMap에 저장 (기존 데이터 덮어쓰기 가능)
 	PlayerAccessories.Add(UserID, PresetJSON);
 	PRINTLOG(TEXT("✅ Accessory stored in map (Total: %d)"), PlayerAccessories.Num());
-	
-	// 모든 클라이언트에게 브로드캐스트
-	MulticastRPC_BroadcastAccessory(UserID, PresetJSON);
-	PRINTLOG(TEXT("✅ Multicast RPC called"));
-}
 
-void AMVE_GM_StageLevel::MulticastRPC_BroadcastAccessory_Implementation(const FString& UserID,
-	const FString& PresetJSON)
-{
-	PRINTLOG(TEXT("=== MulticastRPC_BroadcastAccessory (All Clients) ==="));
-	PRINTLOG(TEXT("UserID: %s"), *UserID);
-	PRINTLOG(TEXT("PresetJSON: %s"), *PresetJSON);
-	
-	// CustomizationManager 가져오기
-	UMVE_AUD_CustomizationManager* CustomizationManager = 
-		GetGameInstance()->GetSubsystem<UMVE_AUD_CustomizationManager>();
-	
-	if (!CustomizationManager)
+	// GameState를 통해 모든 클라이언트에게 브로드캐스트
+	if (AMVE_GS_StageLevel* StageGameState = GetGameState<AMVE_GS_StageLevel>())
 	{
-		PRINTLOG(TEXT("❌ CustomizationManager not found"));
-		return;
+		StageGameState->MulticastRPC_BroadcastAccessory(UserID, PresetJSON);
+		PRINTLOG(TEXT("✅ GameState Multicast RPC called"));
 	}
-	
-	// JSON 역직렬화
-	FCustomizationData Data = CustomizationManager->DeserializeCustomizationData(PresetJSON);
-	
-	// 데이터 검증
-	if (Data.ModelUrl.IsEmpty())
+	else
 	{
-		PRINTLOG(TEXT("⚠️ ModelUrl is empty for UserID: %s"), *UserID);
-		return;
+		PRINTLOG(TEXT("❌ Failed to get GameState"));
 	}
-	
-	PRINTLOG(TEXT("✅ Deserialized data:"));
-	PRINTLOG(TEXT("   Model URL: %s"), *Data.ModelUrl);
-	PRINTLOG(TEXT("   Socket: %s"), *Data.SocketName);
-	PRINTLOG(TEXT("   Location: %s"), *Data.RelativeLocation.ToString());
-	
-	// 대기 맵에 저장 (다운로드 완료 후 매칭용)
-	PendingAccessories.Add(UserID, Data);
-	
-	// SenderReceiver 사용
-	USenderReceiver* SR = GetGameInstance()->GetSubsystem<USenderReceiver>();
-	if (!SR)
-	{
-		PRINTLOG(TEXT("❌ SenderReceiver not found"));
-		return;
-	}
-	
-	// 메타데이터 구성
-	FAssetMetadata Metadata;
-	Metadata.AssetType = EAssetType::MESH;
-	Metadata.UserEmail = UserID;  // ⭐ 매칭용 키
-	Metadata.RemotePath = Data.ModelUrl;  // PresignedURL
-	Metadata.AssetID = FGuid::NewGuid();
-	
-	PRINTLOG(TEXT("✅ Queuing download:"));
-	PRINTLOG(TEXT("   AssetID: %s"), *Metadata.AssetID.ToString());
-	PRINTLOG(TEXT("   DisplayName (UserID): %s"), *Metadata.DisplayName);
-	PRINTLOG(TEXT("   RemotePath: %s"), *Metadata.RemotePath);
-	
-	// 다운로드 시작
-	SR->DownloadFromFileServer(Metadata);
-	
-	PRINTLOG(TEXT("✅ Download queued for UserID: %s"), *UserID);
 }
 
 void AMVE_GM_StageLevel::PostLogin(APlayerController* NewPlayer)
@@ -453,38 +385,4 @@ void AMVE_GM_StageLevel::PostLogin(APlayerController* NewPlayer)
 		PRINTLOG(TEXT("Sending %d existing accessories to new player"), AccessoryArray.Num());
 		PC->ClientRPC_ReceiveExistingAccessories(AccessoryArray);
 	}
-}
-
-void AMVE_GM_StageLevel::OnAccessoryLoaded(UObject* Asset, const FAssetMetadata& Metadata)
-{
-	PRINTLOG(TEXT("=== OnAccessoryLoaded ==="));
-	PRINTLOG(TEXT("DisplayName: %s"), *Metadata.DisplayName);
-	PRINTLOG(TEXT("AssetID: %s"), *Metadata.AssetID.ToString());
-	
-	FString UserID = Metadata.UserEmail;
-	
-	FCustomizationData* Data = PendingAccessories.Find(UserID);
-	if (!Data)
-	{
-		PRINTLOG(TEXT("⚠️ No pending accessory for UserID: %s"), *UserID);
-		return;
-	}
-	
-	if (!Asset)
-	{
-		PRINTLOG(TEXT("❌ Asset is null"));
-		PendingAccessories.Remove(UserID);
-		return;
-	}
-	
-	PRINTLOG(TEXT("✅ Asset loaded successfully"));
-	PRINTLOG(TEXT("   Asset Type: %s"), *Asset->GetClass()->GetName());
-	PRINTLOG(TEXT("   Socket: %s"), *Data->SocketName);
-	
-	// TODO: Step 5에서 구현
-	// ApplyAccessoryToCharacter(UserID, Asset, *Data);
-	PRINTLOG(TEXT("TODO: Apply accessory to character with UserID: %s"), *UserID);
-	
-	// 정리
-	PendingAccessories.Remove(UserID);
 }

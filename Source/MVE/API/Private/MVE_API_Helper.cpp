@@ -300,7 +300,7 @@ void UMVE_API_Helper::GetProfile(const FOnGetProfileComplete& OnResult)
 // 리소스 서버 관련 API
 void UMVE_API_Helper::SaveAccessoryPreset(const FString& PresetName, const TArray<TSharedPtr<FJsonValue>>& Accessories, const FString& Description, const bool bIsPublic, const FOnSavePresetComplete& OnResult)
 {
-    const FString URL = FString::Printf(TEXT("%s/api/presets/save"), *ResourceServerURL);
+    const FString URL = FString::Printf(TEXT("%s/api/accessory-presets/save"), *ResourceServerURL);
     TSharedPtr<FJsonObject> JsonObject = MakeShareable(new FJsonObject);
     JsonObject->SetStringField(TEXT("presetName"), PresetName);
     JsonObject->SetArrayField(TEXT("accessories"), Accessories);
@@ -317,19 +317,19 @@ void UMVE_API_Helper::SaveAccessoryPreset(const FString& PresetName, const TArra
 
 void UMVE_API_Helper::GetPresetList(const bool bIncludePublic, const FOnGetPresetListComplete& OnResult)
 {
-    const FString URL = FString::Printf(TEXT("%s/api/presets/list?includePublic=%s"), *ResourceServerURL, bIncludePublic ? TEXT("true") : TEXT("false"));
+    const FString URL = FString::Printf(TEXT("%s/api/accessory-presets/list?includePublic=%s"), *ResourceServerURL, bIncludePublic ? TEXT("true") : TEXT("false"));
     FMVE_HTTP_Client::SendGetRequest(URL, GlobalAuthToken, HANDLE_RESPONSE_STRUCT(FGetPresetListResponseData, OnResult));
 }
 
 void UMVE_API_Helper::GetPresetDetail(const int32 PresetId, const FOnGetPresetDetailComplete& OnResult)
 {
-    const FString URL = FString::Printf(TEXT("%s/api/presets/%d"), *ResourceServerURL, PresetId);
+    const FString URL = FString::Printf(TEXT("%s/api/accessory-presets/%d"), *ResourceServerURL, PresetId);
     FMVE_HTTP_Client::SendGetRequest(URL, GlobalAuthToken, HANDLE_RESPONSE_STRUCT(FGetPresetDetailResponseData, OnResult));
 }
 
 void UMVE_API_Helper::UpdatePreset(const int32 PresetId, const FString& PresetName, const TArray<TSharedPtr<FJsonValue>>& Accessories, const FString& Description, const bool bIsPublic, const FOnGenericApiComplete& OnResult)
 {
-    const FString URL = FString::Printf(TEXT("%s/api/presets/%d"), *ResourceServerURL, PresetId);
+    const FString URL = FString::Printf(TEXT("%s/api/accessory-presets/%d"), *ResourceServerURL, PresetId);
     TSharedPtr<FJsonObject> JsonObject = MakeShareable(new FJsonObject);
     if(!PresetName.IsEmpty()) JsonObject->SetStringField(TEXT("presetName"), PresetName);
     if(Accessories.Num() > 0) JsonObject->SetArrayField(TEXT("accessories"), Accessories);
@@ -343,7 +343,7 @@ void UMVE_API_Helper::UpdatePreset(const int32 PresetId, const FString& PresetNa
 
 void UMVE_API_Helper::DeletePreset(const int32 PresetId, const FOnGenericApiComplete& OnResult)
 {
-    const FString URL = FString::Printf(TEXT("%s/api/presets/%d"), *ResourceServerURL, PresetId);
+    const FString URL = FString::Printf(TEXT("%s/api/accessory-presets/%d"), *ResourceServerURL, PresetId);
     FMVE_HTTP_Client::SendDeleteRequest(URL, GlobalAuthToken, HANDLE_GENERIC_RESPONSE(OnResult));
 }
 

@@ -22,6 +22,11 @@ void UMVE_AUD_WidgetClass_GenerateMesh::NativeConstruct()
 		SendPromptButton.Get()->OnClicked.AddDynamic(this, &UMVE_AUD_WidgetClass_GenerateMesh::OnSendPromptButtonClicked);
 	}
 
+	if (SaveButton)
+	{
+		SaveButton.Get()->OnClicked.AddDynamic(this, &UMVE_AUD_WidgetClass_GenerateMesh::OnSaveButtonClicked);
+	}
+
 	if (InputImageButton)
 	{
 		InputImageButton.Get()->OnClicked.AddDynamic(this, &UMVE_AUD_WidgetClass_GenerateMesh::OnInputImageButtonClicked);
@@ -80,7 +85,14 @@ void UMVE_AUD_WidgetClass_GenerateMesh::OnSendPromptButtonClicked()
 		FString TestGLBPath = TEXT("Assets/Test/fbx.glb");
 		FString FullPath = FPaths::Combine(ContentDir, TestGLBPath);
 		UMVE_AUD_WidgetClass_PreviewWidget* PreviewWidget = Cast<UMVE_AUD_WidgetClass_PreviewWidget>(MeshPreviewWidget);
-		CustomizationManager->StartMeshPreview(FullPath, PreviewWidget);
+
+		// 가짜 presigned URL (테스트용)
+		FString FakePresignedURL = TEXT("https://fake-s3-bucket.amazonaws.com/test-model.glb");
+
+		// 테스트 함수 호출 (로컬 GLB + 가짜 RemoteURL 설정)
+		CustomizationManager->TestLoadLocalGLBWithFakeURL(FullPath, FakePresignedURL, PreviewWidget);
+
+		SetStatus(TEXT("테스트 모드: 로컬 GLB 로드 완료"));
 	}
 	else
 	{
@@ -178,7 +190,7 @@ void UMVE_AUD_WidgetClass_GenerateMesh::OnHeadButtonClicked()
     
 	if (Manager)
 	{
-		Manager->AttachMeshToSocket(FName("Head"));
+		Manager->AttachMeshToSocket(FName("head_socket"));
 		SetStatus(TEXT("머리에 부착 완료"));
 	}
 	else

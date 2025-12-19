@@ -2,7 +2,6 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "MVE_AUD_CustomizationManager.h"
 #include "GameFramework/GameModeBase.h"
 #include "MVE_GM_StageLevel.generated.h"
 
@@ -109,30 +108,17 @@ private:
 	/*
 	 * 액세서리 네트워크 동기화
 	 */
-	
+
 public:
 	// PlayerController로부터 액세서리 정보 등록 받기
 	void RegisterPlayerAccessory(const FString& UserID, const FString& PresetJSON);
 
 protected:
 	virtual void PostLogin(APlayerController* NewPlayer) override;
-	
+
 private:
-	// 모든 클라이언트에게 액세서리 정보 브로드캐스트
-	UFUNCTION(NetMulticast, Reliable)
-	void MulticastRPC_BroadcastAccessory(const FString& UserID, const FString& PresetJSON);
-	
-	// 현재 참여 중인 플레이어들의 액세서리 정보 저장
+	// 현재 참여 중인 플레이어들의 액세서리 정보 저장 (신규 입장자 전달용)
 	// Key: UserID, Value: PresetJSON
 	UPROPERTY()
 	TMap<FString, FString> PlayerAccessories;
-
-	// 액세서리 다운로드 진행 중인 세션
-	// Key: UserID, Value: CustomizationData
-	UPROPERTY()
-	TMap<FString, FCustomizationData> PendingAccessories;
-
-	// SenderReceiver 델리게이트 콜백
-	UFUNCTION()
-	void OnAccessoryLoaded(UObject* Asset, const FAssetMetadata& Metadata);
 };

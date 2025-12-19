@@ -3,7 +3,11 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/GameStateBase.h"
+#include "MVE_AUD_CustomizationManager.h"
 #include "MVE_GS_StageLevel.generated.h"
+
+class USenderReceiver;
+struct FAssetMetadata;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnViewerCountChanged, int32, NewCount);
 
@@ -32,6 +36,33 @@ protected:
 	
 	UFUNCTION()
 	void OnRep_ViewerCount();
-	
+
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
+	/*
+	 * 액세서리 네트워크 동기화
+	 */
+public:
+	// 모든 클라이언트에게 액세서리 정보 브로드캐스트
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastRPC_BroadcastAccessory(const FString& UserID, const FString& PresetJSON);
+
+	// UserID로 캐릭터 찾기
+	APawn* FindCharacterByUserID(const FString& UserID) const;
+
+protected:
+	virtual void BeginPlay() override;
+
+private:
+	// 액세서리 다운로드 진행 중인 세션
+	// Key: UserID, Value: CustomizationData
+	UPROPERTY()
+	TMap<FString, FCustomizationData> PendingAccessories;
+
+	// SenderReceiver 델리게이트 콜백
+	UFUNCTION()
+	void OnAccessoryLoaded(UObject* Asset, const FAssetMetadata& Metadata);
+
+	// 액세서리를 캐릭터에 적용
+	void ApplyAccessoryToCharacter(const FString& UserID, UObject* Asset, const FCustomizationData& Data);
 };

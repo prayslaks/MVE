@@ -116,6 +116,7 @@ private:
 	FString UserEmail;
 	FString UserName;
 	
+	
 	void Initialize();
 
 

@@ -7,6 +7,7 @@
 #include "MVE.h"
 #include "API/Public/MVE_API_Helper.h"
 #include "API/Public/MVE_API_ResponseData.h"
+#include "API/Public/MVE_HTTP_Client.h"
 #include "MVE_AUD_PreviewCameraPawn.h"
 #include "MVE_AUD_PreviewCaptureActor.h"
 #include "MVE_AUD_WidgetClass_PreviewWidget.h"
@@ -16,6 +17,8 @@
 #include "TimerManager.h"
 #include "Engine/World.h"
 #include "HAL/FileManager.h"
+#include "HAL/PlatformFileManager.h"
+#include "Misc/FileHelper.h"
 #include "Misc/Paths.h"
 
 
@@ -258,17 +261,56 @@ void UMVE_AUD_CustomizationManager::OnGetModelStatusComplete(bool bSuccess, cons
 
 		// 다운로드 경로 설정 (Saved/DownloadedModels 폴더에 저장)
 		FString SaveDir = FPaths::ProjectSavedDir() / TEXT("DownloadedModels");
+
+		// 디렉토리 생성
+		IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
+		if (!PlatformFile.DirectoryExists(*SaveDir))
+		{
+			PlatformFile.CreateDirectoryTree(*SaveDir);
+			PRINTLOG(TEXT("✅ Created directory: %s"), *SaveDir);
+		}
+
 		FString SavePath = SaveDir / FString::Printf(TEXT("Model_%d.glb"), JobStatus.ModelId);
 
 		PRINTLOG(TEXT("📥 Starting model download..."));
+		PRINTLOG(TEXT("   Download URL: %s"), *JobStatus.DownloadUrl);
 		PRINTLOG(TEXT("   Save path: %s"), *SavePath);
 
-		// 다운로드 콜백 설정
-		FOnGetModelDownloadUrlComplete OnDownloadComplete;
-		OnDownloadComplete.BindUObject(this, &UMVE_AUD_CustomizationManager::OnModelDownloadComplete);
+		// presigned URL로 직접 다운로드 (별도 API 호출 불필요)
+		FOnHttpDownloadResult OnDownloadComplete;
+		OnDownloadComplete.BindLambda([this, SavePath](bool bSuccess, const TArray<uint8>& FileData, const FString& ErrorMessage)
+		{
+			if (bSuccess && FileData.Num() > 0)
+			{
+				// 파일 저장
+				if (FFileHelper::SaveArrayToFile(FileData, *SavePath))
+				{
+					PRINTLOG(TEXT("✅ Model downloaded successfully!"));
+					PRINTLOG(TEXT("   File path: %s"), *SavePath);
+					PRINTLOG(TEXT("   File size: %.2f MB"), FileData.Num() / (1024.0f * 1024.0f));
 
-		// 모델 다운로드 시작
-		UMVE_API_Helper::GetModelDownloadUrl(JobStatus.ModelId, OnDownloadComplete);
+					// CurrentGLBFilePath에 저장
+					CurrentGLBFilePath = SavePath;
+
+					// 프리뷰 시작
+					if (MeshPreviewWidget)
+					{
+						StartMeshPreview(SavePath, MeshPreviewWidget);
+					}
+				}
+				else
+				{
+					PRINTLOG(TEXT("❌ Failed to save file: %s"), *SavePath);
+				}
+			}
+			else
+			{
+				PRINTLOG(TEXT("❌ Model download failed: %s"), *ErrorMessage);
+			}
+		});
+
+		// S3 presigned URL은 이미 서명이 포함되어 있으므로 Authorization 헤더 불필요
+		FMVE_HTTP_Client::DownloadFile(JobStatus.DownloadUrl, TEXT(""), OnDownloadComplete);
 	}
 	else if (JobStatus.Status.Equals(TEXT("failed"), ESearchCase::IgnoreCase))
 	{
@@ -429,17 +471,13 @@ void UMVE_AUD_CustomizationManager::AttachMeshToSocket(const FName& SocketName)
         );
         
         NewAccessory->AttachToComponent(SkelMesh, CustomRules, SocketName);
-        
+
         // 스케일 복원
         NewMesh->SetWorldScale3D(DesiredScale);
-        
+
         PRINTLOG(TEXT("✅ Accessory attached to socket: %s"), *SocketName.ToString());
-        PRINTLOG(TEXT("   Final Scale: %s"), *NewMesh->GetComponentScale().ToString());
-        
-        FVector FinalOrigin, FinalExtent;
-        NewAccessory->GetActorBounds(false, FinalOrigin, FinalExtent);
-        PRINTLOG(TEXT("   Final Size: X=%.2f, Y=%.2f, Z=%.2f cm"), 
-            FinalExtent.X * 2.0f, FinalExtent.Y * 2.0f, FinalExtent.Z * 2.0f);
+
+    	ScaleMeshToCharacter();
     }
     else
     {
@@ -1101,6 +1139,73 @@ void UMVE_AUD_CustomizationManager::HandleSavePresetComplete(bool bSuccess, cons
 	}
 }
 
+void UMVE_AUD_CustomizationManager::LoadAccessoryPresetFromServer()
+{
+	PRINTLOG(TEXT("=== LoadAccessoryPresetFromServer ==="));
+
+	// GetPresetList API 호출 (includePublic = false, 자신의 프리셋만)
+	FOnGetPresetListComplete OnResult;
+	OnResult.BindUObject(this, &UMVE_AUD_CustomizationManager::HandleLoadPresetComplete);
+
+	UMVE_API_Helper::GetPresetList(false, OnResult);
+	PRINTLOG(TEXT("✅ Preset list request sent"));
+}
+
+void UMVE_AUD_CustomizationManager::HandleLoadPresetComplete(bool bSuccess, const FGetPresetListResponseData& Data,
+	const FString& ErrorCode)
+{
+	PRINTLOG(TEXT("=== HandleLoadPresetComplete ==="));
+
+	if (!bSuccess)
+	{
+		PRINTLOG(TEXT("❌ Failed to load preset list: %s"), *ErrorCode);
+		return;
+	}
+
+	if (Data.Presets.Num() == 0)
+	{
+		PRINTLOG(TEXT("⚠️ No presets found for this user"));
+		return;
+	}
+
+	// 첫 번째 프리셋 사용 (가장 최근 저장된 것)
+	const FAccessoryPreset& FirstPreset = Data.Presets[0];
+	PRINTLOG(TEXT("✅ Preset loaded from server"));
+	PRINTLOG(TEXT("   Preset ID: %d"), FirstPreset.Id);
+	PRINTLOG(TEXT("   Preset Name: %s"), *FirstPreset.PresetName);
+	PRINTLOG(TEXT("   Created At: %s"), *FirstPreset.CreatedAt);
+
+	// Accessories 배열 파싱
+	if (FirstPreset.Accessories.Num() == 0)
+	{
+		PRINTLOG(TEXT("⚠️ Preset has no accessories"));
+		return;
+	}
+
+	// 첫 번째 액세서리 데이터 추출
+	const FAccessory& FirstAccessory = FirstPreset.Accessories[0];
+
+	// FCustomizationData로 변환
+	SavedCustomization.SocketName = FirstAccessory.SocketName;
+	SavedCustomization.RelativeLocation = FirstAccessory.RelativeLocation;
+	SavedCustomization.RelativeRotation = FirstAccessory.RelativeRotation;
+	SavedCustomization.RelativeScale = FirstAccessory.RelativeScale;
+	SavedCustomization.ModelUrl = FirstAccessory.ModelUrl;
+
+	PRINTLOG(TEXT("✅ Customization data loaded:"));
+	PRINTLOG(TEXT("   Model URL: %s"), *SavedCustomization.ModelUrl);
+	PRINTLOG(TEXT("   Socket: %s"), *SavedCustomization.SocketName);
+	PRINTLOG(TEXT("   Location: %s"), *SavedCustomization.RelativeLocation.ToString());
+	PRINTLOG(TEXT("   Rotation: %s"), *SavedCustomization.RelativeRotation.ToString());
+	PRINTLOG(TEXT("   Scale: %.2f"), SavedCustomization.RelativeScale);
+
+	// 델리게이트 호출 (PlayerController에서 사용)
+	if (OnPresetLoadedDelegate.IsBound())
+	{
+		OnPresetLoadedDelegate.Execute(SavedCustomization);
+	}
+}
+
 void UMVE_AUD_CustomizationManager::OnLoadPresetResponse(FHttpRequestPtr Request, FHttpResponsePtr Response,
 	bool bSucceeded)
 {
@@ -1157,4 +1262,33 @@ void UMVE_AUD_CustomizationManager::SetRemoteModelUrl(const FString& RemoteUrl)
 {
 	CurrentRemoteURL = RemoteUrl;
 	PRINTLOG(TEXT("✅ Remote URL saved: %s"), *CurrentRemoteURL);
+}
+
+void UMVE_AUD_CustomizationManager::TestLoadLocalGLBWithFakeURL(const FString& LocalGLBPath, const FString& FakeRemoteURL, UMVE_AUD_WidgetClass_PreviewWidget* InPreviewWidget)
+{
+	PRINTLOG(TEXT("=== TestLoadLocalGLBWithFakeURL ==="));
+	PRINTLOG(TEXT("Local GLB Path: %s"), *LocalGLBPath);
+	PRINTLOG(TEXT("Fake Remote URL: %s"), *FakeRemoteURL);
+
+	// 1. 로컬 GLB 파일 존재 확인
+	if (!FPaths::FileExists(LocalGLBPath))
+	{
+		PRINTLOG(TEXT("❌ Local GLB file does not exist: %s"), *LocalGLBPath);
+		return;
+	}
+
+	// 2. 가짜 RemoteURL 설정
+	CurrentRemoteURL = FakeRemoteURL;
+	PRINTLOG(TEXT("✅ Fake Remote URL set: %s"), *CurrentRemoteURL);
+
+	// 3. GLB 파일 경로 저장
+	CurrentGLBFilePath = LocalGLBPath;
+
+	// 4. 메시 프리뷰 시작
+	StartMeshPreview(LocalGLBPath, InPreviewWidget);
+
+	PRINTLOG(TEXT("✅ Test mode: Local GLB loaded with fake remote URL"));
+	PRINTLOG(TEXT("   Now you can:"));
+	PRINTLOG(TEXT("   1. Attach mesh to socket (Head/LeftHand/RightHand buttons)"));
+	PRINTLOG(TEXT("   2. Click Save button to test preset saving"));
 }

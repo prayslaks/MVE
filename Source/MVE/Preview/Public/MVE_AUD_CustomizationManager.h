@@ -137,6 +137,13 @@ public:
 	// Transform 저장
 	UFUNCTION(BlueprintCallable, Category = "Customization")
 	void SaveAccessoryTransform(AActor* Accessory, const FTransform& NewTransform);
+
+	// 테스트용: 로컬 GLB 파일로 프리뷰 + 가짜 RemoteURL 설정
+	UFUNCTION(BlueprintCallable, Category = "Customization|Test")
+	void TestLoadLocalGLBWithFakeURL(const FString& LocalGLBPath, const FString& FakeRemoteURL, UMVE_AUD_WidgetClass_PreviewWidget* InPreviewWidget);
+
+	// 현재 로드된 GLB 파일 경로
+	FString CurrentGLBFilePath;
 	
 private:
 	// 프리뷰용 캐릭터 생성
@@ -181,8 +188,7 @@ private:
 	UPROPERTY()
 	FCustomizationData SavedCustomization;
 
-	// 현재 로드된 GLB 파일 경로
-	FString CurrentGLBFilePath;
+	
 
 private:
 	// 캐릭터 대비 메시의 최대 크기 비율 (예: 0.3 = 캐릭터의 30%)
@@ -219,9 +225,15 @@ public:
 	void SaveAccessoryPresetToServer(const FString& PresetName = TEXT("MyAccessory"));
 
 	void HandleSavePresetComplete(bool bSuccess, const FSavePresetResponseData& Data, const FString& ErrorCode);
-	
+
+	// 서버에서 액세서리 프리셋 로드
+	UFUNCTION(BlueprintCallable, Category = "Customization")
+	void LoadAccessoryPresetFromServer();
+
+	void HandleLoadPresetComplete(bool bSuccess, const FGetPresetListResponseData& Data, const FString& ErrorCode);
+
 private:
-	// HTTP 응답 콜백
+	// HTTP 응답 콜백 (Deprecated - HandleLoadPresetComplete 사용)
 	void OnLoadPresetResponse(FHttpRequestPtr Request, FHttpResponsePtr Response, bool bSucceeded);
 
 public:
