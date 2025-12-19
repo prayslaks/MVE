@@ -68,6 +68,10 @@
 			"Enabled": true
 		},
 		{
+			"Name": "OSC",
+			"Enabled": true
+		},
+		{
 			"Name": "LiveLink",
 			"Enabled": true
 		},
@@ -131,10 +135,6 @@
 		},
 		{
 			"Name": "WarpUtils",
-			"Enabled": true
-		},
-		{
-			"Name": "OSC",
 			"Enabled": true
 		},
 		{
