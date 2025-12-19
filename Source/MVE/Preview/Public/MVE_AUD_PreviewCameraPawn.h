@@ -82,20 +82,45 @@ public:
 	UFUNCTION(BlueprintImplementableEvent, Category = "Gizmo")
 	void OnSwitchToViewMode();
 
+	// 마우스 입력을 Blueprint로 전달 (기즈모 플러그인용)
+	UFUNCTION(BlueprintImplementableEvent, Category = "Gizmo")
+	void OnMousePressed();
+
+	UFUNCTION(BlueprintImplementableEvent, Category = "Gizmo")
+	void OnMouseReleased();
+	
 	// Transform 저장
 	UFUNCTION(BlueprintCallable, Category = "Gizmo")
 	void SaveAccessoryTransform(AActor* Accessory, const FTransform& NewTransform);
+
+	// Gizmo 조작을 위해 액터를 임시로 Detach
+	UFUNCTION(BlueprintCallable, Category = "Gizmo")
+	void DetachGizmoTarget();
+
+	// Gizmo 종료 시 액터를 다시 Attach
+	UFUNCTION(BlueprintCallable, Category = "Gizmo")
+	void ReattachGizmoTarget();
 
 protected:
 	UPROPERTY()
 	AActor* TargetActor;
 
 	// Gizmo 모드 관리
-	UPROPERTY(BlueprintReadOnly, Category = "Gizmo")
+	UPROPERTY(EditAnywhere, Category = "Gizmo")
 	bool bIsGizmoMode = false;
 
 	UPROPERTY(BlueprintReadOnly, Category = "Gizmo")
 	AActor* GizmoTargetActor = nullptr;
+
+	// Detach 전 부착 정보 저장 (Reattach용)
+	UPROPERTY()
+	USceneComponent* OriginalParent = nullptr;
+
+	UPROPERTY()
+	FName OriginalSocketName;
+
+	UPROPERTY()
+	FTransform OriginalRelativeTransform;
 
 	float CurrentYaw = 180.0f;
 	float CurrentPitch = 0.0f;

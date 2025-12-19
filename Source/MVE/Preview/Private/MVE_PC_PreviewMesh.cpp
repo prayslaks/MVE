@@ -34,11 +34,14 @@ void AMVE_PC_PreviewMesh::BeginPlay()
 		}
 	}
 
-	if (UUIManagerSubsystem* UIManager = UUIManagerSubsystem::Get(this))
+	if (!bTestMode)
 	{
-		UIManager->ShowScreen(EUIScreen::AudienceStation);
-		//UIManager->ShowPopup(EUIPopup::AudienceCustomizing);
+		if (UUIManagerSubsystem* UIManager = UUIManagerSubsystem::Get(this))
+		{
+			UIManager->ShowScreen(EUIScreen::AudienceStation);
+		}
 	}
+	
 
 	PRINTLOG(TEXT("✅ PreviewMesh PlayerController initialized"));
 }
@@ -50,11 +53,6 @@ void AMVE_PC_PreviewMesh::SetupInputComponent()
 	// EnhancedInputComponent로 캐스팅
 	if (UEnhancedInputComponent* EnhancedInput = Cast<UEnhancedInputComponent>(InputComponent))
 	{
-		// 카메라 Look (마우스 드래그)
-		if (CameraLookAction)
-		{
-			EnhancedInput->BindAction(CameraLookAction, ETriggerEvent::Triggered, this, &AMVE_PC_PreviewMesh::OnCameraLook);
-		}
 
 		// 카메라 Zoom (마우스 휠)
 		if (CameraZoomAction)
@@ -138,12 +136,6 @@ void AMVE_PC_PreviewMesh::PlayerTick(float DeltaTime)
 	}
 }
 
-void AMVE_PC_PreviewMesh::OnCameraLook(const FInputActionValue& Value)
-{
-	// 이제 사용 안 함 (PlayerTick에서 처리)
-	// EnhancedInput의 Mouse XY는 절대 좌표만 주므로 델타를 직접 가져와야 함
-}
-
 void AMVE_PC_PreviewMesh::OnCameraZoom(const FInputActionValue& Value)
 {
 	AMVE_AUD_PreviewCameraPawn* CameraPawn = GetCameraPawn();
@@ -172,8 +164,17 @@ void AMVE_PC_PreviewMesh::OnMouseClickStarted(const FInputActionValue& Value)
 
 	if (CameraPawn->IsGizmoMode())
 	{
-		// Gizmo 모드: Blueprint의 PressPointer 호출 (Blueprint에서 처리)
-		// C++에서는 아무것도 안 함 (Blueprint Event로 처리)
+		// ✅ Gizmo 모드: PressPointer 1회 호출
+		CameraPawn->OnMousePressed();
+
+		// ✅ 카메라 회전 입력 차단 (기즈모 조작 중 카메라 움직임 방지)
+		SetIgnoreLookInput(true);
+
+		PRINTLOG(TEXT("🖱️ Gizmo Mode: Mouse Pressed → Look Input Disabled"));
+
+		// ⚠️ Gizmo 모드에서는 입력을 소비하지 않음 (기즈모가 legacy 이벤트를 받을 수 있도록)
+		// 참고: Enhanced Input이 ConsumeInput하면 기즈모가 마우스 추적을 못 함
+		return;  // 입력을 소비하지 않고 통과시킴
 	}
 	else
 	{
@@ -192,8 +193,13 @@ void AMVE_PC_PreviewMesh::OnMouseClickCompleted(const FInputActionValue& Value)
 
 	if (CameraPawn->IsGizmoMode())
 	{
-		// Gizmo 모드: Blueprint의 ReleasePointer 호출 (Blueprint에서 처리)
-		// C++에서는 아무것도 안 함
+		// ✅ Gizmo 모드: Blueprint 이벤트 호출 (기즈모 플러그인의 ReleasePointer 호출용)
+		CameraPawn->OnMouseReleased();
+
+		// ✅ 카메라 회전 입력 복원 (기즈모 조작 끝)
+		SetIgnoreLookInput(false);
+
+		PRINTLOG(TEXT("🖱️ Gizmo Mode: Mouse Released → Look Input Enabled"));
 	}
 	else
 	{

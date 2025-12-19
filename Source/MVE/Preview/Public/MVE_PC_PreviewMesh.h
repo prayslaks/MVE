@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "MVE_AUD_PreviewCameraPawn.h"
 #include "GameFramework/PlayerController.h"
 #include "MVE_PC_PreviewMesh.generated.h"
 
@@ -24,6 +25,9 @@ public:
 	virtual void BeginPlay() override;
 	virtual void SetupInputComponent() override;
 	virtual void PlayerTick(float DeltaTime) override;
+
+	UPROPERTY(EditAnywhere, Category = "Test")
+	bool bTestMode = false;
 
 	// CameraPawn 가져오기
 	UFUNCTION(BlueprintCallable, Category = "Camera")
@@ -55,7 +59,6 @@ protected:
 	UInputAction* MouseClickAction;
 
 	// 입력 처리 함수들
-	void OnCameraLook(const FInputActionValue& Value);
 	void OnCameraZoom(const FInputActionValue& Value);
 	void OnMouseClickStarted(const FInputActionValue& Value);
 	void OnMouseClickCompleted(const FInputActionValue& Value);
