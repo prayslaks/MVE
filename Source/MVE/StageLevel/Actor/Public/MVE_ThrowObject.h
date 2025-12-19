@@ -6,6 +6,7 @@
 #include "GameFramework/Actor.h"
 #include "MVE_ThrowObject.generated.h"
 
+class USphereComponent;
 class UProjectileMovementComponent;
 class UStaticMeshComponent;
 
@@ -22,6 +23,9 @@ public:
 	void FireInDirection(const FVector& ShootDirection);
 
 protected:
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Components")
+	TObjectPtr<USphereComponent> SphereComp;
+	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Components")
 	TObjectPtr<UStaticMeshComponent> MeshComp;
 	

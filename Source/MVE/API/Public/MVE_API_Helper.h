@@ -67,10 +67,10 @@ public:
     static void GenerateModel(const FString& Prompt, const FString& ImagePath, const FOnGenerateModelComplete& OnResult);
     static void GetModelGenerationStatus(const FString& JobId, const FOnGetJobStatusComplete& OnResult);
     static void UploadModel(const FString& ModelPath, const FString& ThumbnailPath, const FString& ModelName, const FOnUploadModelComplete& OnResult);
-    //static void DownloadModel(int32 ModelId, const FString& SavePath, const FOnGenericApiComplete& OnResult);
+    // (deprecated) static void DownloadModel(int32 ModelId, const FString& SavePath, const FOnGenericApiComplete& OnResult);
     static void GetModelDownloadUrl(int32 ModelId, const FOnGetModelDownloadUrlComplete& OnResult);
     static void DeleteModel(int32 ModelId, const FOnDeleteModelComplete& OnResult);
-
+	
     // TODO: Not Implemented
     // static void AddSongToConcert(const FString& RoomId, int32 SongNum, int32 AudioId, const FString& StreamUrl, int32 StageDirectionId, const FOnGenericApiComplete& OnResult);
     // static void RemoveSongFromConcert(const FString& RoomId, int32 SongNum, const FOnGenericApiComplete& OnResult);

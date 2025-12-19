@@ -12,6 +12,7 @@
 #include "StageLevel/Actor/Public/MVE_StageLevel_AudCharacterShooterComponent.h"
 #include "StageLevel/Default/Public/MVE_PC_StageLevel.h"
 #include "Curves/CurveFloat.h"
+#include "GameFramework/PlayerState.h"
 #include "GameFramework/ProjectileMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "Net/UnrealNetwork.h"
@@ -465,27 +466,33 @@ void AMVE_StageLevel_AudCharacter::ThrowObject()
 {
 	if (ThrowObjectClass)
 	{
-		const FVector HandLocation = GetMesh()->GetSocketLocation(TEXT("HandGrip_R"));
-		// 던지는 방향은 카메라가 바라보는 방향으로
-		const FRotator ThrowRotation = GetControlRotation();
+		// 소켓을 통해 던지는 위치 획득
+		const FVector HandLocation = GetMesh()->GetSocketLocation(FName("ThrowGrip_R"));
+		const FRotator HandRotation = GetMesh()->GetSocketRotation(FName("ThrowGrip_R"));
 		
+		// 스폰 조건
 		FActorSpawnParameters SpawnParams;
 		SpawnParams.Owner = this;
 		SpawnParams.Instigator = GetInstigator();
 		SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
 		
-		if (AMVE_ThrowObject* SpawnedObject = GetWorld()->SpawnActor<AMVE_ThrowObject>(ThrowObjectClass, HandLocation, ThrowRotation, SpawnParams))
+		FVector CameraLocation;
+		FRotator CameraRotation;
+		GetWorld()->GetFirstPlayerController()->GetPlayerViewPoint(CameraLocation, CameraRotation);
+		
+		if (AMVE_ThrowObject* SpawnedObject = GetWorld()->SpawnActor<AMVE_ThrowObject>(ThrowObjectClass, HandLocation, CameraRotation, SpawnParams))
 		{
 			// 초기 속도 설정
 			if (auto* ProjectileComp = SpawnedObject->FindComponentByClass<UProjectileMovementComponent>())
 			{
-				
 				ProjectileComp->InitialSpeed = ThrowSpeed;
 				ProjectileComp->MaxSpeed = ThrowSpeed;
 			}
 			
 			// 발사
-			const FVector LaunchDirection = ThrowRotation.Vector();
+			const FVector LaunchDirection = CameraRotation.Vector();
+			
+			// 위치 이동
 			SpawnedObject->FireInDirection(LaunchDirection);
 		}
 	}
