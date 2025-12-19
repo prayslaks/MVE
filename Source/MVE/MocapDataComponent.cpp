@@ -2,6 +2,7 @@
 #include "MVE.h"
 #include "Sockets.h"
 #include "SocketSubsystem.h"
+#include "ControlRigComponent.h"
 #include "Misc/ScopeLock.h"
 
 UMocapDataComponent::UMocapDataComponent()
@@ -34,19 +35,44 @@ void UMocapDataComponent::TickComponent(float DeltaTime, ELevelTick TickType, FA
 {
     Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
+    // ✅ 압축 모드 타임아웃 체크 (33ms)
     if (bUseCompression && bFrameStarted)
     {
-        // 적응형 프레임 간격 계산
-        CurrentFrameIntervalMs = CalculateAdaptiveFrameInterval();
-        float FrameIntervalSeconds = CurrentFrameIntervalMs / 1000.0f;
-
-        float CurrentTime = GetWorld()->GetTimeSeconds();
-        if ((CurrentTime - FrameStartTime) > FrameIntervalSeconds)
+        float CurrentTime = FPlatformTime::Seconds();
+        if ((CurrentTime - FrameStartTime) > 0.033f)
         {
-            ProcessCompressedFrame();
+            ProcessCompressedFrameToQueue();  // ← 큐에 저장만
             CurrentFrameBones.Reset();
             bFrameStarted = false;
-            FrameCounter++;
+        }
+    }
+
+    // ✅ Transform 큐 처리 (Game Thread)
+    FQueuedTransformData QueuedData;
+    int32 ProcessedCount = 0;
+    const int32 MaxProcessPerTick = 100;
+
+    while (TransformQueue.Dequeue(QueuedData) && ProcessedCount < MaxProcessPerTick)
+    {
+        // Game Thread에서 안전하게 델리게이트 발동
+        OnControlDataReceived.Broadcast(QueuedData.Index, QueuedData.Transform);
+        ProcessedCount++;
+    }
+
+    // ✅ Compressed Frame 큐 처리 (Game Thread)
+    FQueuedCompressedFrame QueuedFrame;
+    while (CompressedFrameQueue.Dequeue(QueuedFrame))
+    {
+        // Game Thread에서 안전하게 델리게이트 발동
+        OnCompressedFrameReceived.Broadcast(QueuedFrame.Frame);
+    }
+
+    if (ProcessedCount > 0)
+    {
+        static int32 LogCount = 0;
+        if (LogCount++ % 30 == 0)
+        {
+            UE_LOG(LogTemp, Warning, TEXT("[MocapData] 🎮 Tick에서 처리: %d개 Transform"), ProcessedCount);
         }
     }
 }
@@ -294,7 +320,6 @@ bool UMocapDataComponent::ParseOSCMessage(const uint8* Data, int32 Size, FOSCPac
 
 void UMocapDataComponent::ProcessControlPacket(const FOSCPacket& Packet)
 {
-    // 기대 형식: Int(Index) + Float*7 (Loc XYZ, Quat XYZW)
     if (Packet.IntArgs.Num() < 1 || Packet.FloatArgs.Num() < 7)
     {
         return;
@@ -307,10 +332,11 @@ void UMocapDataComponent::ProcessControlPacket(const FOSCPacket& Packet)
     
     if (bUseCompression)
     {
+        // ✅ 압축 모드: 데이터 누적만 (델리게이트 발동 X)
         if (!bFrameStarted)
         {
             bFrameStarted = true;
-            FrameStartTime = GetWorld()->GetTimeSeconds();
+            FrameStartTime = FPlatformTime::Seconds();
             CurrentFrameBones.Reset();
         }
 
@@ -320,24 +346,23 @@ void UMocapDataComponent::ProcessControlPacket(const FOSCPacket& Packet)
         BoneData.Rotation = Rotation;
         CurrentFrameBones.Add(BoneData);
 
+        // ✅ 50개 모이면 압축 처리 (델리게이트는 X, 큐에 저장만)
         if (CurrentFrameBones.Num() >= 50)
         {
-            ProcessCompressedFrame();
+            ProcessCompressedFrameToQueue();  // ← 새 함수
             CurrentFrameBones.Reset();
             bFrameStarted = false;
         }
     }
     else
     {
-        FTransform ControlTransform(Rotation, Location, FVector::OneVector);
+        // ✅ 비압축 모드: 큐에 저장
+        FQueuedTransformData QueuedData;
+        QueuedData.Index = ControlIndex;
+        QueuedData.Transform = FTransform(Rotation, Location, FVector::OneVector);
+        QueuedData.Timestamp = FPlatformTime::Seconds();
         
-        static int32 LogCount = 0;
-        if (LogCount++ < 10)
-        {
-            UE_LOG(LogTemp, Warning, TEXT("[MocapData] 🔔 델리게이트 발동: Index=%d"), ControlIndex);
-        }
-        
-        OnControlDataReceived.Broadcast(ControlIndex, ControlTransform);
+        TransformQueue.Enqueue(QueuedData);
     }
 }
 
@@ -358,6 +383,7 @@ void UMocapDataComponent::ProcessFacePacket(const FOSCPacket& Packet)
     }
 }
 
+/*
 void UMocapDataComponent::ProcessCompressedFrame()
 {
     if (CurrentFrameBones.Num() == 0)
@@ -365,11 +391,9 @@ void UMocapDataComponent::ProcessCompressedFrame()
         return;
     }
 
-    const bool bIsKeyframeNow = IsKeyframe();
-
     CurrentCompressedFrame.Bones.Reset();
     CurrentCompressedFrame.Timestamp = GetWorld()->GetTimeSeconds();
-    CurrentCompressedFrame.bDeltaCompressed = bUseDeltaCompression && !bIsKeyframeNow;
+    CurrentCompressedFrame.bDeltaCompressed = bUseDeltaCompression;
 
     int32 OriginalSize = CurrentFrameBones.Num() * 32;
 
@@ -383,33 +407,31 @@ void UMocapDataComponent::ProcessCompressedFrame()
             BoneData.Rotation
         );
 
-        // Keyframe이면 모든 본 전송
-        if (bIsKeyframeNow)
+        if (bUseDeltaCompression)
         {
-            CurrentCompressedFrame.Bones.Add(CompressedBone);
-            BoneCache.Add(CompressedBone.BoneIndex, CompressedBone);
-
-            FTransform Transform = CompressedBone.Decompress();
-            OnControlDataReceived.Broadcast(CompressedBone.BoneIndex, Transform);
-        }
-        else if (bUseDeltaCompression)
-        {
-            // Delta 압축: 변경된 본만 전송 (LOD 기반 threshold 사용)
             if (ShouldSendBone(CompressedBone.BoneIndex, CompressedBone))
             {
                 CurrentCompressedFrame.Bones.Add(CompressedBone);
                 BoneCache.Add(CompressedBone.BoneIndex, CompressedBone);
-
-                FTransform Transform = CompressedBone.Decompress();
-                OnControlDataReceived.Broadcast(CompressedBone.BoneIndex, Transform);
+                
+                // ✅ 큐에 저장
+                FQueuedTransformData QueuedData;
+                QueuedData.Index = CompressedBone.BoneIndex;
+                QueuedData.Transform = CompressedBone.Decompress();
+                QueuedData.Timestamp = FPlatformTime::Seconds();
+                TransformQueue.Enqueue(QueuedData);
             }
         }
         else
         {
             CurrentCompressedFrame.Bones.Add(CompressedBone);
-
-            FTransform Transform = CompressedBone.Decompress();
-            OnControlDataReceived.Broadcast(CompressedBone.BoneIndex, Transform);
+            
+            // ✅ 큐에 저장
+            FQueuedTransformData QueuedData;
+            QueuedData.Index = CompressedBone.BoneIndex;
+            QueuedData.Transform = CompressedBone.Decompress();
+            QueuedData.Timestamp = FPlatformTime::Seconds();
+            TransformQueue.Enqueue(QueuedData);
         }
     }
 
@@ -417,30 +439,92 @@ void UMocapDataComponent::ProcessCompressedFrame()
     LastFrameBoneCount = CurrentCompressedFrame.Bones.Num();
     CompressionRatio = OriginalSize > 0 ? ((float)CompressedSize / (float)OriginalSize) : 1.0f;
 
-    // 기존 델리게이트
+    // Compressed Frame 델리게이트는 Game Thread에서 발동 (TickComponent에서 호출되므로)
     OnCompressedFrameReceived.Broadcast(CurrentCompressedFrame);
 
-    // 네트워크 최적화된 패킹 프레임 생성 및 브로드캐스트
-    FPackedMotionFrame PackedFrame;
-    PackedFrame.PackFromCompressedFrame(CurrentCompressedFrame, bIsKeyframeNow, static_cast<uint8>(FrameCounter % 256));
-    PackedFrame.InterpolationDuration = CurrentFrameIntervalMs / 1000.0f;
-    LastPackedDataSize = PackedFrame.GetPackedSize();
-
-    OnPackedFrameReceived.Broadcast(PackedFrame);
-
-    // 디버그 로그 (30프레임마다)
-    if (FrameCounter % 30 == 0)
+    static int32 FrameCount = 0;
+    if (FrameCount++ % 30 == 0)
     {
-        UE_LOG(LogTemp, Warning, TEXT("[MocapData] 프레임 #%d | %s | 본:%d/%d | 압축률:%.1f%% | 패킹:%d bytes | 간격:%.1fms"),
-            FrameCounter,
-            bIsKeyframeNow ? TEXT("KEYFRAME") : TEXT("delta"),
+        UE_LOG(LogTemp, Warning, TEXT("[MocapData 압축] 프레임 #%d | 본:%d개/%d개 | 압축률:%.1f%%"),
+            FrameCount,
             CurrentCompressedFrame.Bones.Num(),
             CurrentFrameBones.Num(),
-            CompressionRatio * 100.0f,
-            LastPackedDataSize,
-            CurrentFrameIntervalMs);
+            CompressionRatio * 100.0f);
     }
 }
+*/
+void UMocapDataComponent::ProcessCompressedFrameToQueue()
+{
+    if (CurrentFrameBones.Num() == 0)
+    {
+        return;
+    }
+
+    FCompressedMotionFrame CompressedFrame;
+    CompressedFrame.Timestamp = FPlatformTime::Seconds();
+    CompressedFrame.bDeltaCompressed = bUseDeltaCompression;
+
+    int32 OriginalSize = CurrentFrameBones.Num() * 32;
+
+    for (const FBoneData& BoneData : CurrentFrameBones)
+    {
+        if (BoneData.Index >= 256) continue;
+
+        FCompressedBoneTransform CompressedBone(
+            static_cast<uint8>(BoneData.Index),
+            BoneData.Location,
+            BoneData.Rotation
+        );
+
+        if (bUseDeltaCompression)
+        {
+            if (ShouldSendBone(CompressedBone.BoneIndex, CompressedBone))
+            {
+                CompressedFrame.Bones.Add(CompressedBone);
+                BoneCache.Add(CompressedBone.BoneIndex, CompressedBone);
+                
+                // ✅ 개별 Transform도 큐에 저장
+                FQueuedTransformData QueuedData;
+                QueuedData.Index = CompressedBone.BoneIndex;
+                QueuedData.Transform = CompressedBone.Decompress();
+                QueuedData.Timestamp = FPlatformTime::Seconds();
+                TransformQueue.Enqueue(QueuedData);
+            }
+        }
+        else
+        {
+            CompressedFrame.Bones.Add(CompressedBone);
+            
+            // ✅ 개별 Transform도 큐에 저장
+            FQueuedTransformData QueuedData;
+            QueuedData.Index = CompressedBone.BoneIndex;
+            QueuedData.Transform = CompressedBone.Decompress();
+            QueuedData.Timestamp = FPlatformTime::Seconds();
+            TransformQueue.Enqueue(QueuedData);
+        }
+    }
+
+    // ✅ CompressedFrame도 큐에 저장 (델리게이트 발동 X)
+    FQueuedCompressedFrame QueuedFrame;
+    QueuedFrame.Frame = CompressedFrame;
+    QueuedFrame.Timestamp = FPlatformTime::Seconds();
+    CompressedFrameQueue.Enqueue(QueuedFrame);
+
+    int32 CompressedSize = 6 + (CompressedFrame.Bones.Num() * 14);
+    LastFrameBoneCount = CompressedFrame.Bones.Num();
+    CompressionRatio = OriginalSize > 0 ? ((float)CompressedSize / (float)OriginalSize) : 1.0f;
+
+    static int32 FrameCount = 0;
+    if (FrameCount++ % 30 == 0)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("[MocapData 압축] 프레임 #%d | 본:%d개/%d개 | 압축률:%.1f%% (큐 저장)"),
+            FrameCount,
+            CompressedFrame.Bones.Num(),
+            CurrentFrameBones.Num(),
+            CompressionRatio * 100.0f);
+    }
+}
+
 
 bool UMocapDataComponent::ShouldSendBone(uint8 BoneIndex, const FCompressedBoneTransform& NewTransform)
 {
@@ -492,4 +576,128 @@ FString UMocapDataComponent::ReadOSCString(const uint8* Data, int32& OutBytesRea
     OutBytesRead = ((Len + 1) + 3) & ~3;
     
     return Result;
+}
+
+TArray<FName> UMocapDataComponent::ControlNames;
+
+void UMocapDataComponent::InitializeControlNames()
+{
+    if (ControlNames.Num() > 0)
+    {
+        return;
+    }
+
+    ControlNames = {
+        "pelvis_ctrl",                  // 0
+        "spine_01_ctrl",                // 1
+        "spine_02_ctrl",                // 2
+        "spine_03_ctrl",                // 3
+        "spine_04_ctrl",                // 4
+        "spine_05_ctrl",                // 5
+        "neck_01_ctrl",                 // 6
+        "head_ctrl",                    // 7
+        "clavicle_l_ctrl",              // 8
+        "upperarm_l_ctrl",              // 9
+        "lowerarm_l_ctrl",              // 10
+        "hand_l_ctrl",                  // 11
+        "thumb_01_l_ctrl",              // 12
+        "thumb_02_l_ctrl",              // 13
+        "thumb_03_l_ctrl",              // 14
+        "index_metacarpal_l_ctrl",      // 15
+        "index_01_l_ctrl",              // 16
+        "index_02_l_ctrl",              // 17
+        "index_03_l_ctrl",              // 18
+        "middle_metacarpal_l_ctrl",     // 19
+        "middle_01_l_ctrl",             // 20
+        "middle_02_l_ctrl",             // 21
+        "middle_03_l_ctrl",             // 22
+        "ring_metacarpal_l_ctrl",       // 23
+        "ring_01_l_ctrl",               // 24
+        "ring_02_l_ctrl",               // 25
+        "ring_03_l_ctrl",               // 26
+        "pinky_metacarpal_l_ctrl",      // 27
+        "pinky_01_l_ctrl",              // 28
+        "pinky_02_l_ctrl",              // 29
+        "pinky_03_l_ctrl",              // 30
+        "clavicle_r_ctrl",              // 31
+        "upperarm_r_ctrl",              // 32
+        "lowerarm_r_ctrl",              // 33
+        "hand_r_ctrl",                  // 34
+        "thumb_01_r_ctrl",              // 35
+        "thumb_02_r_ctrl",              // 36
+        "thumb_03_r_ctrl",              // 37
+        "index_metacarpal_r_ctrl",      // 38
+        "index_01_r_ctrl",              // 39
+        "index_02_r_ctrl",              // 40
+        "index_03_r_ctrl",              // 41
+        "middle_metacarpal_r_ctrl",     // 42
+        "middle_01_r_ctrl",             // 43
+        "middle_02_r_ctrl",             // 44
+        "middle_03_r_ctrl",             // 45
+        "ring_metacarpal_r_ctrl",       // 46
+        "ring_01_r_ctrl",               // 47
+        "ring_02_r_ctrl",               // 48
+        "ring_03_r_ctrl",               // 49
+        "pinky_metacarpal_r_ctrl",      // 50
+        "pinky_01_r_ctrl",              // 51
+        "pinky_02_r_ctrl",              // 52
+        "pinky_03_r_ctrl"               // 53
+    };
+
+    UE_LOG(LogTemp, Warning, TEXT("[MocapData] ✅ Control 이름 초기화: %d개"), ControlNames.Num());
+}
+
+FName UMocapDataComponent::GetControlNameByIndex(int32 Index)
+{
+    InitializeControlNames();
+    
+    if (Index >= 0 && Index < ControlNames.Num())
+    {
+        return ControlNames[Index];
+    }
+    
+    UE_LOG(LogTemp, Warning, TEXT("[MocapData] ⚠️ 유효하지 않은 Index: %d"), Index);
+    return NAME_None;
+}
+
+void UMocapDataComponent::ApplyTransformsToControlRig(
+    UControlRigComponent* ControlRig,
+    const TArray<FTransform>& Transforms)
+{
+    if (!ControlRig)
+    {
+        UE_LOG(LogTemp, Error, TEXT("[MocapData] ❌ ControlRig가 nullptr"));
+        return;
+    }
+
+    if (Transforms.Num() == 0)
+    {
+        return;
+    }
+
+    InitializeControlNames();
+
+    int32 AppliedCount = 0;
+    int32 MaxIndex = FMath::Min(Transforms.Num(), ControlNames.Num());
+
+    for (int32 i = 0; i < MaxIndex; ++i)
+    {
+       
+        ControlRig->SetControlTransform(
+            ControlNames[i],
+            Transforms[i],
+            EControlRigComponentSpace::WorldSpace
+        );
+        
+        AppliedCount++;
+    }
+
+    // Control Rig 업데이트
+    ControlRig->Update(0.0f);
+
+    static int32 LogCount = 0;
+    if (LogCount++ % 30 == 0)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("[MocapData] 🎮 Control Rig 업데이트: %d개 본"), AppliedCount);
+    }
 }

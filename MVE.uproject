@@ -68,6 +68,10 @@
 			"Enabled": true
 		},
 		{
+			"Name": "OSC",
+			"Enabled": true
+		},
+		{
 			"Name": "LiveLink",
 			"Enabled": true
 		},
@@ -146,8 +150,8 @@
 			]
 		},
 		{
-			"Name": "UE-OSC",
-			"Enabled": false
+			"Name": "RemoteControlProtocolOSC",
+			"Enabled": true
 		}
 	]
 }

@@ -14,6 +14,8 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnCompressedFrameReceived, FCompres
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPackedFrameReceived, FPackedMotionFrame, PackedFrame);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnFaceMorphDataReceived, const TArray<float>&, MorphTargets);
 
+class UControlRigComponent;
+
 UCLASS(ClassGroup=(Mocap), meta=(BlueprintSpawnableComponent))
 class MVE_API UMocapDataComponent : public UActorComponent
 {
@@ -149,7 +151,8 @@ public:
     FCompressedMotionFrame CurrentCompressedFrame;
     TMap<uint8, FCompressedBoneTransform> BoneCache;
 
-    void ProcessCompressedFrame();
+   // void ProcessCompressedFrame();
+    void ProcessCompressedFrameToQueue();
     bool ShouldSendBone(uint8 BoneIndex, const FCompressedBoneTransform& NewTransform);
 
     // Keyframe 판단
@@ -168,4 +171,37 @@ public:
     int32 ReadInt32BigEndian(const uint8* Data);
     float ReadFloatBigEndian(const uint8* Data);
     FString ReadOSCString(const uint8* Data, int32& OutBytesRead);
+
+    // Control Rig 헬퍼 함수
+    UFUNCTION(BlueprintPure, Category = "Mocap|ControlRig", meta = (DisplayName = "Get Control Name By Index"))
+    static FName GetControlNameByIndex(int32 Index);
+
+    UFUNCTION(BlueprintCallable, Category = "Mocap|ControlRig", meta = (DisplayName = "Apply Transforms To Control Rig"))
+    static void ApplyTransformsToControlRig(
+        UControlRigComponent* ControlRig,
+        const TArray<FTransform>& Transforms
+    );
+
+    // 클래스 private 섹션 맨 끝에 추가
+    // Control 이름 캐시
+    static TArray<FName> ControlNames;
+    static void InitializeControlNames();
+
+private:
+    struct FQueuedTransformData
+    {
+        int32 Index;
+        FTransform Transform;
+        float Timestamp;
+    };
+    struct FQueuedCompressedFrame
+    {
+        FCompressedMotionFrame Frame;
+        float Timestamp;
+    };
+
+
+    TQueue<FQueuedTransformData, EQueueMode::Mpsc> TransformQueue;  // Multi-Producer Single-Consumer
+    FCriticalSection QueueLock;
+    TQueue<FQueuedCompressedFrame, EQueueMode::Mpsc> CompressedFrameQueue; 
 };
