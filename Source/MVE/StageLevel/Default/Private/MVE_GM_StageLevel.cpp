@@ -387,40 +387,6 @@ void AMVE_GM_StageLevel::PostLogin(APlayerController* NewPlayer)
 	}
 }
 
-void AMVE_GM_StageLevel::OnAccessoryLoaded(UObject* Asset, const FAssetMetadata& Metadata)
-{
-	PRINTLOG(TEXT("=== OnAccessoryLoaded ==="));
-	PRINTLOG(TEXT("DisplayName: %s"), *Metadata.DisplayName);
-	PRINTLOG(TEXT("AssetID: %s"), *Metadata.AssetID.ToString());
-	
-	FString UserID = Metadata.UserEmail;
-	
-	FCustomizationData* Data = PendingAccessories.Find(UserID);
-	if (!Data)
-	{
-		PRINTLOG(TEXT("⚠️ No pending accessory for UserID: %s"), *UserID);
-		return;
-	}
-	
-	if (!Asset)
-	{
-		PRINTLOG(TEXT("❌ Asset is null"));
-		PendingAccessories.Remove(UserID);
-		return;
-	}
-	
-	PRINTLOG(TEXT("✅ Asset loaded successfully"));
-	PRINTLOG(TEXT("   Asset Type: %s"), *Asset->GetClass()->GetName());
-	PRINTLOG(TEXT("   Socket: %s"), *Data->SocketName);
-	
-	// TODO: Step 5에서 구현
-	// ApplyAccessoryToCharacter(UserID, Asset, *Data);
-	PRINTLOG(TEXT("TODO: Apply accessory to character with UserID: %s"), *UserID);
-	
-	// 정리
-	PendingAccessories.Remove(UserID);
-}
-
 void AMVE_GM_StageLevel::HandleFlashEffect(const AController* InstigatorController,
 	const TArray<AActor*>& IgnoreActors, const FVector& FlashLocation, const FVector& FlashDirection, const float EffectiveDistance, const float FlashAngleDotThreshold) const
 {
