@@ -5,6 +5,8 @@
 #include "GameFramework/PlayerController.h"
 #include "MVE_PC_StageLevel.generated.h"
 
+enum class EAudienceInputHelpState : uint8;
+class UMVE_WC_StageLevel_AudInputHelp;
 class UMVE_StageLevel_WidgetController_Chat;
 struct FPlayerAccessoryInfo;
 struct FCustomizationData;
@@ -47,20 +49,27 @@ public:
 
 	// 래디얼 메뉴에서 현재 선택된 섹터의 인덱스를 반환한다
 	int32 GetRadialMenuSelection() const;
+	
+	void SwitchInputHelpWidget(const EAudienceInputHelpState NewState) const;
 protected:
+	// 플래시 효과를 일으키는 포스트 프로세스 머터리얼의 베이스
 	UPROPERTY(EditDefaultsOnly, Category = "MVE|Flash Effect")
 	TObjectPtr<UMaterialInterface> FlashPostProcessMaterialBase;
 
+	// 플래시 효과를 일으키는 포스트 프로세스 MID 패러미터에 개입하는 커브 플로트
 	UPROPERTY(EditDefaultsOnly, Category = "MVE|Flash Effect")
 	TObjectPtr<UCurveFloat> FlashPostProcessCurve;
-
-	UPROPERTY()
+	
+	// 플래시 효과를 일으키는 포스트 프로세스 머터리얼 베이스로부터 얻은 MID
+	UPROPERTY(VisibleAnywhere, Category = "MVE|Flash Effect")
 	TObjectPtr<UMaterialInstanceDynamic> FlashMID;
 
 private:
+	// 플래시 효과를 일으키는 포스트 프로세스 MID 패러미터에 개입하는 타임라인 컴포넌트
 	UPROPERTY()
 	TObjectPtr<UTimelineComponent> FlashPostProcessTimelineComp;
 
+	// 플래시 효과를 일으키는 타임라인 컴포넌트 업데이트 콜백
 	UFUNCTION()
 	void OnFlashPostProcessUpdate(float Value) const;
 	
@@ -69,17 +78,25 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "MVE|UI")
 	TSubclassOf<UUserWidget> HostStandardMenuWidgetClass;
 	
-	// 클라이언트용 원형 메뉴 위젯 클래스
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "MVE|UI")
-	TSubclassOf<UMVE_WC_StageLevel_AudRadialMenu> AudRadialMenuWidgetClass;
-	
 	// 호스트 위젯
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "MVE|UI")
 	TObjectPtr<UUserWidget> HostStandardMenuWidget;
 	
+	// 클라이언트용 원형 메뉴 위젯 클래스
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "MVE|UI")
+	TSubclassOf<UMVE_WC_StageLevel_AudRadialMenu> AudRadialMenuWidgetClass;
+	
 	// 클라이언트 원형 위젯
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "MVE|UI")
 	TObjectPtr<UMVE_WC_StageLevel_AudRadialMenu> AudRadialMenuWidget;
+	
+	// 클라이언트용 입력 헬프 위젯 클래스
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "MVE|UI")
+	TSubclassOf<UMVE_WC_StageLevel_AudInputHelp> AudInputHelpWidgetClass;
+	
+	// 클라이언트 입력 헬프 위젯
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "MVE|UI")
+	TObjectPtr<UMVE_WC_StageLevel_AudInputHelp> AudInputHelpWidget;
 	
 	// 위젯들을 생성만 하고 뷰포트에는 추가하지 않는다
 	void CreateWidgets();

@@ -8,11 +8,11 @@
 #include "EnhancedInputSubsystems.h"
 #include "InputMappingContext.h"
 #include "MVE.h"
-#include "MVE_PC_StageLevel_AudienceComponent.h"
+#include "MVE_WC_StageLevel_AudInputHelp.h"
+#include "Components/ArrowComponent.h"
 #include "StageLevel/Actor/Public/MVE_StageLevel_AudCharacterShooterComponent.h"
 #include "StageLevel/Default/Public/MVE_PC_StageLevel.h"
 #include "Curves/CurveFloat.h"
-#include "GameFramework/PlayerState.h"
 #include "GameFramework/ProjectileMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "Net/UnrealNetwork.h"
@@ -42,6 +42,10 @@ AMVE_StageLevel_AudCharacter::AMVE_StageLevel_AudCharacter()
 	// 사격 컴포넌트
 	ShooterComponent = CreateDefaultSubobject<UMVE_StageLevel_AudCharacterShooterComponent>(TEXT("ShooterComponent"));
 	
+	// 던지기 애로우 컴포넌트
+	RightThrowArrowComp = CreateDefaultSubobject<UArrowComponent>(TEXT("RightThrowArrowComp"));
+	RightThrowArrowComp->SetupAttachment(GetMesh(), FName("HandGrip_R"));
+	
 	// 카메라 전환 타임라인
 	CameraTimeline = CreateDefaultSubobject<UTimelineComponent>(TEXT("CameraTimeline"));
 	
@@ -58,13 +62,17 @@ AMVE_StageLevel_AudCharacter::AMVE_StageLevel_AudCharacter()
 	// 컨트롤 모드 기본
 	CurrentControlMode = EAudienceControlMode::Default;
 	
-	// 액션 카메라 위치
+	// 모드 별 카메라 위치
 	DefaultCameraPosition = FMVE_StageLevel_AudCharacterCameraPosition(250.0f, { 0.0f, 0.0f, 0.0f });
 	PhotoActionCameraPosition = FMVE_StageLevel_AudCharacterCameraPosition(140.0f, { 0.0f, 50.0f, 50.0f });
 	ThrowActionCameraPosition = FMVE_StageLevel_AudCharacterCameraPosition(150.0f, { 0.0f, 70.0f, 70.0f });
 	CheerActionCameraPosition = FMVE_StageLevel_AudCharacterCameraPosition(180.0f, { 0.0f, 40.0f, 40.0f });
 	WaveLightStickActionCameraPosition = FMVE_StageLevel_AudCharacterCameraPosition(200.0f, { 0.0f, 60.0f, 60.0f });
 	ClapActionCameraPosition = FMVE_StageLevel_AudCharacterCameraPosition(190.0f, { 0.0f, 80.0f, 80.0f });
+	
+	// 상태 별 카메라 위치
+	PhotoAimCameraPosition = FMVE_StageLevel_AudCharacterCameraPosition(110.0f, {0.0f, 50.0f, 50.0f}); 
+	ThrowAimCameraPosition = FMVE_StageLevel_AudCharacterCameraPosition(120.0f, { 0.0f, 70.0f, 70.0f });
 }
 
 void AMVE_StageLevel_AudCharacter::BeginPlay()
@@ -74,9 +82,6 @@ void AMVE_StageLevel_AudCharacter::BeginPlay()
 	// 플레이어 컨트롤러 획득
 	if (APlayerController* PlayerController = Cast<APlayerController>(Controller))
 	{
-		BindingPC = Cast<AMVE_PC_StageLevel>(PlayerController);
-		ensure(BindingPC);
-		
 		// 향상된 입력 로컬 플레이어 서브시스템 획득 
 		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer()))
 		{
@@ -163,9 +168,42 @@ void AMVE_StageLevel_AudCharacter::Server_SetIsAiming_Implementation(const bool 
 	bIsAiming = Value;
 }
 
-void AMVE_StageLevel_AudCharacter::OnRep_IsAiming() const
+void AMVE_StageLevel_AudCharacter::OnRep_IsAiming()
 {
 	PRINTNETLOG(this, TEXT("서버에 의해 리플리케이션됐음!"));
+	
+	// 조준이 풀리면 다시 조준을 하라고 도움말이 뜨고, 조준이 걸리면 발사를 하라고 도움말이 뜬다
+	GetBindingPC()->SwitchInputHelpWidget(bIsAiming ? EAudienceInputHelpState::Executable : EAudienceInputHelpState::Aimable);
+	
+	switch (CurrentControlMode)
+	{
+		case EAudienceControlMode::Photo:
+			{
+				CameraInterpStartPosition.Copy(SpringArm);
+				CameraInterpEndPosition = bIsAiming ? PhotoAimCameraPosition : PhotoActionCameraPosition;
+				PRINTNETLOG(this, TEXT("포지션 : %s"), (bIsAiming ? TEXT("PhotoAimCameraPosition") : TEXT("PhotoActionCameraPosition")));
+				if (CameraTimeline)
+				{
+					CameraTimeline->PlayFromStart();
+				}
+				break;
+			}
+		case EAudienceControlMode::Throw:
+			{
+				CameraInterpStartPosition.Copy(SpringArm);
+				CameraInterpEndPosition = bIsAiming ? ThrowAimCameraPosition : ThrowActionCameraPosition;
+				PRINTNETLOG(this, TEXT("포지션 : %s"), (bIsAiming ? TEXT("ThrowAimCameraPosition") : TEXT("PhotoActionCameraPosition")));
+				if (CameraTimeline)
+				{
+					CameraTimeline->PlayFromStart();
+				}
+				break;
+			}
+		default:
+			{
+				break;
+			}
+	}
 }
 
 #pragma endregion
@@ -218,10 +256,16 @@ void AMVE_StageLevel_AudCharacter::RequestSetControlMode(const EAudienceControlM
 void AMVE_StageLevel_AudCharacter::Server_SetControlMode_Implementation(const EAudienceControlMode Value)
 {
 	CurrentControlMode = Value;
+	OnRep_ControlMode();
 }
 
 void AMVE_StageLevel_AudCharacter::OnRep_ControlMode()
 {
+	if (GetBindingPC() == nullptr)
+	{
+		return;
+	}
+	
 	// 오디언스 오브젝트 세팅 람다 함수
 	const auto SetAudObject = [this](AActor* Actor, const FString& Message)
 	{
@@ -301,6 +345,7 @@ void AMVE_StageLevel_AudCharacter::OnRep_ControlMode()
 	case EAudienceControlMode::WidgetSelection:
 		{
 			CameraMode1();
+			GetBindingPC()->SwitchInputHelpWidget(EAudienceInputHelpState::Unvisible);
 			break;
 		}
 	case EAudienceControlMode::Throw:
@@ -310,6 +355,7 @@ void AMVE_StageLevel_AudCharacter::OnRep_ControlMode()
 			CameraInterpEndPosition = ThrowActionCameraPosition;
 			SetAudObject(nullptr, TEXT("오디언스 오브젝트 해제!"));
 			CameraMode2();
+			GetBindingPC()->SwitchInputHelpWidget(EAudienceInputHelpState::Aimable);
 			break;
 		}
 	case EAudienceControlMode::Photo:
@@ -319,6 +365,7 @@ void AMVE_StageLevel_AudCharacter::OnRep_ControlMode()
 			CameraInterpEndPosition = PhotoActionCameraPosition;
 			SetAudObject(AudCameraChildActorComp->GetChildActor(), TEXT("오디언스 카메라 준비 완료!"));
 			CameraMode2();
+			GetBindingPC()->SwitchInputHelpWidget(EAudienceInputHelpState::Aimable);
 			break;
 		}
 	case EAudienceControlMode::Cheer:
@@ -328,6 +375,7 @@ void AMVE_StageLevel_AudCharacter::OnRep_ControlMode()
 			CameraInterpEndPosition = CheerActionCameraPosition;
 			SetAudObject(nullptr, TEXT("오디언스 오브젝트 해제!"));
 			CameraMode2();
+			GetBindingPC()->SwitchInputHelpWidget(EAudienceInputHelpState::Executable);
 			break;
 		}
 	case EAudienceControlMode::WaveLightStick:
@@ -337,6 +385,7 @@ void AMVE_StageLevel_AudCharacter::OnRep_ControlMode()
 			CameraInterpEndPosition = WaveLightStickActionCameraPosition;
 			SetAudObject(nullptr, TEXT("오디언스 오브젝트 해제!"));
 			CameraMode2();
+			GetBindingPC()->SwitchInputHelpWidget(EAudienceInputHelpState::Executable);
 			break;
 		}
 	case EAudienceControlMode::Clap:
@@ -346,6 +395,7 @@ void AMVE_StageLevel_AudCharacter::OnRep_ControlMode()
 			CameraInterpEndPosition = ClapActionCameraPosition;
 			SetAudObject(nullptr, TEXT("오디언스 오브젝트 해제!"));
 			CameraMode2();
+			GetBindingPC()->SwitchInputHelpWidget(EAudienceInputHelpState::Executable);
 			break;
 		}
 	case EAudienceControlMode::Default:
@@ -355,6 +405,7 @@ void AMVE_StageLevel_AudCharacter::OnRep_ControlMode()
 			CameraInterpEndPosition = DefaultCameraPosition;
 			SetAudObject(nullptr, TEXT("오디언스 오브젝트 해제!"));
 			CameraMode3();
+			GetBindingPC()->SwitchInputHelpWidget(EAudienceInputHelpState::Selectable);
 			break;
 		}
 	default:
@@ -476,8 +527,8 @@ void AMVE_StageLevel_AudCharacter::ThrowObject()
 	{
 		// 소켓을 통해 던지는 위치 획득
 		GetMesh()->RefreshBoneTransforms();
-		const FVector ThrowLocation = GetMesh()->GetSocketLocation(FName("ThrowGrip_R"));
-		const FRotator ThrowRotation = GetMesh()->GetSocketRotation(FName("ThrowGrip_R"));
+		const FVector ThrowLocation = RightThrowArrowComp->GetComponentLocation();
+		const FRotator ThrowRotation = RightThrowArrowComp->GetComponentRotation();
 		
 		// 투척
 		const FVector ThrowDirection = ThrowRotation.Vector();
@@ -565,7 +616,7 @@ void AMVE_StageLevel_AudCharacter::OnInputActionExecuteStarted(const FInputActio
 	}
 	
 	// 실행 완료 후 재입력 딜레이
-	constexpr float Delay = -0.1;
+	constexpr float Delay = 0.2;
 	
 	// 현재 모드에 따라서 다른 도구, 애니메이션, 사운드 사용
 	switch (CurrentControlMode)
@@ -597,7 +648,7 @@ void AMVE_StageLevel_AudCharacter::OnInputActionExecuteStarted(const FInputActio
 				return;
 			}
 			PRINTNETLOG(this, TEXT("카메라 입력 액션!"))
-			Server_ActiveExecuteTimer(1.0f);
+			Server_ActiveExecuteTimer(0.2f);
 			Server_ExecutePhoto();
 			break;
 		}

@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "CoreMinimal.h"
+#include "MVE_PC_StageLevel.h"
 #include "GameFramework/Character.h"
 #include "Components/TimelineComponent.h"
 #include "GameFramework/SpringArmComponent.h"
@@ -156,9 +157,9 @@ public:
 #pragma endregion 
 
 private:
-	// 플레이어 컨트롤러
-	UPROPERTY(VisibleAnywhere, Category = "MVE|Control", meta = (AllowPrivateAccess = "true"))
-	TObjectPtr<AMVE_PC_StageLevel> BindingPC;
+	// 이 캐릭터와 바인딩된 플레이어 컨트롤러
+	UFUNCTION(Category = "MVE|Control")
+	AMVE_PC_StageLevel* GetBindingPC() const { return Cast<AMVE_PC_StageLevel>(GetWorld()->GetFirstPlayerController()); }
 	
 	// 오디언스 상호작용 관련 필드
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "MVE|Components", meta = (AllowPrivateAccess = "true"))
@@ -198,7 +199,7 @@ private:
 	UFUNCTION(Server, Reliable)
 	void Server_SetIsAiming(const bool Value);
 	UFUNCTION()
-	void OnRep_IsAiming() const;
+	void OnRep_IsAiming();
 	UFUNCTION()
 	void RequestSetIsAiming(const bool Value);
 	
@@ -257,7 +258,7 @@ private:
 	
 #pragma endregion 
 
-#pragma region 상호작용 모드 별 카메라 컨트롤 관련
+#pragma region 상호작용 모드 & 특수 상태 별 카메라 컨트롤 관련
 	
 	// 카메라 관련 필드
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "MVE|Components", meta = (AllowPrivateAccess = "true"))
@@ -291,6 +292,12 @@ private:
 	UPROPERTY(VisibleAnywhere, Category = "MVE|Control", meta = (AllowPrivateAccess = "true"))
 	FMVE_StageLevel_AudCharacterCameraPosition ClapActionCameraPosition;
 	
+	// 특수 상태 별 카메라 위치
+	UPROPERTY(VisibleAnywhere, Category = "MVE|Control", meta = (AllowPrivateAccess = "true"))
+	FMVE_StageLevel_AudCharacterCameraPosition PhotoAimCameraPosition;
+	UPROPERTY(VisibleAnywhere, Category = "MVE|Control", meta = (AllowPrivateAccess = "true"))
+	FMVE_StageLevel_AudCharacterCameraPosition ThrowAimCameraPosition;
+	
 #pragma endregion
 	
 	UPROPERTY(VisibleAnywhere, Category = "MVE|Objects", meta = (AllowPrivateAccess = "true"))
@@ -299,6 +306,8 @@ private:
 	TObjectPtr<UChildActorComponent> AudCameraChildActorComp;
 	UPROPERTY(VisibleAnywhere, Category = "MVE|Objects", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UChildActorComponent> AudLightStickChildActorComp;
+	UPROPERTY(EditDefaultsOnly, Category = "MVE|Objects", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UArrowComponent> RightThrowArrowComp;
 
 #pragma region 상호작용 애니메이션 & VFX & SFX
 	
