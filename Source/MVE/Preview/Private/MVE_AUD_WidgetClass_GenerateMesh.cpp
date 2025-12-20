@@ -6,12 +6,16 @@
 #include "MVE_AUD_CustomizationManager.h"
 #include "MVE_AUD_WidgetClass_PreviewWidget.h"
 #include "MVE_GIS_SessionManager.h"
+#include "MVE_HTTP_Client.h"
 #include "SenderReceiver.h"
 #include "UIManagerSubsystem.h"
 #include "Components/Button.h"
 #include "Components/MultiLineEditableTextBox.h"
 #include "Components/TextBlock.h"
 #include "Engine/StaticMesh.h"
+#include "HAL/PlatformFileManager.h"
+#include "Misc/FileHelper.h"
+#include "Misc/Paths.h"
 
 void UMVE_AUD_WidgetClass_GenerateMesh::NativeConstruct()
 {
@@ -78,21 +82,17 @@ void UMVE_AUD_WidgetClass_GenerateMesh::OnSendPromptButtonClicked()
 		return;
 	}
 
-	// 테스트 모드 (위젯 블루프린트에서 bTestMode 껐다가 켤 수 있음)
+	// 테스트 모드: 중계 서버에서 model id로 presigned URL 받아오기
 	if (bTestMode)
 	{
-		FString ContentDir = FPaths::ProjectContentDir();
-		FString TestGLBPath = TEXT("Assets/Test/fbx.glb");
-		FString FullPath = FPaths::Combine(ContentDir, TestGLBPath);
-		UMVE_AUD_WidgetClass_PreviewWidget* PreviewWidget = Cast<UMVE_AUD_WidgetClass_PreviewWidget>(MeshPreviewWidget);
+		UE_LOG(LogMVE, Log, TEXT("[GenerateMesh] 테스트 모드: Model ID %d로 presigned URL 요청"), TestModelId);
+		SetStatus(FString::Printf(TEXT("Model ID %d의 다운로드 URL 요청 중..."), TestModelId));
+		SetButtonsEnabled(false);
 
-		// 가짜 presigned URL (테스트용)
-		FString FakePresignedURL = TEXT("https://fake-s3-bucket.amazonaws.com/test-model.glb");
-
-		// 테스트 함수 호출 (로컬 GLB + 가짜 RemoteURL 설정)
-		CustomizationManager->TestLoadLocalGLBWithFakeURL(FullPath, FakePresignedURL, PreviewWidget);
-
-		SetStatus(TEXT("테스트 모드: 로컬 GLB 로드 완료"));
+		// GetModelDownloadUrl API 호출
+		FOnGetModelDownloadUrlComplete OnComplete;
+		OnComplete.BindUObject(this, &UMVE_AUD_WidgetClass_GenerateMesh::HandleGetModelDownloadUrl);
+		UMVE_API_Helper::GetModelDownloadUrl(TestModelId, OnComplete);
 	}
 	else
 	{
@@ -418,4 +418,90 @@ void UMVE_AUD_WidgetClass_GenerateMesh::SetButtonsEnabled(bool bEnabled)
 {
 	if (SendPromptButton)SendPromptButton->SetIsEnabled(bEnabled);
 	if (InputImageButton)InputImageButton->SetIsEnabled(bEnabled);
+}
+
+void UMVE_AUD_WidgetClass_GenerateMesh::HandleGetModelDownloadUrl(bool bSuccess, const FGetModelDownloadUrlResponseData& Data, const FString& ErrorCode)
+{
+	UE_LOG(LogMVE, Log, TEXT("[GenerateMesh] HandleGetModelDownloadUrl called"));
+
+	if (!bSuccess)
+	{
+		UE_LOG(LogMVE, Error, TEXT("[GenerateMesh] Failed to get download URL: %s"), *ErrorCode);
+		SetStatus(FString::Printf(TEXT("다운로드 URL 요청 실패: %s"), *ErrorCode));
+		SetButtonsEnabled(true);
+		return;
+	}
+
+	UE_LOG(LogMVE, Log, TEXT("[GenerateMesh] Download URL received: %s"), *Data.Url);
+	SetStatus(TEXT("파일 다운로드 중..."));
+
+	// 다운로드 경로 설정
+	FString SaveDir = FPaths::ProjectSavedDir() / TEXT("DownloadedModels");
+	IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
+	if (!PlatformFile.DirectoryExists(*SaveDir))
+	{
+		PlatformFile.CreateDirectoryTree(*SaveDir);
+		UE_LOG(LogMVE, Log, TEXT("[GenerateMesh] Created directory: %s"), *SaveDir);
+	}
+
+	FString SavePath = SaveDir / FString::Printf(TEXT("TestModel_%d.glb"), TestModelId);
+
+	UE_LOG(LogMVE, Log, TEXT("[GenerateMesh] Downloading to: %s"), *SavePath);
+
+	// presigned URL로 다운로드
+	FOnHttpDownloadResult OnDownloadComplete;
+	OnDownloadComplete.BindLambda([this, SavePath, PresignedURL = Data.Url](bool bDownloadSuccess, const TArray<uint8>& FileData, const FString& ErrorMessage)
+	{
+		if (bDownloadSuccess && FileData.Num() > 0)
+		{
+			// 파일 저장
+			if (FFileHelper::SaveArrayToFile(FileData, *SavePath))
+			{
+				UE_LOG(LogMVE, Log, TEXT("[GenerateMesh] ✅ Model downloaded successfully!"));
+				UE_LOG(LogMVE, Log, TEXT("   File path: %s"), *SavePath);
+				UE_LOG(LogMVE, Log, TEXT("   File size: %.2f MB"), FileData.Num() / (1024.0f * 1024.0f));
+
+				SetStatus(TEXT("모델 다운로드 완료! 프리뷰 시작 중..."));
+
+				// CustomizationManager에 RemoteURL 저장
+				UMVE_AUD_CustomizationManager* CustomizationManager =
+					GetGameInstance()->GetSubsystem<UMVE_AUD_CustomizationManager>();
+
+				if (CustomizationManager)
+				{
+					CustomizationManager->SetRemoteModelUrl(PresignedURL);
+					UE_LOG(LogMVE, Log, TEXT("[GenerateMesh] Remote URL saved: %s"), *PresignedURL);
+
+					// 프리뷰 시작
+					if (MeshPreviewWidget)
+					{
+						UMVE_AUD_WidgetClass_PreviewWidget* PreviewWidget =
+							Cast<UMVE_AUD_WidgetClass_PreviewWidget>(MeshPreviewWidget);
+
+						if (PreviewWidget)
+						{
+							CustomizationManager->StartMeshPreview(SavePath, PreviewWidget);
+							SetStatus(TEXT("테스트 모드: 프리뷰 완료! RightHandButton 클릭 가능"));
+							SetButtonsEnabled(true);
+						}
+					}
+				}
+			}
+			else
+			{
+				UE_LOG(LogMVE, Error, TEXT("[GenerateMesh] Failed to save file: %s"), *SavePath);
+				SetStatus(TEXT("파일 저장 실패"));
+				SetButtonsEnabled(true);
+			}
+		}
+		else
+		{
+			UE_LOG(LogMVE, Error, TEXT("[GenerateMesh] Model download failed: %s"), *ErrorMessage);
+			SetStatus(FString::Printf(TEXT("다운로드 실패: %s"), *ErrorMessage));
+			SetButtonsEnabled(true);
+		}
+	});
+
+	// S3 presigned URL은 Authorization 헤더 불필요
+	FMVE_HTTP_Client::DownloadFile(Data.Url, TEXT(""), OnDownloadComplete);
 }
