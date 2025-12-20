@@ -173,13 +173,15 @@ void AMVE_AUD_PreviewCameraPawn::SwitchToGizmoMode(AActor* InTargetActor)
 	PRINTLOG(TEXT("=== CameraPawn: Switch to GIZMO Mode ==="));
 	PRINTLOG(TEXT("Target Actor: %s"), *InTargetActor->GetName());
 
-	// InputMode를 GameOnly로 변경 (UI 입력 차단, 마우스 추적 활성화)
+	// InputMode를 GameAndUI로 유지 (Enhanced Input이 계속 작동하도록)
 	if (APlayerController* PC = Cast<APlayerController>(GetController()))
 	{
-		FInputModeGameOnly GameOnlyMode;
-		PC->SetInputMode(GameOnlyMode);
+		FInputModeGameAndUI GameAndUIMode;
+		GameAndUIMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+		GameAndUIMode.SetHideCursorDuringCapture(false);
+		PC->SetInputMode(GameAndUIMode);
 		PC->bShowMouseCursor = true;
-		PRINTLOG(TEXT("✅ InputMode changed to GameOnly for Gizmo"));
+		PRINTLOG(TEXT("✅ InputMode set to GameAndUI for Gizmo (allows Enhanced Input to work)"));
 	}
 
 	// Blueprint 이벤트 호출 (Gizmo Actor 생성/표시)

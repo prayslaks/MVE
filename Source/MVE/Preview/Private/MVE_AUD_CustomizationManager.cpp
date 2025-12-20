@@ -477,7 +477,7 @@ void UMVE_AUD_CustomizationManager::AttachMeshToSocket(const FName& SocketName)
 
         PRINTLOG(TEXT("✅ Accessory attached to socket: %s"), *SocketName.ToString());
 
-    	ScaleMeshToCharacter();
+    	//ScaleMeshToCharacter();
     }
     else
     {

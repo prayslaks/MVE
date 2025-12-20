@@ -100,6 +100,7 @@ void AMVE_PC_PreviewMesh::SetUIOnlyMode()
 void AMVE_PC_PreviewMesh::SetGameAndUIMode()
 {
 	FInputModeGameAndUI InputMode;
+	InputMode.SetHideCursorDuringCapture(false);
 	InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
 	SetInputMode(InputMode);
 	bShowMouseCursor = true;
@@ -156,11 +157,16 @@ void AMVE_PC_PreviewMesh::OnCameraZoom(const FInputActionValue& Value)
 
 void AMVE_PC_PreviewMesh::OnMouseClickStarted(const FInputActionValue& Value)
 {
+	PRINTLOG(TEXT("⭐ OnMouseClickStarted CALLED!"));  // 디버그 로그 추가
+
 	AMVE_AUD_PreviewCameraPawn* CameraPawn = GetCameraPawn();
 	if (!CameraPawn)
 	{
+		PRINTLOG(TEXT("❌ CameraPawn is null"));
 		return;
 	}
+
+	PRINTLOG(TEXT("🔍 IsGizmoMode: %s"), CameraPawn->IsGizmoMode() ? TEXT("TRUE") : TEXT("FALSE"));
 
 	if (CameraPawn->IsGizmoMode())
 	{
@@ -180,16 +186,22 @@ void AMVE_PC_PreviewMesh::OnMouseClickStarted(const FInputActionValue& Value)
 	{
 		// 뷰 모드: 드래그 시작
 		bIsDragging = true;
+		PRINTLOG(TEXT("🖱️ View Mode: Drag started"));
 	}
 }
 
 void AMVE_PC_PreviewMesh::OnMouseClickCompleted(const FInputActionValue& Value)
 {
+	PRINTLOG(TEXT("⭐ OnMouseClickCompleted CALLED!"));  // 디버그 로그 추가
+
 	AMVE_AUD_PreviewCameraPawn* CameraPawn = GetCameraPawn();
 	if (!CameraPawn)
 	{
+		PRINTLOG(TEXT("❌ CameraPawn is null"));
 		return;
 	}
+
+	PRINTLOG(TEXT("🔍 IsGizmoMode: %s"), CameraPawn->IsGizmoMode() ? TEXT("TRUE") : TEXT("FALSE"));
 
 	if (CameraPawn->IsGizmoMode())
 	{
@@ -205,5 +217,6 @@ void AMVE_PC_PreviewMesh::OnMouseClickCompleted(const FInputActionValue& Value)
 	{
 		// 뷰 모드: 드래그 종료
 		bIsDragging = false;
+		PRINTLOG(TEXT("🖱️ View Mode: Drag ended"));
 	}
 }
