@@ -264,19 +264,19 @@ void AMVE_GS_StageLevel::ApplyAccessoryToCharacter(const FString& UserID, UObjec
 
 	PRINTLOG(TEXT("✅ Mesh component created and registered"));
 
-	// 7. 소켓에 부착
+	// 7. 먼저 KeepWorld로 부착 (현재 월드 트랜스폼 유지)
 	FAttachmentTransformRules AttachRules(
-		EAttachmentRule::SnapToTarget,  // Location
-		EAttachmentRule::SnapToTarget,  // Rotation
-		EAttachmentRule::KeepWorld,     // Scale
+		EAttachmentRule::KeepWorld,  // Location - 월드 트랜스폼 유지
+		EAttachmentRule::KeepWorld,  // Rotation - 월드 트랜스폼 유지
+		EAttachmentRule::KeepWorld,  // Scale - 월드 트랜스폼 유지
 		false
 	);
 
 	AccessoryActor->AttachToComponent(SkelMesh, AttachRules, SocketName);
 
-	PRINTLOG(TEXT("✅ Accessory attached to socket: %s"), *Data.SocketName);
+	PRINTLOG(TEXT("✅ Accessory attached to socket with KeepWorld: %s"), *Data.SocketName);
 
-	// 8. 저장된 Transform 적용
+	// 8. 부착된 상태에서 Relative Transform 설정
 	FTransform RelativeTransform;
 	RelativeTransform.SetLocation(Data.RelativeLocation);
 	RelativeTransform.SetRotation(Data.RelativeRotation.Quaternion());
@@ -284,7 +284,7 @@ void AMVE_GS_StageLevel::ApplyAccessoryToCharacter(const FString& UserID, UObjec
 
 	AccessoryActor->SetActorRelativeTransform(RelativeTransform);
 
-	PRINTLOG(TEXT("✅ Transform applied:"));
+	PRINTLOG(TEXT("✅ Relative Transform applied:"));
 	PRINTLOG(TEXT("   Location: %s"), *Data.RelativeLocation.ToString());
 	PRINTLOG(TEXT("   Rotation: %s"), *Data.RelativeRotation.ToString());
 	PRINTLOG(TEXT("   Scale: %.2f"), Data.RelativeScale);
