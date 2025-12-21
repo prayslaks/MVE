@@ -1,6 +1,7 @@
 ﻿#include "StageLevel/Actor/Public/MVE_StageLevel_AudCamera.h"
 
 #include "MVE.h"
+#include "Components/ArrowComponent.h"
 #include "Components/AudioComponent.h"
 #include "Components/SpotLightComponent.h"
 #include "Components/TimelineComponent.h"
@@ -15,11 +16,18 @@ AMVE_StageLevel_AudCamera::AMVE_StageLevel_AudCamera()
 	
 	// 스태틱 메시 컴포넌트 추가
 	StaticMeshComp = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("StaticMeshComp"));
-	SetRootComponent(StaticMeshComp);
+	StaticMeshComp->SetupAttachment(RootComponent);
+	
+	// 플래시 방향을 나타내는 애로우 컴포넌트 추가
+	ArrowComp = CreateDefaultSubobject<UArrowComponent>(TEXT("ArrowComp"));
+	ArrowComp->SetupAttachment(StaticMeshComp);
+	ArrowComp->SetRelativeLocation({-7.49f, 0.0f, 9.22f});
+	ArrowComp->SetRelativeRotation({0.0f, 90.0f, 0.0f});
+	ArrowComp->ArrowSize = 0.4f;
 	
 	// 스포트 라이트 컴포넌트 추가
 	SpotLightComp = CreateDefaultSubobject<USpotLightComponent>(TEXT("SpotLightComp"));
-	SpotLightComp->SetupAttachment(RootComponent);
+	SpotLightComp->SetupAttachment(StaticMeshComp);
 	SpotLightComp->SetIntensity(0.0f);
 	SpotLightComp->SetVisibility(true);
 	
@@ -72,8 +80,13 @@ void AMVE_StageLevel_AudCamera::TakePhoto(const AController* FlashMan)
 		{
 			TArray<AActor*> IgnoreActors;
 			IgnoreActors.Emplace(this);
+			
+			// 플래시 효과 연산에는 애로우 컴포넌트 활용
+			const FVector FlashLocation = ArrowComp->GetComponentLocation();
+			const FVector FlashDirection = ArrowComp->GetForwardVector();
+			
 			// 게임모드에 플래시 효과 처리를 요청하고, 누가 플래시를 터뜨렸는지 알림
-			GM->HandleFlashEffect(FlashMan, IgnoreActors, GetActorLocation(), GetActorForwardVector(), FlashEffectiveDistance, FlashAngleDotThreshold);
+			GM->HandleFlashEffect(FlashMan, IgnoreActors, FlashLocation, FlashDirection, FlashEffectiveDistance, FlashAngleDotThreshold);
 		}
 	}
 }

@@ -22,6 +22,7 @@
 #include "MVE_API_Helper.h"
 #include "MVE_AUD_CustomizationManager.h"
 #include "MVE_GM_StageLevel.h"
+#include "MVE_WC_StageLevel_AudInputHelp.h"
 #include "GameFramework/PlayerState.h"
 
 class UMVE_AUD_CustomizationManager;
@@ -322,6 +323,18 @@ int32 AMVE_PC_StageLevel::GetRadialMenuSelection() const
 	return -1; // 유효하지 않은 인덱스
 }
 
+void AMVE_PC_StageLevel::SwitchInputHelpWidget(const EAudienceInputHelpState NewState) const
+{
+	if (AudInputHelpWidget)
+	{
+		AudInputHelpWidget->SetInputHelpState(NewState);	
+	}
+	else
+	{
+		PRINTNETLOG(this, TEXT("위험한 접근!"));
+	}
+}
+
 void AMVE_PC_StageLevel::CenterMouseCursor()
 {
 	if (const UGameViewportClient* ViewportClient = GetGameInstance()->GetGameViewportClient())
@@ -360,8 +373,8 @@ void AMVE_PC_StageLevel::CreateWidgets()
 			UMVE_AUD_WC_InteractionPanel* AudienceWidget = Cast<UMVE_AUD_WC_InteractionPanel>(Widget); 
 			SetupChatUI(AudienceWidget->ChatWidget);
 		}
-
 		
+		// 원형 메뉴
 		if (AudRadialMenuWidget)
 		{
 			AudRadialMenuWidget->RemoveFromParent();
@@ -378,6 +391,22 @@ void AMVE_PC_StageLevel::CreateWidgets()
 			PRINTNETLOG(this, TEXT("%s 위젯을 생성했지만, 숨겨진 상태입니다."), *AudRadialMenuWidgetClass->GetName());
 		}
 		
+		// 입력 헬프 위젯
+		if (AudInputHelpWidget)
+		{
+			AudInputHelpWidget->RemoveFromParent();
+			AudInputHelpWidget = nullptr;
+		}
+		if (AudInputHelpWidgetClass)
+		{
+			AudInputHelpWidget = CreateWidget<UMVE_WC_StageLevel_AudInputHelp>(this, AudInputHelpWidgetClass);	
+		}
+		if (AudInputHelpWidget)
+		{
+			AudInputHelpWidget->AddToViewport();
+			AudInputHelpWidget->SetInputHelpState(EAudienceInputHelpState::Selectable);
+			PRINTNETLOG(this, TEXT("%s 위젯을 생성했고, 볼 수 있는 상태입니다."), *AudInputHelpWidgetClass->GetName());
+		}
 	}
 }
 

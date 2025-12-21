@@ -387,7 +387,9 @@ void AMVE_GM_StageLevel::PostLogin(APlayerController* NewPlayer)
 	}
 }
 
-void AMVE_GM_StageLevel::HandleFlashEffect(const AController* InstigatorController,
+// 플래시 눈부심 효과 적용 여부 제어
+
+void AMVE_GM_StageLevel::HandleFlashEffect(const AController* FlashManController,
 	const TArray<AActor*>& IgnoreActors, const FVector& FlashLocation, const FVector& FlashDirection, const float EffectiveDistance, const float FlashAngleDotThreshold) const
 {
 	// 서버 전용 로직
@@ -403,7 +405,7 @@ void AMVE_GM_StageLevel::HandleFlashEffect(const AController* InstigatorControll
 	{
 		// 유효하지 않거나, 플래시를 터뜨린 자신이면 건너뜀
 		APlayerController* PC = It->Get();
-		if (PC == nullptr || PC == InstigatorController)
+		if (PC == nullptr || PC == FlashManController)
 		{
 			continue; 
 		}
@@ -427,6 +429,7 @@ void AMVE_GM_StageLevel::HandleFlashEffect(const AController* InstigatorControll
 
 		// 플래시 각도 체크
 		const FVector VectorToPlayer = (PlayerCamLocation - FlashLocation).GetSafeNormal();
+		DrawDebugDirectionalArrow(GetWorld(), FlashLocation, FlashLocation + FlashDirection * 100, 100, FColor::Red, false, 5.0f);
 		if (FVector::DotProduct(FlashDirection, VectorToPlayer) < FlashAngleDotThreshold)
 		{
 			PRINTNETLOG(this, TEXT("플래시의 유효 입사 각도 벗어남!"));
@@ -450,9 +453,9 @@ void AMVE_GM_StageLevel::HandleFlashEffect(const AController* InstigatorControll
 		{
 			CollisionParams.AddIgnoredActor(Temp);
 		}
-		if (InstigatorController)
+		if (FlashManController)
 		{
-			CollisionParams.AddIgnoredActor(InstigatorController->GetPawn());
+			CollisionParams.AddIgnoredActor(FlashManController->GetPawn());
 		}
 		
 		const bool bHit = GetWorld()->LineTraceSingleByChannel(

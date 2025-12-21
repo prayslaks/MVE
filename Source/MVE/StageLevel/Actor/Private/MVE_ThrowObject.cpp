@@ -13,7 +13,7 @@ AMVE_ThrowObject::AMVE_ThrowObject()
 	PrimaryActorTick.bCanEverTick = true;
 	bReplicates = true;
 	AActor::SetReplicateMovement(true);
-
+	
 	// 충돌체
 	SphereComp = CreateDefaultSubobject<USphereComponent>(TEXT("SphereComp"));
 	SetRootComponent(SphereComp);
@@ -31,6 +31,9 @@ AMVE_ThrowObject::AMVE_ThrowObject()
 
 	// 발사체 컴포넌트
 	ProjectileMovementComp = CreateDefaultSubobject<UProjectileMovementComponent>(TEXT("ProjectileMovementComp"));
+	ProjectileMovementComp->SetIsReplicated(true);
+	ProjectileMovementComp->bComponentShouldUpdatePhysicsVolume = false;
+	ProjectileMovementComp->SetInterpolatedComponent(MeshComp);
 	ProjectileMovementComp->SetUpdatedComponent(RootComponent);
 	ProjectileMovementComp->InitialSpeed = 3000.f;
 	ProjectileMovementComp->MaxSpeed = 3000.f;
@@ -48,32 +51,33 @@ void AMVE_ThrowObject::Tick(float DeltaTime)
 
 	if (HasAuthority() && ProjectileMovementComp->IsActive())
 	{
-		// --- LIFT CALCULATION ---
+		// --- 양력 연산 ---
 		if (IsValid(LiftCurve))
 		{
+			// 현재 속도 획득
 			const FVector CurrentVelocity = ProjectileMovementComp->Velocity;
 
-			// 1. Calculate horizontal speed for curve lookup
+			// 커브 평가에 필요한 수평 속도 연산
 			FVector HorizontalVelocityOnly = CurrentVelocity;
 			HorizontalVelocityOnly.Z = 0.f;
 			const float HorizontalSpeed = HorizontalVelocityOnly.Size();
-			
 			const float BaseLiftAcceleration = LiftCurve->GetFloatValue(HorizontalSpeed);
 
-			// 2. Factor in the object's orientation. Max lift when horizontal, no lift when vertical.
+			// 수평 정렬도를 구해 양력 규모 조절에 활용 
 			const FVector ForwardVector = GetActorForwardVector();
 			const float HorizontalAlignment = 1.0f - FMath::Abs(FVector::DotProduct(ForwardVector, FVector::UpVector));
 			
-			// Modulate lift by how horizontal the flight path is
+			// 기본 양력 가속도와 수평 정렬도를 곱해 최종값 연산
 			const float FinalLiftAcceleration = BaseLiftAcceleration * HorizontalAlignment;
 			
-			// Apply the final lift as vertical acceleration
+			// 수평 가속을 가해 양력을 시뮬레이션
 			ProjectileMovementComp->Velocity.Z += FinalLiftAcceleration * DeltaTime;
 		}
 		
-		// --- CUSTOM LINEAR DAMPING (AIR RESISTANCE) ---
+		// --- 공기 저항 ---
 		if (DragCoefficient > 0.f)
 		{
+			// 현재 속도에 따른 공기 저항을 구해 가한다
 			FVector& CurrentVelocity = ProjectileMovementComp->Velocity;
 			CurrentVelocity -= CurrentVelocity * DragCoefficient * DeltaTime;
 		}
