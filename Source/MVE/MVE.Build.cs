@@ -39,7 +39,6 @@ public class MVE : ModuleRules
 			"AudioCaptureCore",				// STT 오디오 캡쳐 
 			"GameplayTags",
 			"OSC",
-			"UE_OSC",
 			"ControlRig",
 		});
 

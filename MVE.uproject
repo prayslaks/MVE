@@ -146,12 +146,12 @@
 			]
 		},
 		{
-			"Name": "UE-OSC",
-			"Enabled": false
-		},
-		{
 			"Name": "OSC",
 			"Enabled": true
+		},
+		{
+			"Name": "UE-OSC",
+			"Enabled": false
 		}
 	]
 }
