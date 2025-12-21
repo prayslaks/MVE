@@ -712,7 +712,8 @@ UObject* USenderReceiver::LoadMeshFromGLB(const FString& FilePath)
 
     // glTFRuntime으로 로드
     FglTFRuntimeConfig Config;
-    UglTFRuntimeAsset* Asset = 
+    Config.TransformBaseType = EglTFRuntimeTransformBaseType::YForward;  // UE 좌표계로 변환
+    UglTFRuntimeAsset* Asset =
         UglTFRuntimeFunctionLibrary::glTFLoadAssetFromData(FileData, Config);
 
     if (!Asset)
@@ -762,7 +763,8 @@ UStaticMesh* USenderReceiver::LoadStaticMeshFromGLB(const FString& FilePath)
 
     // glTFRuntime으로 로드
     FglTFRuntimeConfig Config;
-    UglTFRuntimeAsset* Asset = 
+    Config.TransformBaseType = EglTFRuntimeTransformBaseType::YForward;  // UE 좌표계로 변환
+    UglTFRuntimeAsset* Asset =
         UglTFRuntimeFunctionLibrary::glTFLoadAssetFromData(FileData, Config);
 
     if (!Asset)

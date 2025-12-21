@@ -21,6 +21,10 @@ public:
 	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly)
 	bool bTestMode = false;
 
+	// 테스트 모드용 Model ID (중계 서버에서 presigned URL 받아오기)
+	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly)
+	int32 TestModelId = 18;
+
 protected:
 	virtual void NativeConstruct() override;
 	
@@ -90,6 +94,10 @@ private:
 	UFUNCTION()
 	void HandleGenerationResponse(bool bSuccess, const FAssetMetadata& Metadata, const FString& ErrorMessage);
 	void Download();
+
+	// 테스트 모드: Model Download URL 콜백
+	UFUNCTION()
+	void HandleGetModelDownloadUrl(bool bSuccess, const FGetModelDownloadUrlResponseData& Data, const FString& ErrorCode);
 
 public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GenAI Test|Settings")

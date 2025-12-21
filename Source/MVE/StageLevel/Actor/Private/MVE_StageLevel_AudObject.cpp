@@ -1,9 +1,16 @@
 ﻿#include "StageLevel/Actor/Public/MVE_StageLevel_AudObject.h"
 
+#include "Components/BoxComponent.h"
+
 AMVE_StageLevel_AudObject::AMVE_StageLevel_AudObject()
 {
 	// 틱 비활성화
 	PrimaryActorTick.bCanEverTick = false;
+	
+	// 충돌체 설정
+	BoxComp = CreateDefaultSubobject<UBoxComponent>(FName("BoxComp"));
+	SetRootComponent(BoxComp);
+	BoxComp->SetCollisionProfileName(FName("NoCollision"));
 }
 
 void AMVE_StageLevel_AudObject::BeginPlay()
@@ -11,6 +18,7 @@ void AMVE_StageLevel_AudObject::BeginPlay()
 	Super::BeginPlay();
 	
 	// 초기 가시성 설정
+	bIsVisible = false;
 	StaticMeshComp->SetVisibility(bIsVisible);
 }
 

@@ -7,6 +7,7 @@
 #include "GameFramework/Actor.h"
 #include "MVE_StageLevel_AudCamera.generated.h"
 
+class UArrowComponent;
 class USpotLightComponent;
 class UTimelineComponent;
 class UCurveFloat;
@@ -25,13 +26,18 @@ public:
 	void TakePhoto(const AController* FlashMan);
 
 protected:
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "MVE|Components")
+	
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="MVE|Components")
 	TObjectPtr<USpotLightComponent> SpotLightComp;
 	
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "MVE|Components")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="MVE|Components")
 	TObjectPtr<UAudioComponent> AudioComp;
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="MVE|Components")
+	TObjectPtr<UArrowComponent> ArrowComp;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "MVE|Components")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="MVE|Components")
 	TObjectPtr<UTimelineComponent> FlashTimelineComp;
 
 	UPROPERTY(EditAnywhere, Category = "MVE|TakePhoto")

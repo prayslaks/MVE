@@ -27,7 +27,7 @@ public:
 
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Projectile", meta = (ClampMin = "0.0"))
-	float DragCoefficient = 0.05f; // 저항 값
+	float DragCoefficient = 0.05f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Projectile")
 	TObjectPtr<UCurveFloat> LiftCurve;

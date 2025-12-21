@@ -173,6 +173,17 @@ void AMVE_AUD_PreviewCameraPawn::SwitchToGizmoMode(AActor* InTargetActor)
 	PRINTLOG(TEXT("=== CameraPawn: Switch to GIZMO Mode ==="));
 	PRINTLOG(TEXT("Target Actor: %s"), *InTargetActor->GetName());
 
+	// InputMode를 GameAndUI로 유지 (Enhanced Input이 계속 작동하도록)
+	if (APlayerController* PC = Cast<APlayerController>(GetController()))
+	{
+		FInputModeGameAndUI GameAndUIMode;
+		GameAndUIMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+		GameAndUIMode.SetHideCursorDuringCapture(false);
+		PC->SetInputMode(GameAndUIMode);
+		PC->bShowMouseCursor = true;
+		PRINTLOG(TEXT("✅ InputMode set to GameAndUI for Gizmo (allows Enhanced Input to work)"));
+	}
+
 	// Blueprint 이벤트 호출 (Gizmo Actor 생성/표시)
 	OnSwitchToGizmoMode(InTargetActor);
 }
@@ -188,6 +199,16 @@ void AMVE_AUD_PreviewCameraPawn::SwitchToViewMode()
 	bIsGizmoMode = false;
 
 	PRINTLOG(TEXT("=== CameraPawn: Switch to VIEW Mode ==="));
+
+	// InputMode를 GameAndUI로 복원
+	if (APlayerController* PC = Cast<APlayerController>(GetController()))
+	{
+		FInputModeGameAndUI GameAndUIMode;
+		GameAndUIMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+		PC->SetInputMode(GameAndUIMode);
+		PC->bShowMouseCursor = true;
+		PRINTLOG(TEXT("✅ InputMode restored to GameAndUI"));
+	}
 
 	// Blueprint 이벤트 호출 (Gizmo 숨김)
 	OnSwitchToViewMode();
@@ -217,5 +238,76 @@ void AMVE_AUD_PreviewCameraPawn::SaveAccessoryTransform(AActor* Accessory, const
 		{
 			Manager->SaveAccessoryTransform(Accessory, NewTransform);
 		}
+	}
+}
+
+void AMVE_AUD_PreviewCameraPawn::DetachGizmoTarget()
+{
+	if (!GizmoTargetActor)
+	{
+		PRINTLOG(TEXT("❌ No GizmoTargetActor to detach"));
+		return;
+	}
+
+	// 현재 부착 정보 저장
+	if (USceneComponent* RootComp = GizmoTargetActor->GetRootComponent())
+	{
+		OriginalParent = RootComp->GetAttachParent();
+		OriginalSocketName = RootComp->GetAttachSocketName();
+		OriginalRelativeTransform = RootComp->GetRelativeTransform();
+
+		PRINTLOG(TEXT("=== Detaching Gizmo Target ==="));
+		PRINTLOG(TEXT("Actor: %s"), *GizmoTargetActor->GetName());
+		PRINTLOG(TEXT("Original Parent: %s"), OriginalParent ? *OriginalParent->GetName() : TEXT("None"));
+		PRINTLOG(TEXT("Original Socket: %s"), *OriginalSocketName.ToString());
+
+		// Detach (World Transform 유지)
+		FDetachmentTransformRules DetachRules(EDetachmentRule::KeepWorld, false);
+		RootComp->DetachFromComponent(DetachRules);
+
+		PRINTLOG(TEXT("✅ Actor detached - now free to move with Gizmo"));
+	}
+}
+
+void AMVE_AUD_PreviewCameraPawn::ReattachGizmoTarget()
+{
+	if (!GizmoTargetActor || !OriginalParent)
+	{
+		PRINTLOG(TEXT("❌ Cannot reattach - missing actor or parent info"));
+		return;
+	}
+
+	if (USceneComponent* RootComp = GizmoTargetActor->GetRootComponent())
+	{
+		PRINTLOG(TEXT("=== Reattaching Gizmo Target ==="));
+		PRINTLOG(TEXT("Actor: %s"), *GizmoTargetActor->GetName());
+		PRINTLOG(TEXT("Parent: %s"), *OriginalParent->GetName());
+		PRINTLOG(TEXT("Socket: %s"), *OriginalSocketName.ToString());
+
+		// 현재 World Transform 저장
+		FTransform CurrentWorldTransform = RootComp->GetComponentTransform();
+
+		// Reattach (KeepRelative로 현재 변경된 위치 유지)
+		FAttachmentTransformRules AttachRules(
+			EAttachmentRule::KeepRelative,
+			EAttachmentRule::KeepRelative,
+			EAttachmentRule::KeepRelative,
+			false
+		);
+		RootComp->AttachToComponent(OriginalParent, AttachRules, OriginalSocketName);
+
+		// World Transform을 Relative Transform으로 변환해서 적용
+		FTransform ParentTransform = OriginalParent->GetSocketTransform(OriginalSocketName);
+		FTransform NewRelativeTransform = CurrentWorldTransform.GetRelativeTransform(ParentTransform);
+		RootComp->SetRelativeTransform(NewRelativeTransform);
+
+		PRINTLOG(TEXT("✅ Actor reattached with new Relative Transform:"));
+		PRINTLOG(TEXT("   Location: %s"), *NewRelativeTransform.GetLocation().ToString());
+		PRINTLOG(TEXT("   Rotation: %s"), *NewRelativeTransform.Rotator().ToString());
+		PRINTLOG(TEXT("   Scale: %s"), *NewRelativeTransform.GetScale3D().ToString());
+
+		// 저장된 정보 초기화
+		OriginalParent = nullptr;
+		OriginalSocketName = NAME_None;
 	}
 }

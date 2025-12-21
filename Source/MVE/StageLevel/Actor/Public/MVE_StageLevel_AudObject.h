@@ -6,6 +6,8 @@
 #include "GameFramework/Actor.h"
 #include "MVE_StageLevel_AudObject.generated.h"
 
+class UBoxComponent;
+
 UCLASS()
 class MVE_API AMVE_StageLevel_AudObject : public AActor
 {
@@ -22,9 +24,12 @@ public:
 	void SetIsVisible(const bool Value);
 
 protected:
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="MVE|Components")
+	TObjectPtr<UBoxComponent> BoxComp;
+	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "MVE|Components")
 	TObjectPtr<UStaticMeshComponent> StaticMeshComp;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MVE|Components")
-	bool bIsVisible = false;
+	bool bIsVisible = true;
 };

@@ -477,7 +477,7 @@ void UMVE_AUD_CustomizationManager::AttachMeshToSocket(const FName& SocketName)
 
         PRINTLOG(TEXT("✅ Accessory attached to socket: %s"), *SocketName.ToString());
 
-    	ScaleMeshToCharacter();
+    	//ScaleMeshToCharacter();
     }
     else
     {
@@ -1065,17 +1065,45 @@ FCustomizationData UMVE_AUD_CustomizationManager::DeserializeCustomizationData(c
 void UMVE_AUD_CustomizationManager::SaveAccessoryPresetToServer(const FString& PresetName)
 {
 	PRINTLOG(TEXT("=== SaveAccessoryPresetToServer ==="));
-    
+
     // 1. 저장된 커스터마이징 데이터 확인
     if (SavedCustomization.ModelUrl.IsEmpty())
     {
         PRINTLOG(TEXT("⚠️ No customization data to save"));
         return;
     }
-    
+
     PRINTLOG(TEXT("✅ Saved customization data found"));
     PRINTLOG(TEXT("   Model URL: %s"), *SavedCustomization.ModelUrl);
     PRINTLOG(TEXT("   Socket: %s"), *SavedCustomization.SocketName);
+
+    // ⭐ 기즈모로 변경된 최신 트랜스폼 반영
+    if (AttachedMesh)
+    {
+        AActor* PreviewCharacterActor = GetPreviewCharacter();
+        if (PreviewCharacterActor)
+        {
+            USkeletalMeshComponent* SkelMesh = PreviewCharacterActor->FindComponentByClass<USkeletalMeshComponent>();
+            if (SkelMesh)
+            {
+                // 현재 월드 트랜스폼을 Relative 트랜스폼으로 변환
+                FName SocketName = FName(*SavedCustomization.SocketName);
+                FTransform SocketTransform = SkelMesh->GetSocketTransform(SocketName);
+                FTransform CurrentWorldTransform = AttachedMesh->GetActorTransform();
+                FTransform RelativeTransform = CurrentWorldTransform.GetRelativeTransform(SocketTransform);
+
+                // SavedCustomization 업데이트
+                SavedCustomization.RelativeLocation = RelativeTransform.GetLocation();
+                SavedCustomization.RelativeRotation = RelativeTransform.GetRotation().Rotator();
+                SavedCustomization.RelativeScale = RelativeTransform.GetScale3D().X;
+
+                PRINTLOG(TEXT("🔄 Updated transform from attached mesh:"));
+                PRINTLOG(TEXT("   Location: %s"), *SavedCustomization.RelativeLocation.ToString());
+                PRINTLOG(TEXT("   Rotation: %s"), *SavedCustomization.RelativeRotation.ToString());
+                PRINTLOG(TEXT("   Scale: %.2f"), SavedCustomization.RelativeScale);
+            }
+        }
+    }
     
     // 2. Accessories 배열 생성 (API 형식)
     TArray<TSharedPtr<FJsonValue>> AccessoriesArray;
