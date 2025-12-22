@@ -150,10 +150,6 @@
 			"Enabled": true
 		},
 		{
-			"Name": "UE-OSC",
-			"Enabled": false
-		},
-		{
 			"Name": "LiveLinkInputDevice",
 			"Enabled": true
 		},
