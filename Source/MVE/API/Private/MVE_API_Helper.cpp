@@ -148,13 +148,26 @@ bool UMVE_API_Helper::GetHostLocalIPAndPort(const UObject* WorldContextObject, F
 
     // 2. 현재 월드의 포트 가져오기
     OutPort = WorldContextObject->GetWorld()->URL.Port;
-    if (OutPort == 0) // Default port is usually 7777 if not specified in URL
+
+    // 1. 네트워킹 드라이버가 존재하고, 실제 게임용 드라이버인지 확인
+    if (const UNetDriver* NetDriver = WorldContextObject->GetWorld()->GetNetDriver(); NetDriver && NetDriver->NetDriverName == NAME_GameNetDriver)
     {
-        // Fallback to default port if not set in URL, common for listen servers
-        OutPort = 7777; 
+        // 2. LocalAddr가 유효한지 확인 후 포트 추출
+        if (NetDriver->LocalAddr.IsValid())
+        {
+            OutPort = NetDriver->LocalAddr->GetPort();
+            PRINTLOG(TEXT("Active Port found: %d"), OutPort);
+        }
+    }
+
+    // 만약 위 단계에서 실패했다면(Standalone 등), URL이나 기본값으로 폴백(Fallback) 처리
+    if (OutPort <= 0)
+    {
+        OutPort = WorldContextObject->GetWorld()->URL.Port > 0 ? WorldContextObject->GetWorld()->URL.Port : 7777;
         PRINTLOG(TEXT("GetHostLocalIPAndPort: Port not found in URL, defaulting to 7777."));
     }
-    PRINTLOG(TEXT("Port: %d"), OutPort);
+    
+    PRINTLOG(TEXT("Selected Listen Server Port: %d"), OutPort);
     
     return true;
 }

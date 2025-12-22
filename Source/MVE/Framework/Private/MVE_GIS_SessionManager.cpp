@@ -349,9 +349,10 @@ void UMVE_GIS_SessionManager::OnGetConcertInfoForJoin(bool bSuccess, const FGetC
 	// FConcertInfo의 ListenServer 정보 추출
 	const FListenServer& ListenServer = Data.Concert.ListenServer;
 
-	// LocalIP와 Port 확인 (PublicIP가 있으면 우선 사용)
-	FString ServerIP = ListenServer.PublicIP.IsEmpty() ? ListenServer.LocalIP : ListenServer.PublicIP;
-	int32 ServerPort = ListenServer.PublicPort > 0 ? ListenServer.PublicPort : ListenServer.Port;
+	//FString ServerIP = ListenServer.PublicIP.IsEmpty() ? ListenServer.LocalIP : ListenServer.PublicIP;
+	//int32 ServerPort = ListenServer.PublicPort > 0 ? ListenServer.PublicPort : ListenServer.Port;
+	FString ServerIP = ListenServer.LocalIP;
+	int32 ServerPort = ListenServer.Port;
     
 	if (ServerIP.IsEmpty() || ServerPort <= 0)
 	{
