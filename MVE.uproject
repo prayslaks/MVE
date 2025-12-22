@@ -150,11 +150,11 @@
 			"Enabled": true
 		},
 		{
-			"Name": "LiveLinkInputDevice",
+			"Name": "LiveLinkFreeD",
 			"Enabled": true
 		},
 		{
-			"Name": "LiveLinkPrestonMDR",
+			"Name": "LiveLinkInputDevice",
 			"Enabled": true
 		},
 		{
@@ -162,11 +162,7 @@
 			"Enabled": true
 		},
 		{
-			"Name": "LiveLinkFreeD",
-			"Enabled": true
-		},
-		{
-			"Name": "LiveLinkVRPN",
+			"Name": "LiveLinkOpenTrackIO",
 			"Enabled": true
 		},
 		{
@@ -177,7 +173,11 @@
 			]
 		},
 		{
-			"Name": "LiveLinkOpenTrackIO",
+			"Name": "LiveLinkPrestonMDR",
+			"Enabled": true
+		},
+		{
+			"Name": "LiveLinkVRPN",
 			"Enabled": true
 		},
 		{
