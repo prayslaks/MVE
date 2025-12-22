@@ -150,8 +150,42 @@
 			"Enabled": true
 		},
 		{
-			"Name": "UE-OSC",
-			"Enabled": false
+			"Name": "LiveLinkFreeD",
+			"Enabled": true
+		},
+		{
+			"Name": "LiveLinkInputDevice",
+			"Enabled": true
+		},
+		{
+			"Name": "LiveLinkMasterLockit",
+			"Enabled": true
+		},
+		{
+			"Name": "LiveLinkOpenTrackIO",
+			"Enabled": true
+		},
+		{
+			"Name": "LiveLinkOpenVR",
+			"Enabled": true,
+			"SupportedTargetPlatforms": [
+				"Win64"
+			]
+		},
+		{
+			"Name": "LiveLinkPrestonMDR",
+			"Enabled": true
+		},
+		{
+			"Name": "LiveLinkVRPN",
+			"Enabled": true
+		},
+		{
+			"Name": "LiveLinkXR",
+			"Enabled": true,
+			"SupportedTargetPlatforms": [
+				"Win64"
+			]
 		}
 	]
 }
