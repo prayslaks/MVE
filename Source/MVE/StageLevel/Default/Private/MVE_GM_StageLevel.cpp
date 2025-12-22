@@ -28,10 +28,10 @@ AMVE_GM_StageLevel::AMVE_GM_StageLevel()
 	{
 		PlayerControllerClass = Finder.Class;
 	}
-	
+	 
 	// 호스트 캐릭터
 	if (ConstructorHelpers::FClassFinder<APawn> 
-		Finder(TEXT("/Remocapp/Features/BP_MainCharacter.BP_MainCharacter_C"));
+		Finder(TEXT("/Remocapp/Features/BP_Orlando.BP_Orlando_C"));
 		Finder.Succeeded())
 
 		
