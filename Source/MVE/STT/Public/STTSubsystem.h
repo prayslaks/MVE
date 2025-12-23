@@ -18,7 +18,9 @@ enum class ESTTCommandType : uint8
     None        UMETA(DisplayName = "None"),
     NextTrack   UMETA(DisplayName = "다음 곡"),
     StopTrack   UMETA(DisplayName = "정지"),
-    PlayTrack   UMETA(DisplayName = "재생")
+    PlayTrack   UMETA(DisplayName = "재생"),
+    ConcertOpen UMETA(DisplayName = "콘서트 열기"),
+    ConcertClose UMETA(DisplayName = "콘서트 닫기")
 };
 
 // ================================================================================================
