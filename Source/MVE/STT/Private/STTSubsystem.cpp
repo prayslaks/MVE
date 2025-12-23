@@ -42,6 +42,10 @@ FString USTTSubsystem::GetCommandDisplayName(ESTTCommandType CommandType)
         return TEXT("정지");
     case ESTTCommandType::PlayTrack:
         return TEXT("재생");
+    case ESTTCommandType::ConcertOpen:
+        return TEXT("콘서트 시작");
+    case ESTTCommandType::ConcertClose:
+        return TEXT("콘서트 끝");
     default:
         return TEXT("없음");
     }
@@ -61,6 +65,14 @@ ESTTCommandType USTTSubsystem::ParseCommandString(const FString& CommandString)
     else if (CommandString == TEXT("PlayTrack"))
     {
         return ESTTCommandType::PlayTrack;
+    }
+    else if (CommandString == TEXT("ConcertOpen"))
+    {
+            return ESTTCommandType::ConcertOpen;
+    }
+    else if (CommandString == TEXT("ConcertClose"))
+    {
+        return ESTTCommandType::ConcertClose;
     }
     return ESTTCommandType::None;
 }
