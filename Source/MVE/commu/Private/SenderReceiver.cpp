@@ -1,6 +1,6 @@
 ﻿// Source/MVE/SenderReceiver.cpp
 
-#include "SenderReceiver.h"
+#include "../Public/SenderReceiver.h"
 #include "HttpModule.h"
 #include "Interfaces/IHttpRequest.h"
 #include "Interfaces/IHttpResponse.h"

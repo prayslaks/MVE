@@ -3,7 +3,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
-#include "AssetTypes.h"
+#include "MVE/MotionCapturel/Public/AssetTypes.h"
 #include "TestGenAIActor.generated.h"
 
 /**

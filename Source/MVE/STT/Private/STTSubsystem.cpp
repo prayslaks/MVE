@@ -1,5 +1,5 @@
 ﻿// STTSubsystem.cpp - 수정된 버전 (Python 서버 응답 형식 매칭)
-#include "STTSubsystem.h"
+#include "../Public/STTSubsystem.h"
 #include "MVE.h"
 #include "WebSocketsModule.h"
 #include "JsonObjectConverter.h"
