@@ -110,14 +110,24 @@ void UMVE_STU_WC_ConcertRoomInfo::OnViewerCountUpdated(int32 NewCount)
 
 void UMVE_STU_WC_ConcertRoomInfo::HandleVoiceCommand(ESTTCommandType CommandType, const FString& OriginalText)
 {
-	// TODO: ESTTCommandType에 ConcertOpen, ConcertClose 가 추가되면 로직 추가하기.
+	UMVE_GIS_SessionManager* SessionManager = GetWorld()->GetGameInstance()->GetSubsystem<UMVE_GIS_SessionManager>();
+	if (!SessionManager) return;
 
-	/*
+	PRINTLOG(TEXT("HandleVoiceCommand Called"));
+	
 	if (CommandType == ESTTCommandType::ConcertOpen)
 	{
-		OnConcertToggleClicked();
+		bIsConcertOpen = true;
+		SessionManager->StartBroadcast();
+		PRINTLOG(TEXT("StartBroadcast called"));
 	}
-	*/
+	else if (CommandType == ESTTCommandType::ConcertClose)
+	{
+		bIsConcertOpen = false;
+		SessionManager->StopBroadcast();
+		PRINTLOG(TEXT("StopBroadcast called"));
+	}
+	UpdateButtonAppearance();
 }
 
 void UMVE_STU_WC_ConcertRoomInfo::SetConcertState(bool bIsOpen)
