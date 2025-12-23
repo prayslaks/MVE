@@ -1,5 +1,5 @@
 ﻿// STTStatusWidget.cpp - STT 상태 표시 UI 위젯 구현
-#include "STTStatusWidget.h"
+#include "../Public/STTStatusWidget.h"
 #include "MVE.h"
 #include "Kismet/GameplayStatics.h"
 #include "Components/TextBlock.h"

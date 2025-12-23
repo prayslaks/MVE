@@ -1,5 +1,5 @@
 ﻿// STTTestActor.cpp - 수정된 버전 (UI 연동 + 명령어 처리)
-#include "STTTestActor.h"
+#include "../Public/STTTestActor.h"
 #include "MVE.h"
 #include "Kismet/GameplayStatics.h"
 #include "Blueprint/UserWidget.h"

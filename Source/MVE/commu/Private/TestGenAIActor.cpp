@@ -1,7 +1,7 @@
 ﻿// Source/MVE/TestGenAIActor.cpp
 
-#include "TestGenAIActor.h"
-#include "SenderReceiver.h"
+#include "../Public/TestGenAIActor.h"
+#include "../Public/SenderReceiver.h"
 #include "Engine/Texture2D.h"
 #include "Components/StaticMeshComponent.h"
 #include "TimerManager.h"

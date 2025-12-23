@@ -1,4 +1,4 @@
-﻿#include "AutoGripComponent.h"
+﻿#include "../Public/AutoGripComponent.h"
 #include "GameFramework/Character.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "TimerManager.h"

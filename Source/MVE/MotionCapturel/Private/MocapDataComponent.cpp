@@ -1,4 +1,4 @@
-﻿#include "MocapDataComponent.h"
+﻿#include "../Public/MocapDataComponent.h"
 #include "MVE.h"
 #include "Sockets.h"
 #include "SocketSubsystem.h"
