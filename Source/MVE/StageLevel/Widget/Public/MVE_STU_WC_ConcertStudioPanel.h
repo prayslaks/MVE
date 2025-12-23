@@ -26,15 +26,16 @@ public:
 	/* Chat 위젯 */
 	UPROPERTY(meta=(BindWidget), BlueprintReadOnly)
 	TObjectPtr<UMVE_WC_Chat> ChatWidget;
-	
-protected:
+
 	/** AudioSearch 위젯 */
 	UPROPERTY(meta=(BindWidget), BlueprintReadOnly)
 	TObjectPtr<UMVE_STD_WC_AudioSearch> AudioSearch;
-    
+
 	/** AudioPlayer 위젯 */
 	UPROPERTY(meta=(BindWidget), BlueprintReadOnly)
 	TObjectPtr<UMVE_STD_WC_AudioPlayer> AudioPlayer;
+
+protected:
 
 	
 private:

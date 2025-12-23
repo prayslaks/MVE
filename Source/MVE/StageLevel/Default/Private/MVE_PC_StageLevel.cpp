@@ -360,8 +360,15 @@ void AMVE_PC_StageLevel::CreateWidgets()
 		{
 			UIManager->ShowScreen(EUIScreen::Studio_OnLive);
 			UUserWidget* Widget = UIManager->GetCurrentWidget();
-			UMVE_STU_WC_ConcertStudioPanel* StudioWidget = Cast<UMVE_STU_WC_ConcertStudioPanel>(Widget); 
+			UMVE_STU_WC_ConcertStudioPanel* StudioWidget = Cast<UMVE_STU_WC_ConcertStudioPanel>(Widget);
 			SetupChatUI(StudioWidget->ChatWidget);
+
+			// StdComponent에 AudioPlayer 연결 (재생 진행률 업데이트용)
+			if (StdComponent && StudioWidget->AudioPlayer)
+			{
+				StdComponent->SetAudioPlayer(StudioWidget->AudioPlayer);
+				PRINTNETLOG(this, TEXT("AudioPlayer가 StdComponent에 연결되었습니다."));
+			}
 		}
 	}
 	else
