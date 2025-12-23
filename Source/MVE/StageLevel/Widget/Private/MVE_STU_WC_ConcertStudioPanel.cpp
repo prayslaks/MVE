@@ -12,7 +12,7 @@ void UMVE_STU_WC_ConcertStudioPanel::NativeConstruct()
 	AudioController = NewObject<UMVE_STU_WidgetController_StudioConcert>(this);
 	if (AudioController)
 	{
-		AudioController->Initialize(AudioPlayer);
+		AudioController->Initialize(AudioPlayer, AudioSearch);
 		PRINTNETLOG(this, TEXT("AudioController initialized successfully"));
 	}
 	else

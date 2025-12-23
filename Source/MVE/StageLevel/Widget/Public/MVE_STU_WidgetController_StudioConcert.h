@@ -3,6 +3,7 @@
 
 #include "CoreMinimal.h"
 #include "MVE_STD_WC_AudioSearchResult.h"
+#include "STT/Public/STTSubsystem.h"
 #include "UObject/Object.h"
 #include "MVE_STU_WidgetController_StudioConcert.generated.h"
 
@@ -19,8 +20,9 @@ public:
 	/**
 	 * Controller 초기화
 	 * @param InPlayerWidget AudioPlayer 위젯 참조
+	 * @param InAudioSearch AudioSearch 위젯 참조
 	 */
-	void Initialize(UMVE_STD_WC_AudioPlayer* InPlayerWidget);
+	void Initialize(UMVE_STD_WC_AudioPlayer* InPlayerWidget, UMVE_STD_WC_AudioSearch* InAudioSearch);
 
 	/**
 	 * AudioSearch에서 트랙이 선택되었을 때 호출
@@ -40,6 +42,23 @@ public:
 	 */
 	UFUNCTION()
 	void OnStopRequested();
+
+	/**
+	 * 다음 곡으로 이동
+	 * @param bAutoPlay 자동 재생 여부 (기본값: true)
+	 */
+	UFUNCTION()
+	void OnNextTrackRequested(bool bAutoPlay = true);
+
+	/**
+	 * 이전 곡으로 이동
+	 * @param bAutoPlay 자동 재생 여부 (기본값: true)
+	 */
+	UFUNCTION()
+	void OnPreviousTrackRequested(bool bAutoPlay = true);
+
+	// Setter
+	void SetCurrentTrackData(const FMVE_STD_AudioSearchResultData& Data);
 
 private:
 	/**
@@ -64,11 +83,32 @@ private:
 	 */
 	void SetupPlayerUI(const FMVE_STD_AudioSearchResultData& AudioData);
 
+	/*
+	 * STT 연동 콜백함수
+	 * @param
+	 */
+	UFUNCTION()
+	void HandleVoiceCommand(ESTTCommandType CommandType, const FString& OriginalText);
+
+	/**
+	 * SearchResultWidgets에서 특정 트랙의 인덱스 찾기
+	 * @param TrackData 찾을 트랙 데이터
+	 * @return 인덱스 (찾지 못하면 -1)
+	 */
+	int32 FindTrackIndex(const FMVE_STD_AudioSearchResultData& TrackData) const;
+
 private:
 	/** AudioPlayer 위젯 참조 */
 	UPROPERTY()
 	TObjectPtr<UMVE_STD_WC_AudioPlayer> PlayerWidget;
 
+	/** AudioSearch 위젯 참조 */
+	UPROPERTY()
+	TObjectPtr<UMVE_STD_WC_AudioSearch> AudioSearch;
+
 	/** 현재 선택된 트랙 정보 */
 	FMVE_STD_AudioSearchResultData CurrentTrackData;
+
+	/** 트랙 선택 후 자동 재생 여부 */
+	bool bAutoPlayAfterSelection = false;
 };

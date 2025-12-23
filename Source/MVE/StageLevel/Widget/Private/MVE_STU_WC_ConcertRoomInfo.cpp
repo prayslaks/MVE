@@ -6,6 +6,7 @@
 #include "Components/TextBlock.h"
 #include "Components/Button.h"
 #include "StageLevel/Default/Public/MVE_GS_StageLevel.h"
+#include "STT/Public/STTSubsystem.h"
 
 void UMVE_STU_WC_ConcertRoomInfo::NativeConstruct()
 {
@@ -41,6 +42,11 @@ void UMVE_STU_WC_ConcertRoomInfo::NativeConstruct()
 
 		// 현재 시청자 수로 초기화
 		UpdateViewerCount(StageGameState->GetViewerCount());
+	}
+
+	if (USTTSubsystem* STTSubsystem = GetWorld()->GetGameInstance()->GetSubsystem<USTTSubsystem>())
+	{
+		STTSubsystem->OnSTTCommandReceived.AddDynamic(this, &UMVE_STU_WC_ConcertRoomInfo::HandleVoiceCommand);
 	}
 }
 
@@ -100,6 +106,18 @@ void UMVE_STU_WC_ConcertRoomInfo::UpdateViewerCount(int32 Count)
 void UMVE_STU_WC_ConcertRoomInfo::OnViewerCountUpdated(int32 NewCount)
 {
 	UpdateViewerCount(NewCount);
+}
+
+void UMVE_STU_WC_ConcertRoomInfo::HandleVoiceCommand(ESTTCommandType CommandType, const FString& OriginalText)
+{
+	// TODO: ESTTCommandType에 ConcertOpen, ConcertClose 가 추가되면 로직 추가하기.
+
+	/*
+	if (CommandType == ESTTCommandType::ConcertOpen)
+	{
+		OnConcertToggleClicked();
+	}
+	*/
 }
 
 void UMVE_STU_WC_ConcertRoomInfo::SetConcertState(bool bIsOpen)
