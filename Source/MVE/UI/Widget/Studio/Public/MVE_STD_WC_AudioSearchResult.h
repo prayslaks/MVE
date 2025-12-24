@@ -14,6 +14,9 @@ class UMVE_STD_WC_AudioSearchResult;
 // 위젯 더블 클릭 델리게이트
 DECLARE_MULTICAST_DELEGATE_OneParam(FOnAudioSearchResultDoubleClicked, UMVE_STD_WC_AudioSearchResult*);
 
+// 위젯 클릭 델리게이트
+DECLARE_MULTICAST_DELEGATE_OneParam(FOnAudioSearchResultClicked, UMVE_STD_WC_AudioSearchResult*);
+
 USTRUCT(BlueprintType)
 struct FMVE_STD_AudioSearchResultData
 {
@@ -47,7 +50,10 @@ class MVE_API UMVE_STD_WC_AudioSearchResult : public UUserWidget
 public:
 	// 더블 클릭 델리게이트
 	FOnAudioSearchResultDoubleClicked OnAudioSearchResultDoubleClicked;
-	
+
+	// 클릭 델리게이트
+	FOnAudioSearchResultClicked OnAudioSearchResultClicked;
+
 	UFUNCTION()
 	void UpdateUI(const FMVE_STD_AudioSearchResultData& InAudioSearchResult);
 
@@ -64,7 +70,7 @@ protected:
 	UPROPERTY(meta=(BindWidget))
 	TObjectPtr<UTextBlock> ArtistTextBlock;
 	
-	UPROPERTY(meta=(BindWidget))
+	UPROPERTY(meta=(BindWidgetOptional))
 	TObjectPtr<UTextBlock> DurationTextBlock;
 	
 	UPROPERTY(meta=(BindWidget))
@@ -80,10 +86,12 @@ protected:
 	FLinearColor HoveredColor = FLinearColor(0.2f, 0.2f, 0.2f, 0.5f);
 	
 private:
+	virtual FReply NativeOnMouseButtonDown(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent) override;
+
 	virtual FReply NativeOnMouseButtonDoubleClick(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent) override;
-	
+
 	virtual void NativeOnMouseEnter(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent) override;
-	
+
 	virtual void NativeOnMouseLeave(const FPointerEvent& InMouseEvent) override;
 	
 	UPROPERTY()

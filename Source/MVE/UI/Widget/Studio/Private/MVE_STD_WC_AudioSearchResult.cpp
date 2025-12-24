@@ -64,6 +64,16 @@ void UMVE_STD_WC_AudioSearchResult::SetSelected(const bool bInIsSelected)
 	}
 }
 
+FReply UMVE_STD_WC_AudioSearchResult::NativeOnMouseButtonDown(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent)
+{
+	if (MouseEvent.GetEffectingButton() == EKeys::LeftMouseButton)
+	{
+		OnAudioSearchResultClicked.Broadcast(this);
+		return FReply::Handled();
+	}
+	return Super::NativeOnMouseButtonDown(MyGeometry, MouseEvent);
+}
+
 FReply UMVE_STD_WC_AudioSearchResult::NativeOnMouseButtonDoubleClick(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent)
 {
 	OnAudioSearchResultDoubleClicked.Broadcast(this);
