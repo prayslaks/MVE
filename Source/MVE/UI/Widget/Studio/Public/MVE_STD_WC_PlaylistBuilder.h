@@ -30,6 +30,12 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Playlist")
 	void SavePlaylistToSessionManager();
 
+	// 재생목록 항목 순서 재배열
+	void ReorderPlaylistItem(int32 FromIndex, int32 ToIndex);
+
+	// 재생목록 항목 삭제
+	void RemovePlaylistItem(int32 Index);
+
 protected:
 	virtual void NativeConstruct() override;
 
@@ -65,8 +71,17 @@ private:
 	// 검색 결과 항목 클릭 이벤트 (싱글클릭)
 	void OnSearchResultClicked(UMVE_STD_WC_AudioSearchResult* ClickedWidget);
 
+	// 재생목록 항목 드롭 이벤트
+	void OnPlaylistItemDropped(int32 FromIndex, int32 ToIndex);
+
+	// 재생목록 항목 삭제 요청 이벤트
+	void OnPlaylistItemDeleteRequested(UMVE_STD_WC_AudioSearchResult* Widget);
+
 	// 드롭다운 업데이트
 	void UpdateDropdown(const TArray<FAudioFile>& Results);
+
+	// 재생목록 ScrollBox 갱신 (인덱스 재설정)
+	void RefreshPlaylistIndices();
 
 	// 재생목록에 음악 추가
 	void AddToPlaylist(const FAudioFile& AudioFile);

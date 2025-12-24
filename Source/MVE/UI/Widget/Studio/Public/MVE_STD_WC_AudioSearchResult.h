@@ -6,6 +6,7 @@
 #include "Blueprint/UserWidget.h"
 #include "MVE_STD_WC_AudioSearchResult.generated.h"
 
+class UButton;
 class UBorder;
 class UImage;
 class UTextBlock;
@@ -16,6 +17,9 @@ DECLARE_MULTICAST_DELEGATE_OneParam(FOnAudioSearchResultDoubleClicked, UMVE_STD_
 
 // 위젯 클릭 델리게이트
 DECLARE_MULTICAST_DELEGATE_OneParam(FOnAudioSearchResultClicked, UMVE_STD_WC_AudioSearchResult*);
+
+// 삭제 요청 델리게이트
+DECLARE_MULTICAST_DELEGATE_OneParam(FOnDeleteRequested, UMVE_STD_WC_AudioSearchResult*);
 
 USTRUCT(BlueprintType)
 struct FMVE_STD_AudioSearchResultData
@@ -54,12 +58,27 @@ public:
 	// 클릭 델리게이트
 	FOnAudioSearchResultClicked OnAudioSearchResultClicked;
 
+	// 삭제 요청 델리게이트
+	FOnDeleteRequested OnDeleteRequested;
+
 	UFUNCTION()
 	void UpdateUI(const FMVE_STD_AudioSearchResultData& InAudioSearchResult);
 
 	void SetSelected(bool bInIsSelected);
 
 	FMVE_STD_AudioSearchResultData GetAudioData() const { return BindingAudioSearchResult; }
+
+	// 드래그 가능 여부 설정 (재생목록에서만 true)
+	void SetDraggable(bool bInIsDraggable) { bIsDraggable = bInIsDraggable; }
+
+	// 재생목록에서의 인덱스 설정
+	void SetPlaylistIndex(int32 InIndex) { PlaylistIndex = InIndex; }
+
+	// 재생목록 인덱스 가져오기
+	int32 GetPlaylistIndex() const { return PlaylistIndex; }
+
+	// PlaylistBuilder 포인터 설정
+	void SetPlaylistBuilder(class UMVE_STD_WC_PlaylistBuilder* InPlaylistBuilder) { OwningPlaylistBuilder = InPlaylistBuilder; }
 
 protected:
 	virtual void NativeOnInitialized() override;
@@ -76,6 +95,9 @@ protected:
 	UPROPERTY(meta=(BindWidget))
 	TObjectPtr<UBorder> BackgroundBorder;
 
+	UPROPERTY(meta=(BindWidgetOptional))
+	TObjectPtr<UButton> DeleteButton;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Appearance")
 	FLinearColor SelectedColor = FLinearColor(0.0f, 0.5f, 1.0f, 0.5f);
 
@@ -84,7 +106,10 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Appearance")
 	FLinearColor HoveredColor = FLinearColor(0.2f, 0.2f, 0.2f, 0.5f);
-	
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Appearance")
+	FLinearColor DropTargetColor = FLinearColor(0.0f, 1.0f, 0.0f, 0.3f);
+
 private:
 	virtual FReply NativeOnMouseButtonDown(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent) override;
 
@@ -93,9 +118,25 @@ private:
 	virtual void NativeOnMouseEnter(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent) override;
 
 	virtual void NativeOnMouseLeave(const FPointerEvent& InMouseEvent) override;
-	
+
+	// 삭제 버튼 클릭 이벤트
+	UFUNCTION()
+	void OnDeleteButtonClicked();
+
+	// 드래그 앤 드롭 관련
+	virtual void NativeOnDragDetected(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent, UDragDropOperation*& Operation) override;
+	virtual bool NativeOnDrop(const FGeometry& InGeometry, const FDragDropEvent& InDragDropEvent, UDragDropOperation* InOperation) override;
+	virtual void NativeOnDragEnter(const FGeometry& InGeometry, const FDragDropEvent& InDragDropEvent, UDragDropOperation* InOperation) override;
+	virtual void NativeOnDragLeave(const FDragDropEvent& InDragDropEvent, UDragDropOperation* InOperation) override;
+
 	UPROPERTY()
 	FMVE_STD_AudioSearchResultData BindingAudioSearchResult;
 
+	// PlaylistBuilder 참조 (드래그 앤 드롭용)
+	UPROPERTY()
+	TObjectPtr<class UMVE_STD_WC_PlaylistBuilder> OwningPlaylistBuilder;
+
 	bool bIsSelected = false;
+	bool bIsDraggable = false;
+	int32 PlaylistIndex = -1;
 };

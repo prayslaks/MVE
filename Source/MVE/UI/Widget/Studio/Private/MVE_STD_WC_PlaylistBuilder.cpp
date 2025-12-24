@@ -201,6 +201,14 @@ void UMVE_STD_WC_PlaylistBuilder::AddToPlaylist(const FAudioFile& AudioFile)
 			ItemData.Duration = AudioFile.Duration;
 			PlaylistItemWidget->UpdateUI(ItemData);
 
+			// 드래그 가능하도록 설정
+			PlaylistItemWidget->SetDraggable(true);
+			PlaylistItemWidget->SetPlaylistIndex(Playlist.Num() - 1);
+			PlaylistItemWidget->SetPlaylistBuilder(this);
+
+			// 삭제 이벤트 바인딩
+			PlaylistItemWidget->OnDeleteRequested.AddUObject(this, &UMVE_STD_WC_PlaylistBuilder::OnPlaylistItemDeleteRequested);
+
 			// ScrollBox에 추가
 			PlaylistScrollBox->AddChild(PlaylistItemWidget);
 			PRINTLOG(TEXT("ScrollBox에 위젯 추가 성공!"));
@@ -253,4 +261,108 @@ void UMVE_STD_WC_PlaylistBuilder::SavePlaylistToSessionManager()
 	{
 		PRINTLOG(TEXT("GameInstance를 찾을 수 없습니다!"));
 	}
+}
+
+void UMVE_STD_WC_PlaylistBuilder::ReorderPlaylistItem(int32 FromIndex, int32 ToIndex)
+{
+	if (!PlaylistScrollBox || FromIndex < 0 || ToIndex < 0 ||
+		FromIndex >= Playlist.Num() || ToIndex >= Playlist.Num())
+	{
+		PRINTLOG(TEXT("ReorderPlaylistItem: 잘못된 인덱스 (From: %d, To: %d, Size: %d)"),
+			FromIndex, ToIndex, Playlist.Num());
+		return;
+	}
+
+	if (FromIndex == ToIndex)
+	{
+		return;
+	}
+
+	PRINTLOG(TEXT("재생목록 순서 변경: %d → %d"), FromIndex, ToIndex);
+
+	// 1. Playlist 배열 재배열
+	FAudioFile MovedItem = Playlist[FromIndex];
+	Playlist.RemoveAt(FromIndex);
+	Playlist.Insert(MovedItem, ToIndex);
+
+	// 2. ScrollBox 위젯들을 임시 배열에 저장
+	TArray<UWidget*> WidgetArray;
+	for (int32 i = 0; i < PlaylistScrollBox->GetChildrenCount(); ++i)
+	{
+		WidgetArray.Add(PlaylistScrollBox->GetChildAt(i));
+	}
+
+	// 3. 위젯 배열 재배열
+	if (WidgetArray.IsValidIndex(FromIndex) && WidgetArray.IsValidIndex(ToIndex))
+	{
+		UWidget* MovedWidget = WidgetArray[FromIndex];
+		WidgetArray.RemoveAt(FromIndex);
+		WidgetArray.Insert(MovedWidget, ToIndex);
+	}
+
+	// 4. ScrollBox 초기화 후 재배열된 순서대로 다시 추가
+	PlaylistScrollBox->ClearChildren();
+	for (UWidget* Widget : WidgetArray)
+	{
+		PlaylistScrollBox->AddChild(Widget);
+	}
+
+	// 5. 모든 항목의 인덱스 재설정
+	RefreshPlaylistIndices();
+
+	PRINTLOG(TEXT("재생목록 순서 변경 완료!"));
+}
+
+void UMVE_STD_WC_PlaylistBuilder::OnPlaylistItemDropped(int32 FromIndex, int32 ToIndex)
+{
+	ReorderPlaylistItem(FromIndex, ToIndex);
+}
+
+void UMVE_STD_WC_PlaylistBuilder::RefreshPlaylistIndices()
+{
+	if (!PlaylistScrollBox)
+	{
+		return;
+	}
+
+	for (int32 i = 0; i < PlaylistScrollBox->GetChildrenCount(); ++i)
+	{
+		if (UMVE_STD_WC_AudioSearchResult* ItemWidget = Cast<UMVE_STD_WC_AudioSearchResult>(PlaylistScrollBox->GetChildAt(i)))
+		{
+			ItemWidget->SetPlaylistIndex(i);
+		}
+	}
+}
+
+void UMVE_STD_WC_PlaylistBuilder::RemovePlaylistItem(int32 Index)
+{
+	if (!PlaylistScrollBox || Index < 0 || Index >= Playlist.Num())
+	{
+		PRINTLOG(TEXT("RemovePlaylistItem: 잘못된 인덱스 (Index: %d, Size: %d)"), Index, Playlist.Num());
+		return;
+	}
+
+	PRINTLOG(TEXT("재생목록에서 항목 제거: %s (Index: %d)"), *Playlist[Index].Title, Index);
+
+	// 1. Playlist 배열에서 제거
+	Playlist.RemoveAt(Index);
+
+	// 2. ScrollBox 위젯 제거
+	PlaylistScrollBox->RemoveChildAt(Index);
+
+	// 3. 모든 항목의 인덱스 재설정
+	RefreshPlaylistIndices();
+
+	PRINTLOG(TEXT("재생목록 항목 제거 완료! 남은 항목: %d개"), Playlist.Num());
+}
+
+void UMVE_STD_WC_PlaylistBuilder::OnPlaylistItemDeleteRequested(UMVE_STD_WC_AudioSearchResult* Widget)
+{
+	if (!Widget)
+	{
+		return;
+	}
+
+	int32 Index = Widget->GetPlaylistIndex();
+	RemovePlaylistItem(Index);
 }
