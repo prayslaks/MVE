@@ -46,6 +46,10 @@ FString USTTSubsystem::GetCommandDisplayName(ESTTCommandType CommandType)
         return TEXT("콘서트 시작");
     case ESTTCommandType::ConcertClose:
         return TEXT("콘서트 끝");
+    case ESTTCommandType::ThemeChristmas:
+        return TEXT("크리스마스");
+    case ESTTCommandType::ThemeNewYear:
+        return TEXT("새해");
     default:
         return TEXT("없음");
     }
@@ -73,6 +77,14 @@ ESTTCommandType USTTSubsystem::ParseCommandString(const FString& CommandString)
     else if (CommandString == TEXT("ConcertClose"))
     {
         return ESTTCommandType::ConcertClose;
+    }
+    else if (CommandString == TEXT("ThemeChristmas"))
+    {
+        return ESTTCommandType::ThemeChristmas;
+    }
+    else if (CommandString == TEXT("ThemeNewYear"))
+    {
+        return ESTTCommandType::ThemeNewYear;
     }
     return ESTTCommandType::None;
 }
@@ -583,3 +595,4 @@ void USTTSubsystem::LogError(const FString& Message)
 {
     PRINTLOG(TEXT("[STT ERROR] %s"), *Message);
 }
+

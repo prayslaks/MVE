@@ -20,7 +20,9 @@ enum class ESTTCommandType : uint8
     StopTrack   UMETA(DisplayName = "정지"),
     PlayTrack   UMETA(DisplayName = "재생"),
     ConcertOpen UMETA(DisplayName = "콘서트 열기"),
-    ConcertClose UMETA(DisplayName = "콘서트 닫기")
+    ConcertClose UMETA(DisplayName = "콘서트 닫기"),
+    ThemeChristmas UMETA(DisplayName = "크리스마스"),
+    ThemeNewYear UMETA(DisplayName = "새해")
 };
 
 // ================================================================================================
@@ -131,7 +133,7 @@ public:
     // ================================================================================================
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "STT|Config")
-    FString WebSocketURL = TEXT("ws://172.16.20.236:8001/ws");
+    FString WebSocketURL = TEXT("ws://127.0.0.1:8001/ws");
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "STT|Config")
     int32 SampleRate = 48000;
