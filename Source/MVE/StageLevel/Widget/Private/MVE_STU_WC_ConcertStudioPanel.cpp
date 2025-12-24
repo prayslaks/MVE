@@ -3,6 +3,7 @@
 #include "../Public/MVE_STD_WC_AudioPlayer.h"
 #include "../Public/MVE_STD_WC_AudioSearch.h"
 #include "StageLevel/Widget/Public/MVE_STU_WidgetController_StudioConcert.h"
+#include "MVE_GIS_SessionManager.h"
 
 void UMVE_STU_WC_ConcertStudioPanel::NativeConstruct()
 {
@@ -27,6 +28,27 @@ void UMVE_STU_WC_ConcertStudioPanel::NativeConstruct()
 		AudioSearch->OnAudioSearchResultSelected.AddDynamic(
 			AudioController, &UMVE_STU_WidgetController_StudioConcert::OnTrackSelected);
 		PRINTNETLOG(this, TEXT("AudioSearch events connected to Controller"));
+
+		// SessionManager에서 PlaylistBuilder로부터 받은 재생목록 가져오기
+		if (UGameInstance* GameInstance = GetGameInstance())
+		{
+			if (UMVE_GIS_SessionManager* SessionManager = GameInstance->GetSubsystem<UMVE_GIS_SessionManager>())
+			{
+				TArray<FAudioFile> PendingPlaylist = SessionManager->GetPendingPlaylist();
+				if (PendingPlaylist.Num() > 0)
+				{
+					PRINTNETLOG(this, TEXT("PlaylistBuilder에서 받은 재생목록 적용: %d곡"), PendingPlaylist.Num());
+					AudioSearch->SetPlaylistFromBuilder(PendingPlaylist);
+
+					// 사용 완료 후 초기화
+					SessionManager->ClearPendingPlaylist();
+				}
+				else
+				{
+					PRINTNETLOG(this, TEXT("PlaylistBuilder에서 받은 재생목록 없음 - 기본 동작"));
+				}
+			}
+		}
 	}
 	else
 	{

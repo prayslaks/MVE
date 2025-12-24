@@ -3,6 +3,7 @@
 #include "MVE.h"
 #include "MVE_API_Helper.h"
 #include "MVE_GIS_API.h"
+#include "MVE_GIS_SessionManager.h"
 #include "Components/Button.h"
 #include "Components/ScrollBox.h"
 #include "UI/Widget/Studio/Public/MVE_STD_WC_AudioSearchResult.h"
@@ -16,7 +17,12 @@ void UMVE_STD_WC_AudioSearch::NativeConstruct()
 		GetAudioListButton.Get()->OnClicked.AddDynamic(this, &UMVE_STD_WC_AudioSearch::OnGetAudioListButtonClicked);
 	}
 
-	OnGetAudioListButtonClicked();
+	//OnGetAudioListButtonClicked();
+
+	if (UMVE_GIS_SessionManager* SessionManager = GetWorld()->GetGameInstance()->GetSubsystem<UMVE_GIS_SessionManager>())
+	{
+		SetPlaylistFromBuilder(SessionManager->GetPendingPlaylist());
+	}
 }
 
 void UMVE_STD_WC_AudioSearch::OnGetAudioListButtonClicked()
@@ -82,6 +88,33 @@ void UMVE_STD_WC_AudioSearch::OnSearchResultDoubleClicked(UMVE_STD_WC_AudioSearc
 
 	SelectedSearchResult = ClickedWidget;
 	SelectedSearchResult->SetSelected(true);
-	
+
 	OnAudioSearchResultSelected.Broadcast(SelectedSearchResult->GetAudioData());
+}
+
+void UMVE_STD_WC_AudioSearch::SetPlaylistFromBuilder(const TArray<FAudioFile>& Playlist)
+{
+	PRINTLOG(TEXT("PlaylistBuilder에서 재생목록 받음: %d곡"), Playlist.Num());
+
+	if (AudioListScrollBox)
+	{
+		AudioListScrollBox->ClearChildren();
+	}
+	SearchResultWidgets.Empty();
+	SelectedSearchResult = nullptr;
+
+	// PlaylistBuilder에서 받은 재생목록 표시
+	for (const FAudioFile& AudioFile : Playlist)
+	{
+		if (auto* NewWidget = CreateWidget<UMVE_STD_WC_AudioSearchResult>(this, AudioSearchResultWidgetClass))
+		{
+			FMVE_STD_AudioSearchResultData ResultData(AudioFile.Title, AudioFile.Artist, AudioFile.Id, AudioFile.Duration);
+			NewWidget->UpdateUI(ResultData);
+			NewWidget->OnAudioSearchResultDoubleClicked.AddUObject(this, &UMVE_STD_WC_AudioSearch::OnSearchResultDoubleClicked);
+			SearchResultWidgets.Add(NewWidget);
+			AudioListScrollBox->AddChild(NewWidget);
+
+			PRINTLOG(TEXT("재생목록 항목 추가: %s - %s"), *AudioFile.Title, *AudioFile.Artist);
+		}
+	}
 }

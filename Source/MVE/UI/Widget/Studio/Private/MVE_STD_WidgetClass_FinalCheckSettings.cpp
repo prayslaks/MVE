@@ -4,6 +4,7 @@
 #include "MVE_API_Helper.h"
 #include "MVE_AUD_WidgetClass_ConcertRoom.h"
 #include "MVE_GIS_SessionManager.h"
+#include "MVE_STD_WC_PlaylistBuilder.h"
 #include "UIManagerSubsystem.h"
 #include "Components/Button.h"
 #include "Components/EditableTextBox.h"
@@ -19,6 +20,8 @@ void UMVE_STD_WidgetClass_FinalCheckSettings::NativeConstruct()
 
 void UMVE_STD_WidgetClass_FinalCheckSettings::OnStartConcertButtonClicked()
 {
+	PlaylistBuilderWidget->SavePlaylistToSessionManager();
+	
 	FConcertInfo ConcertInfo;
 	ConcertInfo.ConcertName = RoomTitleEditableText->GetText().ToString();
 	ConcertInfo.MaxAudience = 20;

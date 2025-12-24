@@ -26,6 +26,10 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Playlist")
 	void ClearPlaylist();
 
+	// SessionManager에 재생목록 저장 (StageLevel 이동 전 호출)
+	UFUNCTION(BlueprintCallable, Category = "Playlist")
+	void SavePlaylistToSessionManager();
+
 protected:
 	virtual void NativeConstruct() override;
 

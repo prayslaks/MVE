@@ -3,6 +3,7 @@
 #include "MVE_STD_WC_PlaylistBuilder.h"
 #include "MVE_API_Helper.h"
 #include "MVE_STD_WC_AudioSearchResult.h"
+#include "MVE_GIS_SessionManager.h"
 #include "Components/EditableTextBox.h"
 #include "Components/ScrollBox.h"
 #include "Components/VerticalBox.h"
@@ -232,4 +233,24 @@ void UMVE_STD_WC_PlaylistBuilder::ClearPlaylist()
 	}
 
 	PRINTLOG(TEXT("재생목록 초기화됨"));
+}
+
+void UMVE_STD_WC_PlaylistBuilder::SavePlaylistToSessionManager()
+{
+	if (UGameInstance* GameInstance = GetGameInstance())
+	{
+		if (UMVE_GIS_SessionManager* SessionManager = GameInstance->GetSubsystem<UMVE_GIS_SessionManager>())
+		{
+			SessionManager->SetPendingPlaylist(Playlist);
+			PRINTLOG(TEXT("SessionManager에 재생목록 저장 완료: %d곡"), Playlist.Num());
+		}
+		else
+		{
+			PRINTLOG(TEXT("SessionManager를 찾을 수 없습니다!"));
+		}
+	}
+	else
+	{
+		PRINTLOG(TEXT("GameInstance를 찾을 수 없습니다!"));
+	}
 }
