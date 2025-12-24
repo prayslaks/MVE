@@ -24,7 +24,11 @@ public:
 
 	UPROPERTY(BlueprintAssignable, Category = "Audio Search")
 	FOnAudioSearchResultSelected OnAudioSearchResultSelected;
-	
+
+	/** 검색 결과 위젯 배열 (STT 자동 선택을 위해 public) */
+	UPROPERTY()
+	TArray<TObjectPtr<UMVE_STD_WC_AudioSearchResult>> SearchResultWidgets;
+
 protected:
 	
 	UPROPERTY(meta=(BindWidget))
@@ -40,9 +44,6 @@ protected:
 	void OnGetAudioListButtonClicked();
 
 private:
-	UPROPERTY()
-	TArray<TObjectPtr<UMVE_STD_WC_AudioSearchResult>> SearchResultWidgets;
-	
 	UPROPERTY()
 	TObjectPtr<UMVE_STD_WC_AudioSearchResult> SelectedSearchResult;
 

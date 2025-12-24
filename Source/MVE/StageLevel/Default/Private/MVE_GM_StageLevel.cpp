@@ -12,6 +12,7 @@
 #include "StageLevel/Default/Public/MVE_PC_StageLevel_StudioComponent.h"
 #include "StageLevel/Default/Public/MVE_PC_StageLevel.h"
 #include "StageLevel/Default/Public/MVE_GS_StageLevel.h"
+#include "STT/Public/STTSubsystem.h"
 
 AMVE_GM_StageLevel::AMVE_GM_StageLevel()
 {
@@ -93,6 +94,12 @@ void AMVE_GM_StageLevel::BeginPlay()
 		true,
 		0.f // 즉시 한 번 실행
 	);
+
+	// STT 시작
+	if (USTTSubsystem* STTSubsystem = GetWorld()->GetGameInstance()->GetSubsystem<USTTSubsystem>())
+	{
+		STTSubsystem->StartTranscribing();
+	}
 }
 
 UClass* AMVE_GM_StageLevel::GetDefaultPawnClassForController_Implementation(AController* InController)

@@ -93,4 +93,12 @@ private:
 
 	// State
 	bool bIsConcertOpen = false;
+
+	/**
+	 * 
+	 * @param CommandType 음성 종류 (열어줘, 닫아줘)
+	 * @param OriginalText 원래 텍스트
+	 */
+	UFUNCTION()
+	void HandleVoiceCommand(ESTTCommandType CommandType, const FString& OriginalText);
 };

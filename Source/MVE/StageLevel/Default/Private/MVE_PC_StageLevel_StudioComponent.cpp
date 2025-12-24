@@ -5,6 +5,9 @@
 #include "MVE.h"
 #include "Kismet/GameplayStatics.h"
 #include "StageLevel/Actor/Public/MVE_StageLevel_Speaker.h"
+#include "StageLevel/Widget/Public/MVE_STD_WC_AudioPlayer.h"
+#include "Components/AudioComponent.h"
+#include "Sound/SoundWave.h"
 
 UMVE_PC_StageLevel_StudioComponent::UMVE_PC_StageLevel_StudioComponent()
 {
@@ -78,14 +81,36 @@ void UMVE_PC_StageLevel_StudioComponent::OnAudioLoadedFromUrl(UglTFRuntimeAsset*
 	if (LoadedSoundWave)
 	{
 		PRINTNETLOG(this, TEXT("[오디오 동기화] 사운드 로드 성공. %d개의 스피커에 사운드를 설정합니다."), FoundSpeakers.Num());
-		
+
+		// 총 재생 시간 저장
+		TotalPlaybackDuration = LoadedSoundWave->Duration;
+		PRINTNETLOG(this, TEXT("[오디오 동기화] 총 재생 시간: %.2f초"), TotalPlaybackDuration);
+
+		// UI 슬라이더 초기화 (새 곡 로드 시)
+		if (AudioPlayer)
+		{
+			AudioPlayer->ResetPlaybackUI();
+			PRINTNETLOG(this, TEXT("[오디오 동기화] AudioPlayer UI 초기화 완료"));
+		}
+
 		// 이 클라이언트가 찾은 모든 스피커에 로드된 사운드를 설정합니다.
 		int32 SpeakerCount = 0;
 		for (AMVE_StageLevel_Speaker* Speaker : FoundSpeakers)
 		{
 			if (Speaker && Speaker->GetAudioComponent())
 			{
-				Speaker->GetAudioComponent()->SetSound(LoadedSoundWave);
+				UAudioComponent* AudioComp = Speaker->GetAudioComponent();
+				AudioComp->SetSound(LoadedSoundWave);
+
+				// 첫 번째 스피커에만 델리게이트 바인딩 (중복 방지)
+				if (SpeakerCount == 0)
+				{
+					// 기존 바인딩 제거 후 새로 바인딩
+					AudioComp->OnAudioPlaybackPercent.Clear();
+					AudioComp->OnAudioPlaybackPercent.AddDynamic(this, &UMVE_PC_StageLevel_StudioComponent::OnAudioPlaybackPercentUpdate);
+					PRINTNETLOG(this, TEXT("[오디오 동기화] OnAudioPlaybackPercent 델리게이트 바인딩 완료"));
+				}
+
 				SpeakerCount++;
 			}
 		}
@@ -101,6 +126,7 @@ void UMVE_PC_StageLevel_StudioComponent::OnAudioLoadedFromUrl(UglTFRuntimeAsset*
 void UMVE_PC_StageLevel_StudioComponent::Client_PlayPreparedAudio_Implementation()
 {
 	PRINTNETLOG(this, TEXT("[오디오 동기화] 재생 명령 수신 확인. %d개의 스피커에서 오디오를 재생합니다."), FoundSpeakers.Num());
+
 	int32 SpeakerCount = 0;
 	for (AMVE_StageLevel_Speaker* Speaker : FoundSpeakers)
 	{
@@ -118,6 +144,13 @@ void UMVE_PC_StageLevel_StudioComponent::Client_PlayPreparedAudio_Implementation
 void UMVE_PC_StageLevel_StudioComponent::Client_StopPreparedAudio_Implementation()
 {
 	PRINTNETLOG(this, TEXT("[오디오 동기화] 중지 명령 수신 확인. %d개의 스피커에서 오디오를 중지합니다."), FoundSpeakers.Num());
+
+	// UI 슬라이더 초기화
+	if (AudioPlayer)
+	{
+		AudioPlayer->ResetPlaybackUI();
+	}
+
 	int32 SpeakerCount = 0;
 	for (AMVE_StageLevel_Speaker* Speaker : FoundSpeakers)
 	{
@@ -128,4 +161,16 @@ void UMVE_PC_StageLevel_StudioComponent::Client_StopPreparedAudio_Implementation
 		}
 	}
 	PRINTNETLOG(this, TEXT("[오디오 동기화] %d개의 스피커에 중지 명령 전달 완료."), SpeakerCount);
+}
+
+void UMVE_PC_StageLevel_StudioComponent::OnAudioPlaybackPercentUpdate(const USoundWave* PlayingSoundWave, const float PlaybackPercent)
+{
+	if (AudioPlayer && PlayingSoundWave)
+	{
+		// Percent (0.0 ~ 1.0)를 실제 시간으로 변환
+		const float CurrentTime = TotalPlaybackDuration * PlaybackPercent;
+
+		// UI 업데이트
+		AudioPlayer->UpdatePlaybackProgress(CurrentTime, TotalPlaybackDuration);
+	}
 }
