@@ -31,7 +31,7 @@ public:
 
 protected:
 	
-	UPROPERTY(meta=(BindWidget))
+	UPROPERTY(meta=(BindWidgetOptional))
 	TObjectPtr<UButton> GetAudioListButton;
 	
 	UPROPERTY(meta=(BindWidget))

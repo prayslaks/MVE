@@ -15,6 +15,8 @@ void UMVE_STD_WC_AudioSearch::NativeConstruct()
 	{
 		GetAudioListButton.Get()->OnClicked.AddDynamic(this, &UMVE_STD_WC_AudioSearch::OnGetAudioListButtonClicked);
 	}
+
+	OnGetAudioListButtonClicked();
 }
 
 void UMVE_STD_WC_AudioSearch::OnGetAudioListButtonClicked()
