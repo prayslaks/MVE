@@ -46,7 +46,18 @@ public:
 
     UFUNCTION(BlueprintCallable, BlueprintPure, Category = "MVE|Session")
     FString GetCurrentRoomID();
-    
+
+    // ===== 콘서트 재생목록 관리 =====
+
+    UFUNCTION(BlueprintCallable, Category = "MVE|Session")
+    void SetPendingPlaylist(const TArray<FAudioFile>& Playlist);
+
+    UFUNCTION(BlueprintCallable, BlueprintPure, Category = "MVE|Session")
+    TArray<FAudioFile> GetPendingPlaylist() const { return PendingConcertPlaylist; }
+
+    UFUNCTION(BlueprintCallable, Category = "MVE|Session")
+    void ClearPendingPlaylist();
+
     UPROPERTY(BlueprintAssignable, Category = "MVE|Session")
     FOnSessionCreated OnSessionCreated;
     
@@ -103,9 +114,13 @@ private:
     // 세션 참여한 방 정보
     UPROPERTY()
     FString JoinedConcertName;
-    
+
     UPROPERTY()
     TArray<FConcertInfo> ConcertList;
+
+    // 콘서트 생성 시 사용할 재생목록
+    UPROPERTY()
+    TArray<FAudioFile> PendingConcertPlaylist;
 
     
     UPROPERTY()

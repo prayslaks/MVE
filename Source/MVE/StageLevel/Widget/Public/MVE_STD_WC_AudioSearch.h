@@ -29,6 +29,10 @@ public:
 	UPROPERTY()
 	TArray<TObjectPtr<UMVE_STD_WC_AudioSearchResult>> SearchResultWidgets;
 
+	/** PlaylistBuilder에서 전달받은 재생목록 설정 */
+	UFUNCTION(BlueprintCallable, Category = "Audio Search")
+	void SetPlaylistFromBuilder(const TArray<FAudioFile>& Playlist);
+
 protected:
 	
 	UPROPERTY(meta=(BindWidgetOptional))

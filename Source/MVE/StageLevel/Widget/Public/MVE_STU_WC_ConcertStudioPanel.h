@@ -34,9 +34,6 @@ public:
 	/** AudioPlayer 위젯 */
 	UPROPERTY(meta=(BindWidget), BlueprintReadOnly)
 	TObjectPtr<UMVE_STD_WC_AudioPlayer> AudioPlayer;
-
-protected:
-
 	
 private:
 	/** Audio 관련 모든 로직을 담당하는 Controller */

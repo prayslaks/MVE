@@ -508,13 +508,29 @@ int32 UMVE_GIS_SessionManager::GetUniqueClientId() const
 	{
 		return -1;
 	}
-    
+
 	APlayerController* PC = World->GetFirstPlayerController();
 	if (!PC)
 	{
 		return -1;
 	}
-    
+
 	// NetPlayerIndex 사용 (멀티플레이어에서 고유 ID)
 	return PC->NetPlayerIndex;
+}
+
+// ========================================
+// 콘서트 재생목록 관리
+// ========================================
+
+void UMVE_GIS_SessionManager::SetPendingPlaylist(const TArray<FAudioFile>& Playlist)
+{
+	PendingConcertPlaylist = Playlist;
+	SESSIONPRINTLOG(TEXT("재생목록 설정됨: %d곡"), Playlist.Num());
+}
+
+void UMVE_GIS_SessionManager::ClearPendingPlaylist()
+{
+	PendingConcertPlaylist.Empty();
+	SESSIONPRINTLOG(TEXT("재생목록 초기화됨"));
 }
