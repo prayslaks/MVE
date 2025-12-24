@@ -5,7 +5,6 @@
 #include "JsonUtilities.h"
 #include "SocketSubsystem.h" // For ISocketSubsystem
 #include "IPAddress.h"     // For FInternetAddr
-#include "LegacyScreenPercentageDriver.h"
 #include "Engine/World.h"   // For UWorld
 
 #pragma region 네이티브 & 블루프린트 리스폰스 핸들러 매크로 
