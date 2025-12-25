@@ -11,7 +11,8 @@
 			"AdditionalDependencies": [
 				"Engine",
 				"AIModule",
-				"UMG"
+				"UMG",
+				"OSC"
 			]
 		}
 	],
@@ -147,7 +148,8 @@
 		},
 		{
 			"Name": "OSC",
-			"Enabled": true
+			"Enabled": true,
+			"LoadingPhase": "PostConfigInit"
 		},
 		{
 			"Name": "LiveLinkFreeD",
