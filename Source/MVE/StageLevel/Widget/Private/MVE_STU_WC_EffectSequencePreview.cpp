@@ -26,6 +26,13 @@ void UMVE_STU_WC_EffectSequencePreview::NativeConstruct()
 	{
 		AudioComponent->RegisterComponent();
 		AudioComponent->bAutoActivate = false;
+
+		// 재생 퍼센트 업데이트 간격 설정 (0.1초마다)
+		AudioComponent->SetAudioPlaybackPercent(0.1f);
+
+		// 재생 퍼센트 델리게이트 바인딩
+		AudioComponent->OnAudioPlaybackPercent.AddDynamic(this, &UMVE_STU_WC_EffectSequencePreview::OnAudioPlaybackPercentChanged);
+
 		PRINTLOG(TEXT("AudioComponent 생성됨"));
 	}
 
@@ -255,29 +262,24 @@ void UMVE_STU_WC_EffectSequencePreview::SetAudioFile(const FAudioFile& AudioFile
 		*AudioFile.Title, *AudioFile.Artist, *FormatTime(TotalDurationTimeStamp));
 }
 
-void UMVE_STU_WC_EffectSequencePreview::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
+void UMVE_STU_WC_EffectSequencePreview::OnAudioPlaybackPercentChanged(const USoundWave* PlayingSoundWave, const float PlaybackPercent)
 {
-	Super::NativeTick(MyGeometry, InDeltaTime);
-
-	// AudioComponent의 재생 시간을 EffectSequenceManager와 동기화
-	if (AudioComponent && AudioComponent->IsPlaying() && CurrentSound)
+	if (!PlayingSoundWave || bIsSliderDragging)
 	{
-		// 현재 재생 시간 (초 단위)
-		float PlaybackTime = AudioComponent->GetPlaybackPercent() * CurrentSound->Duration;
-
-		// 1/10초 단위로 변환
-		int32 CurrentTimeStamp = static_cast<int32>(PlaybackTime * 10.0f);
-
-		// EffectSequenceManager 업데이트
-		if (EffectSequenceManager)
-		{
-			// Manager의 타임라인도 동기화
-			EffectSequenceManager->SeekToTimeStamp(CurrentTimeStamp);
-		}
-
-		// UI 업데이트
-		UpdatePlaybackProgress(CurrentTimeStamp);
+		return;
 	}
+
+	// 현재 재생 시간 계산 (초 단위)
+	float PlaybackTime = PlaybackPercent * PlayingSoundWave->Duration;
+
+	// 1/10초 단위로 변환
+	int32 CurrentTimeStamp = static_cast<int32>(PlaybackTime * 10.0f);
+
+	// UI 업데이트 (슬라이더는 드래그 중이 아닐 때만)
+	UpdatePlaybackProgress(CurrentTimeStamp);
+
+	// EffectSequenceManager의 타임라인은 자체적으로 Tick에서 업데이트되므로
+	// 여기서는 UI만 동기화
 }
 
 void UMVE_STU_WC_EffectSequencePreview::OnPlayButtonClicked()

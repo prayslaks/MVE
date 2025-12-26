@@ -96,7 +96,6 @@ public:
 	void SetAudioFile(const FAudioFile& AudioFile);
 
 protected:
-	virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
 	virtual void NativeConstruct() override;
 	virtual void NativeOnInitialized() override;
 	virtual void NativeDestruct() override;
@@ -187,6 +186,12 @@ private:
 	 * @return 포맷된 문자열 (예: "2:31")
 	 */
 	static FString FormatTime(int32 TimeStamp);
+
+	/**
+	 * AudioComponent의 재생 퍼센트 업데이트 콜백
+	 */
+	UFUNCTION()
+	void OnAudioPlaybackPercentChanged(const USoundWave* PlayingSoundWave, const float PlaybackPercent);
 
 private:
 	/** AI 분석 결과 */
