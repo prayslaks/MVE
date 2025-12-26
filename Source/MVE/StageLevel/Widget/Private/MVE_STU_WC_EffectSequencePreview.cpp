@@ -18,6 +18,7 @@ void UMVE_STU_WC_EffectSequencePreview::NativeConstruct()
 	Super::NativeConstruct();
 
 	bIsSliderDragging = false;
+	bIsAudioPaused = false;
 	TotalDurationTimeStamp = 0;
 
 	// AudioComponent 생성
@@ -26,9 +27,6 @@ void UMVE_STU_WC_EffectSequencePreview::NativeConstruct()
 	{
 		AudioComponent->RegisterComponent();
 		AudioComponent->bAutoActivate = false;
-
-		// 재생 퍼센트 업데이트 간격 설정 (0.1초마다)
-		AudioComponent->SetAudioPlaybackPercent(0.1f);
 
 		// 재생 퍼센트 델리게이트 바인딩
 		AudioComponent->OnAudioPlaybackPercent.AddDynamic(this, &UMVE_STU_WC_EffectSequencePreview::OnAudioPlaybackPercentChanged);
@@ -295,6 +293,7 @@ void UMVE_STU_WC_EffectSequencePreview::OnPlayButtonClicked()
 			if (AudioComponent && AudioComponent->IsPlaying())
 			{
 				AudioComponent->SetPaused(true);
+				bIsAudioPaused = true;
 			}
 
 			OnStopClicked.Broadcast();
@@ -310,9 +309,10 @@ void UMVE_STU_WC_EffectSequencePreview::OnPlayButtonClicked()
 			{
 				if (CurrentSound)
 				{
-					if (AudioComponent->GetPaused())
+					if (bIsAudioPaused)
 					{
 						AudioComponent->SetPaused(false);
+						bIsAudioPaused = false;
 					}
 					else if (!AudioComponent->IsPlaying())
 					{

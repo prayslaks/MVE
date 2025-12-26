@@ -211,6 +211,9 @@ private:
 	/** 슬라이더 드래그 중 여부 */
 	bool bIsSliderDragging;
 
+	/** 오디오 일시정지 상태 */
+	bool bIsAudioPaused;
+
 	/** 음악 재생용 AudioComponent */
 	UPROPERTY()
 	UAudioComponent* AudioComponent;
