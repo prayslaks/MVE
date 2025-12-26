@@ -14,7 +14,7 @@ class MVE_API AMVE_StageLevel_SequenceActorBase : public AActor
 public:
 	AMVE_StageLevel_SequenceActorBase();
 	
-	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "MVE|SequenceActor")
 	int32 SequenceOrder;
 	
 	UFUNCTION(BlueprintImplementableEvent)
