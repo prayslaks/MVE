@@ -1,22 +1,15 @@
 ﻿#pragma once
 
 #include "CoreMinimal.h"
+#include "MVE_StageLevel_SequenceManagerBase.h"
 #include "GameFramework/Actor.h"
 #include "MVE_StageLevel_SpotlightManager.generated.h"
 
-class AMVE_StageLevel_Spotlight;
+class AMVE_StageLevel_SequenceActorBase;
 
-USTRUCT(BlueprintType)
-struct FSpotlightGroup
-{
-	GENERATED_BODY()
-
-	UPROPERTY()
-	TArray<AMVE_StageLevel_Spotlight*> Spotlights;
-};
 
 UCLASS()
-class MVE_API AMVE_StageLevel_SpotlightManager : public AActor
+class MVE_API AMVE_StageLevel_SpotlightManager : public AMVE_StageLevel_SequenceManagerBase
 {
 	GENERATED_BODY()
 
@@ -25,15 +18,7 @@ public:
 	
 	virtual void BeginPlay() override;
 	
-	UFUNCTION(BlueprintCallable, Category = "MVE|SequenceActor")
-	void ExecuteSequence(int32 SequenceNumber, float DelayBetweenOrder);
+	virtual void ExecuteSequenceNumber(int32 SequenceNumber, float DelayBetweenOrder) override;
 	
-private:
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess = "true"), Category = "MVE|SequenceActor")
-	TMap<int32, FSpotlightGroup> SpotlightsBySequenceOrder;
-	
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess = "true"), Category = "MVE|SequenceActor")
-	TArray<int32> SequenceOrders;
-	
-	FTimerHandle ExecutionDelayTimerHandle;
+	virtual void ExecuteSequenceActorByOrder() override;
 };
