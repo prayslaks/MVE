@@ -15,7 +15,7 @@ AMVE_StageLevel_EffectSequenceManager::AMVE_StageLevel_EffectSequenceManager()
 	bIsPlaying = false;
 	AccumulatedTime = 0.0f;
 	SpotlightManager = nullptr;
-	PerformanceManager = nullptr;
+	//PerformanceManager = nullptr;
 }
 
 void AMVE_StageLevel_EffectSequenceManager::BeginPlay()
@@ -169,6 +169,7 @@ void AMVE_StageLevel_EffectSequenceManager::ExecuteEffectAtTimeStamp(const FEffe
 	}
 	else if (TagString.StartsWith(TEXT("VFX.Flame")) || TagString.StartsWith(TEXT("VFX.Fanfare")))
 	{
+		/*
 		// Flame 또는 Fanfare 이펙트
 		if (PerformanceManager)
 		{
@@ -180,6 +181,7 @@ void AMVE_StageLevel_EffectSequenceManager::ExecuteEffectAtTimeStamp(const FEffe
 		{
 			PRINTLOG(TEXT("PerformanceManager를 찾을 수 없습니다"));
 		}
+		*/
 	}
 	else
 	{

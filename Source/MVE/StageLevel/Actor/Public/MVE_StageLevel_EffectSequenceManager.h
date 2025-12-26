@@ -1,10 +1,9 @@
-// Fill out your copyright notice in the Description page of Project Settings.
 
 #pragma once
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
-#include "MVE_EffectSequenceData.h"
+#include "StageLevel/Data/MVE_EffectSequenceData.h"
 #include "MVE_StageLevel_EffectSequenceManager.generated.h"
 
 class AMVE_StageLevel_SpotlightManager;
@@ -117,6 +116,6 @@ private:
 	AMVE_StageLevel_SpotlightManager* SpotlightManager;
 
 	/** PerformanceManager 레퍼런스 */
-	UPROPERTY()
-	AMVE_StageLevel_PerformanceManager* PerformanceManager;
+	//UPROPERTY()
+	//AMVE_StageLevel_PerformanceManager* PerformanceManager;
 };
