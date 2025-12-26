@@ -8,7 +8,7 @@ public class RemocappEditor : ModuleRules
 	{
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 
-		PublicDependencyModuleNames.AddRange(new string[] { "TakeRecorder", "Blutility", "UMG", "Projects" });
+		PublicDependencyModuleNames.AddRange(new string[] { "TakeRecorder", "Blutility", "UMG", "Projects", "OSC" });
 
 		PrivateDependencyModuleNames.AddRange(
 			new string[] { 
