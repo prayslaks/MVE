@@ -209,6 +209,9 @@ void UMVE_STD_WC_PlaylistBuilder::AddToPlaylist(const FAudioFile& AudioFile)
 			// 삭제 이벤트 바인딩
 			PlaylistItemWidget->OnDeleteRequested.AddUObject(this, &UMVE_STD_WC_PlaylistBuilder::OnPlaylistItemDeleteRequested);
 
+			// 클릭 이벤트 바인딩 (음악 선택)
+			PlaylistItemWidget->OnAudioSearchResultClicked.AddUObject(this, &UMVE_STD_WC_PlaylistBuilder::OnPlaylistItemClicked);
+
 			// ScrollBox에 추가
 			PlaylistScrollBox->AddChild(PlaylistItemWidget);
 			PRINTLOG(TEXT("ScrollBox에 위젯 추가 성공!"));
@@ -365,4 +368,26 @@ void UMVE_STD_WC_PlaylistBuilder::OnPlaylistItemDeleteRequested(UMVE_STD_WC_Audi
 
 	int32 Index = Widget->GetPlaylistIndex();
 	RemovePlaylistItem(Index);
+}
+
+void UMVE_STD_WC_PlaylistBuilder::OnPlaylistItemClicked(UMVE_STD_WC_AudioSearchResult* ClickedWidget)
+{
+	if (!ClickedWidget)
+	{
+		return;
+	}
+
+	int32 Index = ClickedWidget->GetPlaylistIndex();
+	if (Index < 0 || Index >= Playlist.Num())
+	{
+		PRINTLOG(TEXT("잘못된 재생목록 인덱스: %d"), Index);
+		return;
+	}
+
+	// 선택된 음악 저장
+	SelectedAudioFile = Playlist[Index];
+	PRINTLOG(TEXT("음악 선택됨: %s - %s"), *SelectedAudioFile.Title, *SelectedAudioFile.Artist);
+
+	// 델리게이트 브로드캐스트
+	OnAudioFileSelected.Broadcast(SelectedAudioFile);
 }

@@ -12,15 +12,25 @@ class UScrollBox;
 class UVerticalBox;
 class UMVE_STD_WC_AudioSearchResult;
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnAudioFileSelected, const FAudioFile&, SelectedAudio);
+
 UCLASS()
 class MVE_API UMVE_STD_WC_PlaylistBuilder : public UUserWidget
 {
 	GENERATED_BODY()
 
 public:
+	/** 음악 선택 시 브로드캐스트되는 델리게이트 */
+	UPROPERTY(BlueprintAssignable, Category = "Playlist|Event")
+	FOnAudioFileSelected OnAudioFileSelected;
+
 	// 재생목록 가져오기
 	UFUNCTION(BlueprintCallable, Category = "Playlist")
 	TArray<FAudioFile> GetPlaylist() const { return Playlist; }
+
+	// 선택된 음악 가져오기
+	UFUNCTION(BlueprintCallable, Category = "Playlist")
+	FAudioFile GetSelectedAudioFile() const { return SelectedAudioFile; }
 
 	// 재생목록 초기화
 	UFUNCTION(BlueprintCallable, Category = "Playlist")
@@ -77,6 +87,9 @@ private:
 	// 재생목록 항목 삭제 요청 이벤트
 	void OnPlaylistItemDeleteRequested(UMVE_STD_WC_AudioSearchResult* Widget);
 
+	// 재생목록 항목 클릭 이벤트 (선택)
+	void OnPlaylistItemClicked(UMVE_STD_WC_AudioSearchResult* ClickedWidget);
+
 	// 드롭다운 업데이트
 	void UpdateDropdown(const TArray<FAudioFile>& Results);
 
@@ -93,4 +106,8 @@ private:
 	// 현재 재생목록
 	UPROPERTY()
 	TArray<FAudioFile> Playlist;
+
+	// 선택된 음악
+	UPROPERTY()
+	FAudioFile SelectedAudioFile;
 };

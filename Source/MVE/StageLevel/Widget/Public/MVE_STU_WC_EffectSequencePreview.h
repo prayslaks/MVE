@@ -1,10 +1,9 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #pragma once
 
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
 #include "StageLevel/Data/MVE_EffectSequenceData.h"
+#include "API/Public/MVE_API_ResponseData.h"
 #include "MVE_STU_WC_EffectSequencePreview.generated.h"
 
 class AMVE_StageLevel_EffectSequenceManager;
@@ -14,6 +13,8 @@ class UTextBlock;
 class UImage;
 class UCanvasPanel;
 class UTexture2D;
+class UAudioComponent;
+class USoundWave;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnEffectPreviewPlayClicked);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnEffectPreviewStopClicked);
@@ -73,10 +74,34 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Effect Preview")
 	void SetEffectSequenceManager(AMVE_StageLevel_EffectSequenceManager* Manager);
 
+	/**
+	 * 스테이지 프리뷰 RenderTarget 설정
+	 * @param RenderTarget StagePreviewCaptureActor가 캡처한 RenderTarget
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Effect Preview")
+	void SetRenderTarget(UTextureRenderTarget2D* RenderTarget);
+
+	/**
+	 * 테스트용 더미 데이터 로드
+	 * AI 연동 전 테스트를 위한 임시 함수
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Effect Preview|Test")
+	void LoadTestData();
+
+	/**
+	 * 재생할 음악 설정
+	 * @param AudioFile PlaylistBuilder에서 선택한 음악 정보
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Effect Preview")
+	void SetAudioFile(const FAudioFile& AudioFile);
+
 protected:
 	virtual void NativeConstruct() override;
 	virtual void NativeOnInitialized() override;
 	virtual void NativeDestruct() override;
+	
+	UPROPERTY(meta=(BindWidget))
+	TObjectPtr<UImage> StagePreviewImage;
 
 	/** 재생/일시정지 버튼 */
 	UPROPERTY(meta = (BindWidget))
@@ -123,6 +148,7 @@ protected:
 	TObjectPtr<UTexture2D> FanfareIconTexture;
 
 private:
+	
 	/** 재생 버튼 클릭 핸들러 */
 	UFUNCTION()
 	void OnPlayButtonClicked();
@@ -161,6 +187,12 @@ private:
 	 */
 	static FString FormatTime(int32 TimeStamp);
 
+	/**
+	 * AudioComponent의 재생 퍼센트 업데이트 콜백
+	 */
+	UFUNCTION()
+	void OnAudioPlaybackPercentChanged(const USoundWave* PlayingSoundWave, const float PlaybackPercent);
+
 private:
 	/** AI 분석 결과 */
 	TArray<FEffectSequenceData> SequenceDataArray;
@@ -178,4 +210,19 @@ private:
 
 	/** 슬라이더 드래그 중 여부 */
 	bool bIsSliderDragging;
+
+	/** 오디오 일시정지 상태 */
+	bool bIsAudioPaused;
+
+	/** 음악 재생용 AudioComponent */
+	UPROPERTY()
+	UAudioComponent* AudioComponent;
+
+	/** 현재 선택된 음악 정보 */
+	UPROPERTY()
+	FAudioFile CurrentAudioFile;
+
+	/** 현재 로드된 사운드 */
+	UPROPERTY()
+	USoundWave* CurrentSound;
 };
