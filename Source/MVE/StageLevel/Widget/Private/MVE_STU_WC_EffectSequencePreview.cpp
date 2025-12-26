@@ -9,6 +9,7 @@
 #include "Components/Image.h"
 #include "Components/CanvasPanel.h"
 #include "Components/CanvasPanelSlot.h"
+#include "Engine/TextureRenderTarget2D.h"
 
 void UMVE_STU_WC_EffectSequencePreview::NativeConstruct()
 {
@@ -137,6 +138,26 @@ void UMVE_STU_WC_EffectSequencePreview::SetEffectSequenceManager(AMVE_StageLevel
 {
 	EffectSequenceManager = Manager;
 	PRINTLOG(TEXT("EffectSequenceManager 설정됨"));
+}
+
+void UMVE_STU_WC_EffectSequencePreview::SetRenderTarget(UTextureRenderTarget2D* RenderTarget)
+{
+	if (StagePreviewImage && RenderTarget)
+	{
+		// RenderTarget을 Brush로 변환
+		FSlateBrush Brush;
+		Brush.SetResourceObject(RenderTarget);
+		Brush.ImageSize = FVector2D(RenderTarget->SizeX, RenderTarget->SizeY);
+		Brush.DrawAs = ESlateBrushDrawType::Image;
+
+		StagePreviewImage->SetBrush(Brush);
+
+		PRINTLOG(TEXT("StagePreviewImage에 RenderTarget 설정됨: %s"), *RenderTarget->GetName());
+	}
+	else
+	{
+		PRINTLOG(TEXT("StagePreviewImage 또는 RenderTarget이 null입니다"));
+	}
 }
 
 void UMVE_STU_WC_EffectSequencePreview::OnPlayButtonClicked()

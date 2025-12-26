@@ -73,10 +73,20 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Effect Preview")
 	void SetEffectSequenceManager(AMVE_StageLevel_EffectSequenceManager* Manager);
 
+	/**
+	 * 스테이지 프리뷰 RenderTarget 설정
+	 * @param RenderTarget StagePreviewCaptureActor가 캡처한 RenderTarget
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Effect Preview")
+	void SetRenderTarget(UTextureRenderTarget2D* RenderTarget);
+
 protected:
 	virtual void NativeConstruct() override;
 	virtual void NativeOnInitialized() override;
 	virtual void NativeDestruct() override;
+	
+	UPROPERTY(meta=(BindWidget))
+	TObjectPtr<UImage> StagePreviewImage;
 
 	/** 재생/일시정지 버튼 */
 	UPROPERTY(meta = (BindWidget))
@@ -123,6 +133,7 @@ protected:
 	TObjectPtr<UTexture2D> FanfareIconTexture;
 
 private:
+	
 	/** 재생 버튼 클릭 핸들러 */
 	UFUNCTION()
 	void OnPlayButtonClicked();
