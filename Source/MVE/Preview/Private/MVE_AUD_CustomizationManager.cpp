@@ -853,10 +853,15 @@ void UMVE_AUD_CustomizationManager::OnGLTFAssetLoaded(UglTFRuntimeAsset* Asset)
 
 	PRINTLOG(TEXT("✅ Mesh component created and registered"));
 
-	// glTFRuntime으로 Static Mesh 생성
+	// ⭐ glTFRuntime Static Mesh 설정 (머티리얼 포함)
 	FglTFRuntimeStaticMeshConfig StaticMeshConfig;
 
-	PRINTLOG(TEXT("Loading static mesh from GLB..."));
+	// 머티리얼 설정
+	FglTFRuntimeMaterialsConfig& MaterialsConfig = StaticMeshConfig.MaterialsConfig;
+	MaterialsConfig.bGeneratesMipMaps = true;  // 밉맵 생성
+	MaterialsConfig.bMergeSectionsByMaterial = false;
+
+	PRINTLOG(TEXT("Loading static mesh from GLB with materials..."));
 
 	UStaticMesh* StaticMesh = Asset->LoadStaticMesh(0, StaticMeshConfig);
 
@@ -868,9 +873,24 @@ void UMVE_AUD_CustomizationManager::OnGLTFAssetLoaded(UglTFRuntimeAsset* Asset)
 	}
 
 	PRINTLOG(TEXT("✅ Static mesh loaded successfully"));
+	PRINTLOG(TEXT("   Material count: %d"), StaticMesh->GetStaticMaterials().Num());
 
 	// 메시 설정
 	MeshComponent->SetStaticMesh(StaticMesh);
+
+	// 머티리얼 확인 로그
+	for (int32 i = 0; i < MeshComponent->GetNumMaterials(); i++)
+	{
+		UMaterialInterface* Material = MeshComponent->GetMaterial(i);
+		if (Material)
+		{
+			PRINTLOG(TEXT("   Material[%d]: %s"), i, *Material->GetName());
+		}
+		else
+		{
+			PRINTLOG(TEXT("   Material[%d]: NULL"), i);
+		}
+	}
 
 	PRINTLOG(TEXT("✅ Static mesh set to component"));
 	PRINTLOG(TEXT("✅ GLB loaded successfully, invoking callback"));
