@@ -249,7 +249,7 @@ void USTTSubsystem::OnWebSocketClosed(int32 StatusCode, const FString& Reason, b
 }
 
 // ================================================================================================
-// 🔥 핵심 수정: 서버 응답 처리 (Python 서버 형식 매칭)
+//  핵심 수정: 서버 응답 처리 (Python 서버 형식 매칭)
 // ================================================================================================
 
 void USTTSubsystem::OnWebSocketMessage(const FString& Message)
@@ -267,7 +267,7 @@ void USTTSubsystem::OnWebSocketMessage(const FString& Message)
         // 텍스트 스트림 이벤트 발송
         OnSTTTextStream.Broadcast(Response);
 
-        // 🔥 명령어인 경우 별도 이벤트 발송
+        //명령어인 경우 별도 이벤트 발송
         if (Response.bIsCommand && Response.CommandType != ESTTCommandType::None)
         {
             PRINTLOG(TEXT("🎯 명령어 감지: [%s] -> %s"),
@@ -296,16 +296,6 @@ void USTTSubsystem::OnWebSocketMessage(const FString& Message)
     }
 }
 
-// ================================================================================================
-// 🔥 핵심 수정: JSON 파싱 (Python 서버 응답 형식)
-// Python 서버 응답 형식:
-// {
-//     "content": "인식된 텍스트",
-//     "command": "NextTrack" | "StopTrack" | "PlayTrack",
-//     "is_command": true
-// }
-// ================================================================================================
-
 FSTTResponse USTTSubsystem::ParseJSONResponse(const FString& JSONString)
 {
     FSTTResponse Response;
@@ -319,8 +309,7 @@ FSTTResponse USTTSubsystem::ParseJSONResponse(const FString& JSONString)
         LogError(FString::Printf(TEXT("JSON 파싱 실패: %s"), *JSONString));
         return Response;
     }
-
-    // 🔥 Python 서버 응답 필드 매칭
+    
     // 1. content 필드 (인식된 텍스트)
     if (JsonObject->HasField(TEXT("content")))
     {
@@ -467,7 +456,7 @@ void USTTSubsystem::OnAudioCapture(
 
     int32 TotalSamples = ProcessedFloatData.Num();
 
-    // 🔥 오디오 레벨 계산 (UI용)
+    // 오디오 레벨 계산 (UI용)
     float MaxPeak = 0.0f;
     for (int32 i = 0; i < TotalSamples; ++i)
     {
