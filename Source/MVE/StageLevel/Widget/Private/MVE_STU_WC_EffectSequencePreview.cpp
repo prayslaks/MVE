@@ -1,4 +1,3 @@
-// Fill out your copyright notice in the Description page of Project Settings.
 
 #include "MVE_STU_WC_EffectSequencePreview.h"
 #include "MVE_StageLevel_EffectSequenceManager.h"
@@ -9,7 +8,10 @@
 #include "Components/Image.h"
 #include "Components/CanvasPanel.h"
 #include "Components/CanvasPanelSlot.h"
+#include "Components/AudioComponent.h"
 #include "Engine/TextureRenderTarget2D.h"
+#include "Sound/SoundWave.h"
+#include "Kismet/GameplayStatics.h"
 
 void UMVE_STU_WC_EffectSequencePreview::NativeConstruct()
 {
@@ -17,6 +19,15 @@ void UMVE_STU_WC_EffectSequencePreview::NativeConstruct()
 
 	bIsSliderDragging = false;
 	TotalDurationTimeStamp = 0;
+
+	// AudioComponent 생성
+	AudioComponent = NewObject<UAudioComponent>(this);
+	if (AudioComponent)
+	{
+		AudioComponent->RegisterComponent();
+		AudioComponent->bAutoActivate = false;
+		PRINTLOG(TEXT("AudioComponent 생성됨"));
+	}
 
 	// 버튼 이벤트 바인딩
 	if (PlayButton)
@@ -125,6 +136,12 @@ void UMVE_STU_WC_EffectSequencePreview::ResetPreview()
 		CurrentTimeTextBlock->SetText(FText::FromString(TEXT("0:00")));
 	}
 
+	// AudioComponent 정지
+	if (AudioComponent && AudioComponent->IsPlaying())
+	{
+		AudioComponent->Stop();
+	}
+
 	// EffectSequenceManager 초기화
 	if (EffectSequenceManager)
 	{
@@ -160,19 +177,153 @@ void UMVE_STU_WC_EffectSequencePreview::SetRenderTarget(UTextureRenderTarget2D* 
 	}
 }
 
+void UMVE_STU_WC_EffectSequencePreview::LoadTestData()
+{
+	// 테스트용 더미 데이터 생성
+	// AI가 분석한 결과를 시뮬레이션
+	TArray<FEffectSequenceData> TestData;
+
+	// 0:10초 - Spotlight VerySlowSpeed (고요한 인트로)
+	TestData.Add(FEffectSequenceData(100, FGameplayTag::RequestGameplayTag(FName("VFX.Spotlight.VerySlowSpeed"))));
+
+	// 0:30초 - Spotlight SlowSpeed (서정적인 시작)
+	TestData.Add(FEffectSequenceData(300, FGameplayTag::RequestGameplayTag(FName("VFX.Spotlight.SlowSpeed"))));
+
+	// 1:00분 - Fanfare LowSpawnRate (설레는 첫 소절)
+	TestData.Add(FEffectSequenceData(600, FGameplayTag::RequestGameplayTag(FName("VFX.Fanfare.LowSpawnRate"))));
+
+	// 1:30분 - Spotlight NormalSpeed (경쾌한 팝)
+	TestData.Add(FEffectSequenceData(900, FGameplayTag::RequestGameplayTag(FName("VFX.Spotlight.NormalSpeed"))));
+
+	// 2:00분 - Flame NormalSmallSizeAndNormalSpeed (힙합 비트)
+	TestData.Add(FEffectSequenceData(1200, FGameplayTag::RequestGameplayTag(FName("VFX.Flame.NormalSmallSizeAndNormalSpeed"))));
+
+	// 2:30분 - Fanfare NormalSpawnRate (즐거운 축제)
+	TestData.Add(FEffectSequenceData(1500, FGameplayTag::RequestGameplayTag(FName("VFX.Fanfare.NormalSpawnRate"))));
+
+	// 3:00분 - Spotlight FastSpeed (고조되는 댄스)
+	TestData.Add(FEffectSequenceData(1800, FGameplayTag::RequestGameplayTag(FName("VFX.Spotlight.FastSpeed"))));
+
+	// 3:30분 - Flame FastSizeAndFastSpeed (파워풀한 하이라이트)
+	TestData.Add(FEffectSequenceData(2100, FGameplayTag::RequestGameplayTag(FName("VFX.Flame.FastSizeAndFastSpeed"))));
+
+	// 4:00분 - Fanfare HighSpawnRate (폭발적인 메인 하이라이트)
+	TestData.Add(FEffectSequenceData(2400, FGameplayTag::RequestGameplayTag(FName("VFX.Fanfare.HighSpawnRate"))));
+
+	// 4:30분 - Spotlight VeryFastSpeed (락 장르 클라이막스)
+	TestData.Add(FEffectSequenceData(2700, FGameplayTag::RequestGameplayTag(FName("VFX.Spotlight.VeryFastSpeed"))));
+
+	// 5:00분 - Flame VeryFastSizeAndVeryFastSpeed (극강 클라이막스)
+	TestData.Add(FEffectSequenceData(3000, FGameplayTag::RequestGameplayTag(FName("VFX.Flame.VeryFastSizeAndVeryFastSpeed"))));
+
+	// 5:30분 - Fanfare VeryHighSpawnRate (그랜드 피날레)
+	TestData.Add(FEffectSequenceData(3300, FGameplayTag::RequestGameplayTag(FName("VFX.Fanfare.VeryHighSpawnRate"))));
+
+	// 총 길이 6분 (3600 = 360초 * 10)
+	int32 TotalDuration = 3600;
+
+	// 데이터 설정
+	SetSequenceData(TestData, TotalDuration);
+
+	PRINTLOG(TEXT("테스트 데이터 로드 완료 - %d개 이펙트, 총 길이: 6:00"), TestData.Num());
+}
+
+void UMVE_STU_WC_EffectSequencePreview::SetAudioFile(const FAudioFile& AudioFile)
+{
+	CurrentAudioFile = AudioFile;
+
+	// TODO: Runtime audio loading from FilePath
+	// For now, we'll set the duration based on AudioFile.Duration
+	// Duration is in seconds, convert to 1/10 second units
+	TotalDurationTimeStamp = AudioFile.Duration * 10;
+
+	// 슬라이더 범위 설정
+	if (PlaybackSlider)
+	{
+		PlaybackSlider->SetMinValue(0.0f);
+		PlaybackSlider->SetMaxValue(static_cast<float>(TotalDurationTimeStamp));
+		PlaybackSlider->SetValue(0.0f);
+	}
+
+	// 총 시간 텍스트 업데이트
+	if (TotalTimeTextBlock)
+	{
+		TotalTimeTextBlock->SetText(FText::FromString(FormatTime(TotalDurationTimeStamp)));
+	}
+
+	PRINTLOG(TEXT("음악 설정됨: %s - %s (길이: %s)"),
+		*AudioFile.Title, *AudioFile.Artist, *FormatTime(TotalDurationTimeStamp));
+}
+
+void UMVE_STU_WC_EffectSequencePreview::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
+{
+	Super::NativeTick(MyGeometry, InDeltaTime);
+
+	// AudioComponent의 재생 시간을 EffectSequenceManager와 동기화
+	if (AudioComponent && AudioComponent->IsPlaying() && CurrentSound)
+	{
+		// 현재 재생 시간 (초 단위)
+		float PlaybackTime = AudioComponent->GetPlaybackPercent() * CurrentSound->Duration;
+
+		// 1/10초 단위로 변환
+		int32 CurrentTimeStamp = static_cast<int32>(PlaybackTime * 10.0f);
+
+		// EffectSequenceManager 업데이트
+		if (EffectSequenceManager)
+		{
+			// Manager의 타임라인도 동기화
+			EffectSequenceManager->SeekToTimeStamp(CurrentTimeStamp);
+		}
+
+		// UI 업데이트
+		UpdatePlaybackProgress(CurrentTimeStamp);
+	}
+}
+
 void UMVE_STU_WC_EffectSequencePreview::OnPlayButtonClicked()
 {
 	if (EffectSequenceManager)
 	{
 		if (EffectSequenceManager->IsPlaying())
 		{
+			// 중지
 			EffectSequenceManager->StopSequence();
+
+			// AudioComponent 일시정지
+			if (AudioComponent && AudioComponent->IsPlaying())
+			{
+				AudioComponent->SetPaused(true);
+			}
+
 			OnStopClicked.Broadcast();
 			PRINTLOG(TEXT("재생 중지"));
 		}
 		else
 		{
+			// 재생 시작
 			EffectSequenceManager->StartSequence(false);
+
+			// AudioComponent 재생 또는 재개
+			if (AudioComponent)
+			{
+				if (CurrentSound)
+				{
+					if (AudioComponent->GetPaused())
+					{
+						AudioComponent->SetPaused(false);
+					}
+					else if (!AudioComponent->IsPlaying())
+					{
+						AudioComponent->SetSound(CurrentSound);
+						AudioComponent->Play();
+					}
+				}
+				else
+				{
+					PRINTLOG(TEXT("재생할 음악이 설정되지 않았습니다. LoadTestData() 또는 SetAudioFile()을 먼저 호출하세요."));
+				}
+			}
+
 			OnPlayClicked.Broadcast();
 			PRINTLOG(TEXT("재생 시작"));
 		}
@@ -195,6 +346,22 @@ void UMVE_STU_WC_EffectSequencePreview::OnPlaybackSliderMouseCaptureEnd()
 	{
 		int32 NewTimeStamp = static_cast<int32>(PlaybackSlider->GetValue());
 		EffectSequenceManager->SeekToTimeStamp(NewTimeStamp);
+
+		// AudioComponent도 같은 위치로 시크
+		if (AudioComponent && CurrentSound && TotalDurationTimeStamp > 0)
+		{
+			float SeekTime = static_cast<float>(NewTimeStamp) / 10.0f; // 1/10초 → 초 변환
+			AudioComponent->SetFloatParameter(FName("StartTime"), SeekTime);
+
+			// 재생 중이었으면 다시 재생
+			if (EffectSequenceManager->IsPlaying())
+			{
+				AudioComponent->Stop();
+				AudioComponent->SetSound(CurrentSound);
+				AudioComponent->Play(SeekTime);
+			}
+		}
+
 		PRINTLOG(TEXT("슬라이더 드래그 종료 - TimeStamp: %d"), NewTimeStamp);
 	}
 }

@@ -1,10 +1,9 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #pragma once
 
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
 #include "StageLevel/Data/MVE_EffectSequenceData.h"
+#include "API/Public/MVE_API_ResponseData.h"
 #include "MVE_STU_WC_EffectSequencePreview.generated.h"
 
 class AMVE_StageLevel_EffectSequenceManager;
@@ -14,6 +13,8 @@ class UTextBlock;
 class UImage;
 class UCanvasPanel;
 class UTexture2D;
+class UAudioComponent;
+class USoundWave;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnEffectPreviewPlayClicked);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnEffectPreviewStopClicked);
@@ -80,7 +81,22 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Effect Preview")
 	void SetRenderTarget(UTextureRenderTarget2D* RenderTarget);
 
+	/**
+	 * 테스트용 더미 데이터 로드
+	 * AI 연동 전 테스트를 위한 임시 함수
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Effect Preview|Test")
+	void LoadTestData();
+
+	/**
+	 * 재생할 음악 설정
+	 * @param AudioFile PlaylistBuilder에서 선택한 음악 정보
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Effect Preview")
+	void SetAudioFile(const FAudioFile& AudioFile);
+
 protected:
+	virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
 	virtual void NativeConstruct() override;
 	virtual void NativeOnInitialized() override;
 	virtual void NativeDestruct() override;
@@ -189,4 +205,16 @@ private:
 
 	/** 슬라이더 드래그 중 여부 */
 	bool bIsSliderDragging;
+
+	/** 음악 재생용 AudioComponent */
+	UPROPERTY()
+	UAudioComponent* AudioComponent;
+
+	/** 현재 선택된 음악 정보 */
+	UPROPERTY()
+	FAudioFile CurrentAudioFile;
+
+	/** 현재 로드된 사운드 */
+	UPROPERTY()
+	USoundWave* CurrentSound;
 };
