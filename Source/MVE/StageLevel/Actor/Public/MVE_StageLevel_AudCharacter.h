@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "MVE_PC_StageLevel.h"
 #include "GameFramework/Character.h"
+#include "InputActionValue.h"
 #include "Components/TimelineComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "MVE_StageLevel_AudCharacter.generated.h"
@@ -17,6 +18,7 @@ class UAudioComponent;
 class UMVE_StageLevel_AudCharacterShooterComponent;
 class AMVE_PC_StageLevel;
 class UCurveFloat;
+
 
 UENUM(BlueprintType)
 enum class EAudienceControlMode : uint8
@@ -323,4 +325,67 @@ private:
 	TObjectPtr<USoundBase> AudCheerUpSound;
 	
 #pragma endregion
+
+public:
+	// Enhanced input
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input")
+	TObjectPtr<UInputAction> IA_ToggleViewpoint;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input")
+	TObjectPtr<UInputAction> IA_Zoom;
+	
+	// 카메라 셋팅
+	UPROPERTY(EditDefaultsOnly, Category = "MVE|Viewpoint")
+	float ThirdPersonArmLength = 300.f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "MVE|Viewpoint")
+	float FirstPersonArmLength = 0.f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "MVE|Viewpoint")
+	float ViewpointInterpSpeed = 8.f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "MVE|Zoom")
+	float ZoomMin = 300.f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "MVE|Zoom")
+	float ZoomMax = 800.f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "MVE|Zoom")
+	float ZoomStep = 50.f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "MVE|Zoom")
+	float ZoomInterpSpeed = 10.f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "MVE|Look")
+	float LookSensitivity = 1.f;
+	
+	UPROPERTY(EditDefaultsOnly, Category = "MVE|Zoom")
+	float DefaultFOV = 90.f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "MVE|Zoom")
+	float ZoomFOVMin = 30.f; 
+	
+	// 기본시야
+	UPROPERTY(EditDefaultsOnly, Category = "MVE|Zoom")
+	float ZoomFOVMax = 90.f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "MVE|Zoom")
+	float FOVZoomStep = 5.f;
+	
+	// 런타임 
+	float TargetFOV = 90.f;
+	bool bIsFirstPerson = false;
+	float TargetArmLength = 300.f;
+	float ZoomTargetArmLength = 300.f;
+
+	// input 핸들러
+	void HandleMove(const FInputActionValue& Value);
+	void HandleLook(const FInputActionValue& Value);
+	void HandleToggleViewpoint(const FInputActionValue& Value);
+	void HandleZoom(const FInputActionValue& Value);
+	void UpdateCameraInterpolation(float DeltaTime);
+	
+	FTimerHandle ViewpointInterpTimerHandle;
+
 };
