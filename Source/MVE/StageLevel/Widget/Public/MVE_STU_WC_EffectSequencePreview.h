@@ -112,7 +112,7 @@ protected:
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UImage> PlayStateImage;
 
-	/** 타임라인 슬라이더 커밋하ㅈ
+	/** 타임라인 슬라이더 커밋하ㅈ */
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<USlider> PlaybackSlider;
 
