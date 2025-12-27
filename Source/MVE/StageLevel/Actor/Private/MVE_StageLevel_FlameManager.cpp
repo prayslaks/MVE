@@ -1,25 +1,24 @@
-﻿// Fill out your copyright notice in the Description page of Project Settings.
+﻿#include "MVE_StageLevel_FlameManager.h"
 
-#include "MVE_StageLevel_SpotlightManager.h"
-#include "MVE_StageLevel_Spotlight.h"
+#include "MVE_StageLevel_Flame.h"
 #include "Kismet/GameplayStatics.h"
 
-AMVE_StageLevel_SpotlightManager::AMVE_StageLevel_SpotlightManager()
+AMVE_StageLevel_FlameManager::AMVE_StageLevel_FlameManager()
 {
 	// 틱 비활성화
 	PrimaryActorTick.bCanEverTick = false;
 }
 
-void AMVE_StageLevel_SpotlightManager::BeginPlay()
+void AMVE_StageLevel_FlameManager::BeginPlay()
 {
 	Super::BeginPlay();
-
+	
 	// 레벨에서 모든 스포트라이트 획득
 	TArray<AActor*> OutActors;
-	UGameplayStatics::GetAllActorsOfClass(this, AMVE_StageLevel_Spotlight::StaticClass(), OutActors);
+	UGameplayStatics::GetAllActorsOfClass(this, AMVE_StageLevel_Flame::StaticClass(), OutActors);
 	for (AActor* Actor : OutActors)
 	{
-		if (const auto Spotlight = Cast<AMVE_StageLevel_Spotlight>(Actor))
+		if (const auto Spotlight = Cast<AMVE_StageLevel_Flame>(Actor))
 		{
 			FSequenceActorGroup& Group = SequenceActorsBySequenceOrder.FindOrAdd(Spotlight->SequenceOrder);
 			Group.SequenceActors.Emplace(Spotlight);
@@ -31,7 +30,7 @@ void AMVE_StageLevel_SpotlightManager::BeginPlay()
 	SequenceOrders.Sort();
 }
 
-void AMVE_StageLevel_SpotlightManager::ExecuteSequenceNumber(const int32 SequenceNumber, const float DelayBetweenOrder)
+void AMVE_StageLevel_FlameManager::ExecuteSequenceNumber(int32 SequenceNumber, float DelayBetweenOrder)
 {
 	CurrentSequenceOrderIndex = 0;
 	CurrentSequenceNumber = SequenceNumber;
@@ -61,7 +60,7 @@ void AMVE_StageLevel_SpotlightManager::ExecuteSequenceNumber(const int32 Sequenc
 	}
 }
 
-void AMVE_StageLevel_SpotlightManager::ExecuteSequenceActorByOrder()
+void AMVE_StageLevel_FlameManager::ExecuteSequenceActorByOrder()
 {
 	// 시퀀스 오더 인덱스가 시퀀스 오더 배열의 크기를 초과
 	if (CurrentSequenceOrderIndex >= SequenceOrders.Num())
