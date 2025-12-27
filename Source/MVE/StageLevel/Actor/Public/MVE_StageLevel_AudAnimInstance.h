@@ -39,6 +39,9 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Character")
 	bool bIsExecuting;
 	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Character")
+	float Speed;
+	
 	UFUNCTION()
 	void AnimNotify_OnThrow() const;
 };

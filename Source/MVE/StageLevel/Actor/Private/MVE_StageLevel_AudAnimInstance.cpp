@@ -1,6 +1,7 @@
 ﻿#include "StageLevel/Actor/Public/MVE_StageLevel_AudAnimInstance.h"
 
 #include "MVE.h"
+#include "GameFramework/CharacterMovementComponent.h"
 #include "StageLevel/Actor/Public/MVE_StageLevel_AudCharacter.h"
 #include "Kismet/KismetMathLibrary.h"
 
@@ -29,6 +30,10 @@ void UMVE_StageLevel_AudAnimInstance::NativeUpdateAnimation(const float DeltaSec
 	// 컨트롤 모드 업데이트
 	AudienceControlMode = OwningCharacter->GetControlMode();
 	
+	if (const UCharacterMovementComponent* MovementComp = OwningCharacter->GetCharacterMovement())
+	{
+		Speed = MovementComp->Velocity.Size2D();
+	}
 	// 에임 활성화 여부를 캐릭터에서 가져온다
 	bAimEnabled = OwningCharacter->GetIsAiming();
 	
@@ -51,7 +56,7 @@ void UMVE_StageLevel_AudAnimInstance::NativeUpdateAnimation(const float DeltaSec
 	{
 		// 에임이 비활성화된 경우 값들을 0으로 부드럽게 복원한다
 		AimYaw = FMath::FInterpTo(AimYaw, 0.f, DeltaSeconds, 15.f);
-		AimPitch = FMath::FInterpTo(AimPitch, 0.f, DeltaSeconds, 15.f);
+		AimPitch = FMath::FInterpTo( AimPitch, 0.f, DeltaSeconds, 15.f);
 	}
 }
 

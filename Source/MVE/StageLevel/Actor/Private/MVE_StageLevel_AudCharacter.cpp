@@ -30,6 +30,7 @@ AMVE_StageLevel_AudCharacter::AMVE_StageLevel_AudCharacter()
 	SpringArm->SetupAttachment(RootComponent);
 	SpringArm->TargetArmLength = 300.f;
 	SpringArm->bUsePawnControlRotation = true; 
+	SpringArm->bDoCollisionTest = true;
 	
 	// 카메라
 	Camera = CreateDefaultSubobject<UCameraComponent>(TEXT("Camera"));
@@ -73,12 +74,28 @@ AMVE_StageLevel_AudCharacter::AMVE_StageLevel_AudCharacter()
 	// 상태 별 카메라 위치
 	PhotoAimCameraPosition = FMVE_StageLevel_AudCharacterCameraPosition(110.0f, {0.0f, 50.0f, 50.0f}); 
 	ThrowAimCameraPosition = FMVE_StageLevel_AudCharacterCameraPosition(120.0f, { 0.0f, 70.0f, 70.0f });
+	
+	// 시점 변경
+	bUseControllerRotationPitch = false;
+	bUseControllerRotationYaw = false;
+	bUseControllerRotationRoll = false;
+	
+	if (UCharacterMovementComponent* MovementComp = GetCharacterMovement())
+	{
+		MovementComp->bOrientRotationToMovement = true;
+		MovementComp->RotationRate = FRotator(0.f, 500.f, 0.f);
+	}
+
+	TargetArmLength = ThirdPersonArmLength;
+	ZoomTargetArmLength = ThirdPersonArmLength;
+
 }
 
 void AMVE_StageLevel_AudCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 	
+
 	// 플레이어 컨트롤러 획득
 	if (APlayerController* PlayerController = Cast<APlayerController>(Controller))
 	{
@@ -113,8 +130,10 @@ void AMVE_StageLevel_AudCharacter::SetupPlayerInputComponent(UInputComponent* Pl
 	if (const auto EnhancedInputComponent = Cast<UEnhancedInputComponent>(PlayerInputComponent))
 	{
 		// 이동이나 점프는 아직 보류
-		// EnhancedInputComponent->BindAction(IA_Move)
-		// EnhancedInputComponent->BindAction(IA_Jump)
+		EnhancedInputComponent->BindAction(IA_Move, ETriggerEvent::Triggered, this, &AMVE_StageLevel_AudCharacter::HandleMove);
+		EnhancedInputComponent->BindAction(IA_ToggleViewpoint, ETriggerEvent::Started, this, &AMVE_StageLevel_AudCharacter::HandleToggleViewpoint);
+		EnhancedInputComponent->BindAction(IA_Zoom, ETriggerEvent::Triggered, this, &AMVE_StageLevel_AudCharacter::HandleZoom);
+		// 카메라 관련이랑 이동 추가함
 		EnhancedInputComponent->BindAction(IA_Look, ETriggerEvent::Triggered, this, &AMVE_StageLevel_AudCharacter::OnInputActionLookTriggered);	
 		EnhancedInputComponent->BindAction(IA_Aim, ETriggerEvent::Started, this, &AMVE_StageLevel_AudCharacter::OnInputActionAimStarted);
 		EnhancedInputComponent->BindAction(IA_Aim, ETriggerEvent::Completed, this, &AMVE_StageLevel_AudCharacter::OnInputActionAimCompleted);
@@ -731,4 +750,163 @@ void AMVE_StageLevel_AudCharacter::UpdateCameraTimeline(const float Alpha) const
 void AMVE_StageLevel_AudCharacter::Server_SetUseControllerRotationYaw_Implementation(const bool Value)
 {
 	bUseControllerRotationYaw = Value;
+}
+
+
+// 움직임
+void AMVE_StageLevel_AudCharacter::HandleMove(const FInputActionValue& Value)
+{
+	const FVector2D MovementVector = Value.Get<FVector2D>();
+
+	if (Controller != nullptr)
+	{
+		const FRotator Rotation = Controller->GetControlRotation();
+		const FRotator YawRotation(0, Rotation.Yaw, 0);
+
+		const FVector ForwardDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);
+		const FVector RightDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y);
+
+		AddMovementInput(ForwardDirection, MovementVector.Y);
+		AddMovementInput(RightDirection, MovementVector.X);
+	}
+}
+
+void AMVE_StageLevel_AudCharacter::HandleLook(const FInputActionValue& Value)
+{
+	if (Controller == nullptr || bLockCamera)
+	{
+		return;
+	}
+	
+	const FVector2D LookAxisVector = Value.Get<FVector2D>();
+	AddControllerYawInput(LookAxisVector.X * LookSensitivity);
+	AddControllerPitchInput(LookAxisVector.Y * LookSensitivity);
+}
+
+void AMVE_StageLevel_AudCharacter::HandleToggleViewpoint(const FInputActionValue& Value)
+{
+	bIsFirstPerson = !bIsFirstPerson;
+
+	if (bIsFirstPerson)
+	{
+		TargetArmLength = FirstPersonArmLength;
+		bUseControllerRotationYaw = true;
+		Server_SetUseControllerRotationYaw(true);
+		
+		if (UCharacterMovementComponent* MovementComp = GetCharacterMovement())
+		{
+			MovementComp->bOrientRotationToMovement = false;
+		}
+		
+		if (USkeletalMeshComponent* MeshComp = GetMesh())
+		{
+			MeshComp->SetOwnerNoSee(true);
+		}
+		
+		PRINTNETLOG(this, TEXT("1인칭 시점으로 전환"));
+	}
+	else
+	{
+		TargetArmLength = ZoomTargetArmLength;
+		bUseControllerRotationYaw = false;
+		Server_SetUseControllerRotationYaw(false);
+		
+		if (UCharacterMovementComponent* MovementComp = GetCharacterMovement())
+		{
+			MovementComp->bOrientRotationToMovement = true;
+		}
+		
+		if (USkeletalMeshComponent* MeshComp = GetMesh())
+		{
+			MeshComp->SetOwnerNoSee(false);
+		}
+		
+		PRINTNETLOG(this, TEXT("3인칭 시점으로 전환"));
+	}
+
+	// 보간 타이머 시작 (람다 사용)
+	GetWorldTimerManager().SetTimer(
+		ViewpointInterpTimerHandle,
+		FTimerDelegate::CreateLambda([this]()
+		{
+			UpdateCameraInterpolation(0.016f);
+		}),
+		0.016f,
+		true
+	);
+}
+
+void AMVE_StageLevel_AudCharacter::HandleZoom(const FInputActionValue& Value)
+{
+	const float ZoomValue = Value.Get<float>();
+
+	if (bIsFirstPerson)
+	{
+		//fov 만 조절
+		TargetFOV = FMath::Clamp(
+			TargetFOV - (ZoomValue * FOVZoomStep),
+			ZoomFOVMin,
+			ZoomFOVMax
+		);
+	}
+	else
+	{
+		// 스프링암 있으니 스프링암 조절
+		ZoomTargetArmLength = FMath::Clamp(
+			ZoomTargetArmLength - (ZoomValue * ZoomStep),
+			ZoomMin,
+			ZoomMax
+		);
+		TargetArmLength = ZoomTargetArmLength;
+	}
+	
+	// 보간 tick 안쓸려고
+	if (!GetWorldTimerManager().IsTimerActive(ViewpointInterpTimerHandle))
+	{
+		GetWorldTimerManager().SetTimer(
+			ViewpointInterpTimerHandle,
+			FTimerDelegate::CreateLambda([this]()
+			{
+				UpdateCameraInterpolation(0.016f);
+			}),
+			0.016f,
+			true
+		);
+	}
+}
+
+void AMVE_StageLevel_AudCharacter::UpdateCameraInterpolation(float DeltaTime)
+{
+	bool bStillInterpolating = false;
+
+	// 스플링 암 보간
+	if (SpringArm && FMath::Abs(SpringArm->TargetArmLength - TargetArmLength) > 0.1f)
+	{
+		const float InterpSpeed = bIsFirstPerson ? ViewpointInterpSpeed : ZoomInterpSpeed;
+		SpringArm->TargetArmLength = FMath::FInterpTo(
+			SpringArm->TargetArmLength,
+			TargetArmLength,
+			DeltaTime,
+			InterpSpeed
+		);
+		bStillInterpolating = true;
+	}
+
+	// fove 보간
+	if (Camera && FMath::Abs(Camera->FieldOfView - TargetFOV) > 0.1f)
+	{
+		Camera->FieldOfView = FMath::FInterpTo(
+			Camera->FieldOfView,
+			TargetFOV,
+			DeltaTime,
+			ZoomInterpSpeed
+		);
+		bStillInterpolating = true;
+	}
+
+	// 보간끝나면 타이머 종료
+	if (!bStillInterpolating)
+	{
+		GetWorldTimerManager().ClearTimer(ViewpointInterpTimerHandle);
+	}
 }
