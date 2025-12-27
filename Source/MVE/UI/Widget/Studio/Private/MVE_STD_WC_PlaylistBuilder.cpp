@@ -4,6 +4,7 @@
 #include "MVE_API_Helper.h"
 #include "MVE_STD_WC_AudioSearchResult.h"
 #include "MVE_GIS_SessionManager.h"
+#include "MVE_StageLevel_EffectSequenceManager.h"
 #include "Components/EditableTextBox.h"
 #include "Components/ScrollBox.h"
 #include "Components/VerticalBox.h"
@@ -266,6 +267,15 @@ void UMVE_STD_WC_PlaylistBuilder::SavePlaylistToSessionManager()
 	}
 }
 
+void UMVE_STD_WC_PlaylistBuilder::SetEffectSequenceManager(AMVE_StageLevel_EffectSequenceManager* Manager)
+{
+	EffectSequenceManager = Manager;
+	if (EffectSequenceManager)
+	{
+		PRINTLOG(TEXT("PlaylistBuilder에 EffectSequenceManager 설정 완료"));
+	}
+}
+
 void UMVE_STD_WC_PlaylistBuilder::ReorderPlaylistItem(int32 FromIndex, int32 ToIndex)
 {
 	if (!PlaylistScrollBox || FromIndex < 0 || ToIndex < 0 ||
@@ -388,6 +398,13 @@ void UMVE_STD_WC_PlaylistBuilder::OnPlaylistItemClicked(UMVE_STD_WC_AudioSearchR
 	SelectedAudioFile = Playlist[Index];
 	PRINTLOG(TEXT("음악 선택됨: %s - %s"), *SelectedAudioFile.Title, *SelectedAudioFile.Artist);
 
-	// 델리게이트 브로드캐스트
+	// 🔹 먼저 EffectSequenceManager->StopSequence() 호출
+	if (EffectSequenceManager)
+	{
+		EffectSequenceManager->StopSequence();
+		PRINTLOG(TEXT("EffectSequenceManager->StopSequence() 호출됨"));
+	}
+
+	// 🔹 그 다음 델리게이트 브로드캐스트
 	OnAudioFileSelected.Broadcast(SelectedAudioFile);
 }

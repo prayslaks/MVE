@@ -15,6 +15,7 @@ class UCanvasPanel;
 class UTexture2D;
 class UAudioComponent;
 class USoundWave;
+class UglTFRuntimeAsset;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnEffectPreviewPlayClicked);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnEffectPreviewStopClicked);
@@ -111,7 +112,7 @@ protected:
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UImage> PlayStateImage;
 
-	/** 타임라인 슬라이더 */
+	/** 타임라인 슬라이더 커밋하ㅈ
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<USlider> PlaybackSlider;
 
@@ -193,6 +194,12 @@ private:
 	UFUNCTION()
 	void OnAudioPlaybackPercentChanged(const USoundWave* PlayingSoundWave, const float PlaybackPercent);
 
+	/**
+	 * glTFRuntime에서 URL로부터 오디오 로드 완료 시 호출되는 콜백
+	 */
+	UFUNCTION()
+	void OnAudioLoadedFromUrl(UglTFRuntimeAsset* Asset);
+
 private:
 	/** AI 분석 결과 */
 	TArray<FEffectSequenceData> SequenceDataArray;
@@ -225,4 +232,8 @@ private:
 	/** 현재 로드된 사운드 */
 	UPROPERTY()
 	USoundWave* CurrentSound;
+
+	/** Asset 캐시 (AudioFileId → glTFRuntimeAsset) */
+	UPROPERTY()
+	TMap<int32, UglTFRuntimeAsset*> CachedAssets;
 };

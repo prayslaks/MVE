@@ -5,6 +5,7 @@
 #include "Blueprint/UserWidget.h"
 #include "MVE_STD_WidgetClass_FinalCheckSettings.generated.h"
 
+class UMVE_STU_WC_EffectSequencePreview;
 class UMVE_STD_WC_PlaylistBuilder;
 class UEditableTextBox;
 class UButton;
@@ -27,8 +28,14 @@ protected:
 
 	UPROPERTY(meta=(BindWidget))
 	TObjectPtr<UEditableTextBox> RoomTitleEditableText;
+
+	UPROPERTY(meta=(BindWidget))
+	TObjectPtr<UMVE_STU_WC_EffectSequencePreview> EffectSequencePreviewWidget;
 	
 private:
 	UFUNCTION()
 	void OnStartConcertButtonClicked();
+
+	UFUNCTION()
+	void OnAudioFileSelected(const FAudioFile& SelectedAudio);
 };

@@ -11,6 +11,7 @@ class UEditableTextBox;
 class UScrollBox;
 class UVerticalBox;
 class UMVE_STD_WC_AudioSearchResult;
+class AMVE_StageLevel_EffectSequenceManager;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnAudioFileSelected, const FAudioFile&, SelectedAudio);
 
@@ -39,6 +40,10 @@ public:
 	// SessionManager에 재생목록 저장 (StageLevel 이동 전 호출)
 	UFUNCTION(BlueprintCallable, Category = "Playlist")
 	void SavePlaylistToSessionManager();
+
+	// EffectSequenceManager 설정
+	UFUNCTION(BlueprintCallable, Category = "Playlist")
+	void SetEffectSequenceManager(AMVE_StageLevel_EffectSequenceManager* Manager);
 
 	// 재생목록 항목 순서 재배열
 	void ReorderPlaylistItem(int32 FromIndex, int32 ToIndex);
@@ -110,4 +115,8 @@ private:
 	// 선택된 음악
 	UPROPERTY()
 	FAudioFile SelectedAudioFile;
+
+	// EffectSequenceManager 레퍼런스
+	UPROPERTY()
+	AMVE_StageLevel_EffectSequenceManager* EffectSequenceManager;
 };
