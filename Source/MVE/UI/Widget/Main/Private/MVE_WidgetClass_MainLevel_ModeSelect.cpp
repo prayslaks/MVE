@@ -28,10 +28,8 @@ void UMVE_WidgetClass_MainLevel_ModeSelect::NativeConstruct()
 
 void UMVE_WidgetClass_MainLevel_ModeSelect::OnMoveStudioButtonClicked()
 {
-	if (UUIManagerSubsystem* UIManager = UUIManagerSubsystem::Get(this))
-	{
-		UIManager->ShowScreen(EUIScreen::Studio_CharacterSetting);
-	}
+	// PreviewStageLevel로 전환
+	UGameplayStatics::OpenLevel(this, FName(TEXT("PreviewStageLevel")), true);
 }
 
 void UMVE_WidgetClass_MainLevel_ModeSelect::OnMoveAudienceButtonClicked()

@@ -6,6 +6,7 @@
 #include "Blueprint/UserWidget.h"
 #include "MVE_STU_WC_ConcertStudioPanel.generated.h"
 
+class UMVE_STD_WC_PlaylistBuilder;
 class UMVE_WC_Chat;
 class UMVE_STU_WidgetController_StudioConcert;
 class UglTFRuntimeAsset;
@@ -34,6 +35,8 @@ public:
 	/** AudioPlayer 위젯 */
 	UPROPERTY(meta=(BindWidget), BlueprintReadOnly)
 	TObjectPtr<UMVE_STD_WC_AudioPlayer> AudioPlayer;
+
+
 	
 private:
 	/** Audio 관련 모든 로직을 담당하는 Controller */
