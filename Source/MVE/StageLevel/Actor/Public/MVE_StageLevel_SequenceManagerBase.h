@@ -26,7 +26,7 @@ public:
 	AMVE_StageLevel_SequenceManagerBase();
 	
 	UFUNCTION(BlueprintCallable, Category = "MVE|SequenceActor")
-	virtual void ExecuteSequenceNumber(int32 SequenceNumber, float DelayBetweenOrder);
+	virtual void ExecuteSequenceNumber(const int32 SequenceNumber, const float DelayBetweenOrder);
 	
 	UFUNCTION(BlueprintCallable, Category = "MVE|SequenceActor")
 	virtual void ExecuteSequenceActorByOrder();

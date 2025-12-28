@@ -17,8 +17,4 @@ public:
 	AMVE_StageLevel_SpotlightManager();
 	
 	virtual void BeginPlay() override;
-	
-	virtual void ExecuteSequenceNumber(int32 SequenceNumber, float DelayBetweenOrder) override;
-	
-	virtual void ExecuteSequenceActorByOrder() override;
 };
