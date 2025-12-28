@@ -69,6 +69,10 @@ void UMVE_STD_WidgetClass_FinalCheckSettings::NativeConstruct()
 			AMVE_STU_StagePreviewCaptureActor* CaptureActor = Cast<AMVE_STU_StagePreviewCaptureActor>(FoundActors[0]);
 			if (CaptureActor && CaptureActor->RenderTarget)
 			{
+				// SceneCaptureComponent가 RenderTarget에 캡처하도록 설정
+				CaptureActor->SetRenderTarget(CaptureActor->RenderTarget);
+
+				// 위젯에 RenderTarget 전달
 				EffectSequencePreviewWidget->SetRenderTarget(CaptureActor->RenderTarget);
 				PRINTLOG(TEXT("StagePreviewCaptureActor RenderTarget 설정 완료"));
 			}
@@ -100,7 +104,25 @@ void UMVE_STD_WidgetClass_FinalCheckSettings::OnAudioFileSelected(const FAudioFi
 {
 	EffectSequencePreviewWidget->SetAudioFile(SelectedAudio);
 
-	// AI 서버에 메타데이터 전송
-	// AI 응답 수신 후 SetSequenceData() 호출
-	
+	// TestMode 체크
+	if (EffectSequencePreviewWidget->bTestMode)
+	{
+		// 🧪 테스트 모드: 더미 데이터로 EffectSequenceManager 동작 확인
+		EffectSequencePreviewWidget->LoadTestData();
+		PRINTLOG(TEXT("✅ TestMode 활성화 - 더미 데이터 로드"));
+	}
+	else
+	{
+		// 🎯 실제 모드: AI 서버에 메타데이터 전송
+		// TODO: AI 서버와 통신하여 TimeStamp 분석 결과 받기
+		// 예시:
+		// FString Title = SelectedAudio.Title;
+		// FString Artist = SelectedAudio.Artist;
+		// AI_Client->AnalyzeMusicMetadata(Title, Artist, [this](const TArray<FEffectSequenceData>& SequenceData, int32 TotalDuration)
+		// {
+		//     EffectSequencePreviewWidget->SetSequenceData(SequenceData, TotalDuration);
+		// });
+
+		PRINTLOG(TEXT("⚠️ TestMode 비활성화 - AI 서버 통신은 아직 구현되지 않았습니다"));
+	}
 }

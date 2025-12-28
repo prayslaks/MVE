@@ -96,6 +96,10 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Effect Preview")
 	void SetAudioFile(const FAudioFile& AudioFile);
 
+	/** 테스트 모드 - true이면 더미 데이터 사용, false이면 AI 서버 응답 대기 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effect Preview|Test")
+	bool bTestMode = true;
+
 protected:
 	virtual void NativeConstruct() override;
 	virtual void NativeOnInitialized() override;
@@ -112,7 +116,7 @@ protected:
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UImage> PlayStateImage;
 
-	/** 타임라인 슬라이더 커밋하ㅈ
+	/** 타임라인 슬라이더*/
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<USlider> PlaybackSlider;
 
@@ -147,6 +151,8 @@ protected:
 	/** Fanfare 아이콘 텍스처 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Effect Preview|Icon")
 	TObjectPtr<UTexture2D> FanfareIconTexture;
+
+	
 
 private:
 	

@@ -669,6 +669,13 @@ UTexture2D* UMVE_STU_WC_EffectSequencePreview::GetIconTextureForTag(const FGamep
 {
 	FString TagString = Tag.ToString();
 
+	PRINTLOG(TEXT("🔍 GetIconTextureForTag - Tag: '%s', IsValid: %s"),
+		*TagString, Tag.IsValid() ? TEXT("Yes") : TEXT("No"));
+	PRINTLOG(TEXT("   SpotlightIconTexture: %s, FlameIconTexture: %s, FanfareIconTexture: %s"),
+		SpotlightIconTexture ? TEXT("존재") : TEXT("null"),
+		FlameIconTexture ? TEXT("존재") : TEXT("null"),
+		FanfareIconTexture ? TEXT("존재") : TEXT("null"));
+
 	if (TagString.StartsWith(TEXT("VFX.Spotlight")))
 	{
 		return SpotlightIconTexture;
@@ -682,6 +689,7 @@ UTexture2D* UMVE_STU_WC_EffectSequencePreview::GetIconTextureForTag(const FGamep
 		return FanfareIconTexture;
 	}
 
+	PRINTLOG(TEXT("⚠️ 매칭되는 카테고리 없음!"));
 	return nullptr;
 }
 
