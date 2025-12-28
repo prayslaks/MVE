@@ -14,6 +14,7 @@
 #include "Data/RoomInfo.h"
 #include "Kismet/GameplayStatics.h"
 #include "MVE.h"
+#include "commu/Public/SenderReceiver.h"
 
 void UMVE_STD_WidgetClass_FinalCheckSettings::NativeConstruct()
 {
@@ -113,16 +114,56 @@ void UMVE_STD_WidgetClass_FinalCheckSettings::OnAudioFileSelected(const FAudioFi
 	}
 	else
 	{
-		// 🎯 실제 모드: AI 서버에 메타데이터 전송
-		// TODO: AI 서버와 통신하여 TimeStamp 분석 결과 받기
-		// 예시:
-		// FString Title = SelectedAudio.Title;
-		// FString Artist = SelectedAudio.Artist;
-		// AI_Client->AnalyzeMusicMetadata(Title, Artist, [this](const TArray<FEffectSequenceData>& SequenceData, int32 TotalDuration)
-		// {
-		//     EffectSequencePreviewWidget->SetSequenceData(SequenceData, TotalDuration);
-		// });
+		// 🎯 실제 모드: AI 서버에 음악 분석 요청
+		PRINTLOG(TEXT("🎯 TestMode 비활성화 - AI 서버에 음악 분석 요청"));
 
-		PRINTLOG(TEXT("⚠️ TestMode 비활성화 - AI 서버 통신은 아직 구현되지 않았습니다"));
+		// SenderReceiver 가져오기
+		USenderReceiver* SenderReceiver = GetGameInstance()->GetSubsystem<USenderReceiver>();
+		if (!SenderReceiver)
+		{
+			PRINTLOG(TEXT("❌ SenderReceiver 서브시스템을 찾을 수 없습니다"));
+			return;
+		}
+
+		// 델리게이트 바인딩 (기존 바인딩 제거 후 새로 바인딩)
+		SenderReceiver->OnMusicAnalysisComplete.Clear();
+		SenderReceiver->OnMusicAnalysisComplete.AddDynamic(this, &UMVE_STD_WidgetClass_FinalCheckSettings::OnMusicAnalysisReceived);
+
+		// 음악 분석 요청
+		FString Title = SelectedAudio.Title;
+		FString Artist = SelectedAudio.Artist;
+
+		PRINTLOG(TEXT("📤 AI 서버로 음악 분석 요청 전송 - Title: %s, Artist: %s"), *Title, *Artist);
+		SenderReceiver->SendMusicAnalysisRequest(Title, Artist);
+	}
+}
+
+void UMVE_STD_WidgetClass_FinalCheckSettings::OnMusicAnalysisReceived(bool bSuccess, const TArray<FEffectSequenceData>& SequenceData, const FString& ErrorMessage)
+{
+	if (bSuccess)
+	{
+		PRINTLOG(TEXT("✅ 음악 분석 성공 - %d개 이펙트 시퀀스 수신"), SequenceData.Num());
+
+		// EffectSequencePreview에 데이터 전달
+		// TotalDuration은 EffectSequencePreview가 이미 SetAudioFile에서 설정했으므로
+		// getter 함수로 가져오기
+		if (EffectSequencePreviewWidget)
+		{
+			int32 TotalDuration = EffectSequencePreviewWidget->GetTotalDurationTimeStamp();
+			EffectSequencePreviewWidget->SetSequenceData(SequenceData, TotalDuration);
+			PRINTLOG(TEXT("📊 EffectSequencePreview에 분석 데이터 설정 완료"));
+		}
+	}
+	else
+	{
+		PRINTLOG(TEXT("❌ 음악 분석 실패: %s"), *ErrorMessage);
+
+		// 실패 시 빈 데이터로 설정 (UI 정리)
+		if (EffectSequencePreviewWidget)
+		{
+			TArray<FEffectSequenceData> EmptyData;
+			int32 TotalDuration = EffectSequencePreviewWidget->GetTotalDurationTimeStamp();
+			EffectSequencePreviewWidget->SetSequenceData(EmptyData, TotalDuration);
+		}
 	}
 }
