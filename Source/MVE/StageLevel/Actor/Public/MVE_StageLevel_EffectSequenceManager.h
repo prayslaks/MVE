@@ -7,7 +7,8 @@
 #include "MVE_StageLevel_EffectSequenceManager.generated.h"
 
 class AMVE_StageLevel_SpotlightManager;
-class AMVE_StageLevel_PerformanceManager;
+class AMVE_StageLevel_FlameManager;
+class AMVE_StageLevel_FanfareManager;
 
 /**
  * Effect Sequence Manager
@@ -94,7 +95,21 @@ private:
 	int32 GetSpotlightSequenceNumber(const FGameplayTag& AssetID) const;
 
 	/**
-	 * 레벨에서 SpotlightManager와 PerformanceManager 찾기
+	 * Flame AssetID를 SequenceNumber로 변환
+	 * @param AssetID VFX.Flame.* 형식의 GameplayTag
+	 * @return SequenceNumber (0~4), 변환 실패 시 -1
+	 */
+	int32 GetFlameSequenceNumber(const FGameplayTag& AssetID) const;
+
+	/**
+	 * Fanfare AssetID를 SequenceNumber로 변환
+	 * @param AssetID VFX.Fanfare.* 형식의 GameplayTag
+	 * @return SequenceNumber (0~4), 변환 실패 시 -1
+	 */
+	int32 GetFanfareSequenceNumber(const FGameplayTag& AssetID) const;
+
+	/**
+	 * 레벨에서 Manager들 찾기
 	 */
 	void FindManagers();
 
@@ -122,7 +137,11 @@ private:
 	UPROPERTY()
 	AMVE_StageLevel_SpotlightManager* SpotlightManager;
 
-	/** PerformanceManager 레퍼런스 */
-	//UPROPERTY()
-	//AMVE_StageLevel_PerformanceManager* PerformanceManager;
+	/** FlameManager 레퍼런스 */
+	UPROPERTY()
+	AMVE_StageLevel_FlameManager* FlameManager;
+
+	/** FanfareManager 레퍼런스 */
+	UPROPERTY()
+	AMVE_StageLevel_FanfareManager* FanfareManager;
 };

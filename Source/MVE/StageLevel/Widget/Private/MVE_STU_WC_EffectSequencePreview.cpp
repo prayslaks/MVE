@@ -208,53 +208,50 @@ void UMVE_STU_WC_EffectSequencePreview::SetRenderTarget(UTextureRenderTarget2D* 
 
 void UMVE_STU_WC_EffectSequencePreview::LoadTestData()
 {
-	// 테스트용 더미 데이터 생성
+	// 테스트용 더미 데이터 생성 (2분 38초 = 158초 = 1580 TimeStamp)
 	// AI가 분석한 결과를 시뮬레이션
 	TArray<FEffectSequenceData> TestData;
 
-	// 0:10초 - Spotlight VerySlowSpeed (고요한 인트로)
-	TestData.Add(FEffectSequenceData(100, FGameplayTag::RequestGameplayTag(FName("VFX.Spotlight.VerySlowSpeed"))));
+	// 0:05초 - Spotlight VerySlowSpeed (고요한 인트로)
+	TestData.Add(FEffectSequenceData(50, FGameplayTag::RequestGameplayTag(FName("VFX.Spotlight.VerySlowSpeed"))));
 
-	// 0:30초 - Spotlight SlowSpeed (서정적인 시작)
-	TestData.Add(FEffectSequenceData(300, FGameplayTag::RequestGameplayTag(FName("VFX.Spotlight.SlowSpeed"))));
+	// 0:15초 - Flame VerySmallSizeAndVerySlowSpeed (약한 촛불)
+	TestData.Add(FEffectSequenceData(150, FGameplayTag::RequestGameplayTag(FName("VFX.Flame.VerySmallSizeAndVerySlowSpeed"))));
 
-	// 1:00분 - Fanfare LowSpawnRate (설레는 첫 소절)
-	TestData.Add(FEffectSequenceData(600, FGameplayTag::RequestGameplayTag(FName("VFX.Fanfare.LowSpawnRate"))));
+	// 0:25초 - Spotlight SlowSpeed (서정적인 시작)
+	TestData.Add(FEffectSequenceData(250, FGameplayTag::RequestGameplayTag(FName("VFX.Spotlight.SlowSpeed"))));
 
-	// 1:30분 - Spotlight NormalSpeed (경쾌한 팝)
-	TestData.Add(FEffectSequenceData(900, FGameplayTag::RequestGameplayTag(FName("VFX.Spotlight.NormalSpeed"))));
+	// 0:40초 - Fanfare VeryLowSpawnRate (신비로운 분위기)
+	TestData.Add(FEffectSequenceData(400, FGameplayTag::RequestGameplayTag(FName("VFX.Fanfare.VeryLowSpawnRate"))));
 
-	// 2:00분 - Flame NormalSmallSizeAndNormalSpeed (힙합 비트)
-	TestData.Add(FEffectSequenceData(1200, FGameplayTag::RequestGameplayTag(FName("VFX.Flame.NormalSmallSizeAndNormalSpeed"))));
+	// 0:55초 - Flame SmallSizeAndSlowSpeed (모닥불 크기)
+	TestData.Add(FEffectSequenceData(550, FGameplayTag::RequestGameplayTag(FName("VFX.Flame.SmallSizeAndSlowSpeed"))));
 
-	// 2:30분 - Fanfare NormalSpawnRate (즐거운 축제)
-	TestData.Add(FEffectSequenceData(1500, FGameplayTag::RequestGameplayTag(FName("VFX.Fanfare.NormalSpawnRate"))));
+	// 1:10초 - Spotlight NormalSpeed (경쾌한 팝)
+	TestData.Add(FEffectSequenceData(700, FGameplayTag::RequestGameplayTag(FName("VFX.Spotlight.NormalSpeed"))));
 
-	// 3:00분 - Spotlight FastSpeed (고조되는 댄스)
-	TestData.Add(FEffectSequenceData(1800, FGameplayTag::RequestGameplayTag(FName("VFX.Spotlight.FastSpeed"))));
+	// 1:25초 - Fanfare LowSpawnRate (설레는 소절)
+	TestData.Add(FEffectSequenceData(850, FGameplayTag::RequestGameplayTag(FName("VFX.Fanfare.LowSpawnRate"))));
 
-	// 3:30분 - Flame FastSizeAndFastSpeed (파워풀한 하이라이트)
-	TestData.Add(FEffectSequenceData(2100, FGameplayTag::RequestGameplayTag(FName("VFX.Flame.FastSizeAndFastSpeed"))));
+	// 1:40초 - Flame NormalSmallSizeAndNormalSpeed (힙합 비트)
+	TestData.Add(FEffectSequenceData(1000, FGameplayTag::RequestGameplayTag(FName("VFX.Flame.NormalSmallSizeAndNormalSpeed"))));
 
-	// 4:00분 - Fanfare HighSpawnRate (폭발적인 메인 하이라이트)
-	TestData.Add(FEffectSequenceData(2400, FGameplayTag::RequestGameplayTag(FName("VFX.Fanfare.HighSpawnRate"))));
+	// 1:55초 - Spotlight FastSpeed (고조되는 댄스)
+	TestData.Add(FEffectSequenceData(1150, FGameplayTag::RequestGameplayTag(FName("VFX.Spotlight.FastSpeed"))));
 
-	// 4:30분 - Spotlight VeryFastSpeed (락 장르 클라이막스)
-	TestData.Add(FEffectSequenceData(2700, FGameplayTag::RequestGameplayTag(FName("VFX.Spotlight.VeryFastSpeed"))));
+	// 2:10초 - Fanfare NormalSpawnRate (즐거운 축제)
+	TestData.Add(FEffectSequenceData(1300, FGameplayTag::RequestGameplayTag(FName("VFX.Fanfare.NormalSpawnRate"))));
 
-	// 5:00분 - Flame VeryFastSizeAndVeryFastSpeed (극강 클라이막스)
-	TestData.Add(FEffectSequenceData(3000, FGameplayTag::RequestGameplayTag(FName("VFX.Flame.VeryFastSizeAndVeryFastSpeed"))));
+	// 2:25초 - Flame FastSizeAndFastSpeed (파워풀한 하이라이트)
+	TestData.Add(FEffectSequenceData(1450, FGameplayTag::RequestGameplayTag(FName("VFX.Flame.FastSizeAndFastSpeed"))));
 
-	// 5:30분 - Fanfare VeryHighSpawnRate (그랜드 피날레)
-	TestData.Add(FEffectSequenceData(3300, FGameplayTag::RequestGameplayTag(FName("VFX.Fanfare.VeryHighSpawnRate"))));
-
-	// 총 길이 6분 (3600 = 360초 * 10)
-	int32 TotalDuration = 3600;
+	// 총 길이 2분 38초 (1580 = 158초 * 10)
+	int32 TotalDuration = 1580;
 
 	// 데이터 설정
 	SetSequenceData(TestData, TotalDuration);
 
-	PRINTLOG(TEXT("테스트 데이터 로드 완료 - %d개 이펙트, 총 길이: 6:00"), TestData.Num());
+	PRINTLOG(TEXT("테스트 데이터 로드 완료 - %d개 이펙트, 총 길이: 2:38"), TestData.Num());
 }
 
 void UMVE_STU_WC_EffectSequencePreview::SetAudioFile(const FAudioFile& AudioFile)
