@@ -27,6 +27,10 @@ class MVE_API AMVE_STU_StagePreviewCaptureActor : public AActor
 public:
 	AMVE_STU_StagePreviewCaptureActor();
 
+protected:
+	virtual void BeginPlay() override;
+
+public:
 	/** SceneCapture2D 컴포넌트 */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Capture")
 	USceneCaptureComponent2D* SceneCaptureComponent;

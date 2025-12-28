@@ -146,7 +146,7 @@ void AMVE_StageLevel_EffectSequenceManager::ExecuteEffectAtTimeStamp(const FEffe
 
 	FString TagString = Data.AssetID.ToString();
 
-	PRINTLOG(TEXT("Effect 실행 - TimeStamp: %d, AssetID: %s"), Data.TimeStamp, *TagString);
+	PRINTLOG(TEXT("🎬 Effect 실행 - TimeStamp: %d, AssetID: %s"), Data.TimeStamp, *TagString);
 
 	// GameplayTag를 파싱해서 카테고리 확인
 	// 예: "VFX.Spotlight.FastSpeed" → "VFX.Spotlight"
@@ -158,13 +158,21 @@ void AMVE_StageLevel_EffectSequenceManager::ExecuteEffectAtTimeStamp(const FEffe
 		// Spotlight 이펙트
 		if (SpotlightManager)
 		{
-			// TODO: SpotlightManager에 GameplayTag 기반 실행 함수 추가 필요
-			// SpotlightManager->ExecuteByTag(Data.AssetID);
-			PRINTLOG(TEXT("SpotlightManager 호출: %s"), *TagString);
+			int32 SequenceNumber = GetSpotlightSequenceNumber(Data.AssetID);
+			if (SequenceNumber >= 0)
+			{
+				float DelayBetweenOrder = 0.0f; // 동시 실행
+				SpotlightManager->ExecuteSequenceNumber(SequenceNumber, DelayBetweenOrder);
+				PRINTLOG(TEXT("✅ SpotlightManager 실행 - SequenceNumber: %d, AssetID: %s"), SequenceNumber, *TagString);
+			}
+			else
+			{
+				PRINTLOG(TEXT("⚠️ 유효하지 않은 Spotlight AssetID: %s"), *TagString);
+			}
 		}
 		else
 		{
-			PRINTLOG(TEXT("SpotlightManager를 찾을 수 없습니다"));
+			PRINTLOG(TEXT("❌ SpotlightManager를 찾을 수 없습니다"));
 		}
 	}
 	else if (TagString.StartsWith(TEXT("VFX.Flame")) || TagString.StartsWith(TEXT("VFX.Fanfare")))
@@ -182,10 +190,47 @@ void AMVE_StageLevel_EffectSequenceManager::ExecuteEffectAtTimeStamp(const FEffe
 			PRINTLOG(TEXT("PerformanceManager를 찾을 수 없습니다"));
 		}
 		*/
+		PRINTLOG(TEXT("🔜 PerformanceManager 연동 예정 - AssetID: %s"), *TagString);
 	}
 	else
 	{
-		PRINTLOG(TEXT("알 수 없는 카테고리의 AssetID: %s"), *TagString);
+		PRINTLOG(TEXT("❓ 알 수 없는 카테고리의 AssetID: %s"), *TagString);
+	}
+}
+
+int32 AMVE_StageLevel_EffectSequenceManager::GetSpotlightSequenceNumber(const FGameplayTag& AssetID) const
+{
+	FString TagString = AssetID.ToString();
+
+	// VFX.Spotlight.VerySlowSpeed → 0
+	if (TagString == TEXT("VFX.Spotlight.VerySlowSpeed"))
+	{
+		return 0;
+	}
+	// VFX.Spotlight.SlowSpeed → 1
+	else if (TagString == TEXT("VFX.Spotlight.SlowSpeed"))
+	{
+		return 1;
+	}
+	// VFX.Spotlight.NormalSpeed → 2
+	else if (TagString == TEXT("VFX.Spotlight.NormalSpeed"))
+	{
+		return 2;
+	}
+	// VFX.Spotlight.FastSpeed → 3
+	else if (TagString == TEXT("VFX.Spotlight.FastSpeed"))
+	{
+		return 3;
+	}
+	// VFX.Spotlight.VeryFastSpeed → 4
+	else if (TagString == TEXT("VFX.Spotlight.VeryFastSpeed"))
+	{
+		return 4;
+	}
+	else
+	{
+		// 변환 실패
+		return -1;
 	}
 }
 

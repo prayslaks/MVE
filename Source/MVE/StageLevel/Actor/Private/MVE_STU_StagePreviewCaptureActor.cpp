@@ -62,6 +62,22 @@ AMVE_STU_StagePreviewCaptureActor::AMVE_STU_StagePreviewCaptureActor()
 	SkyLight->SetCastShadows(false);
 }
 
+void AMVE_STU_StagePreviewCaptureActor::BeginPlay()
+{
+	Super::BeginPlay();
+
+	// 에디터에서 RenderTarget이 설정되어 있으면 자동으로 SceneCaptureComponent에 연결
+	if (RenderTarget && SceneCaptureComponent)
+	{
+		SceneCaptureComponent->TextureTarget = RenderTarget;
+		PRINTLOG(TEXT("BeginPlay: SceneCaptureComponent에 RenderTarget 자동 설정됨: %s"), *RenderTarget->GetName());
+	}
+	else if (!RenderTarget)
+	{
+		PRINTLOG(TEXT("⚠️ BeginPlay: RenderTarget이 설정되지 않았습니다. 에디터에서 RT_StagePreview를 할당하세요."));
+	}
+}
+
 void AMVE_STU_StagePreviewCaptureActor::SetRenderTarget(UTextureRenderTarget2D* InRenderTarget)
 {
 	RenderTarget = InRenderTarget;
