@@ -87,6 +87,13 @@ private:
 	void ExecuteEffectAtTimeStamp(const FEffectSequenceData& Data);
 
 	/**
+	 * Spotlight AssetID를 SequenceNumber로 변환
+	 * @param AssetID VFX.Spotlight.* 형식의 GameplayTag
+	 * @return SequenceNumber (0~4), 변환 실패 시 -1
+	 */
+	int32 GetSpotlightSequenceNumber(const FGameplayTag& AssetID) const;
+
+	/**
 	 * 레벨에서 SpotlightManager와 PerformanceManager 찾기
 	 */
 	void FindManagers();
