@@ -65,9 +65,8 @@ void UMVE_WC_ChatMessageEntry::CreateWidgets()
 	if (SenderNameText)
 	{
 		// 폰트 설정
-		FSlateFontInfo FontInfo = SenderNameText->GetFont();
-		FontInfo.Size = 14;
-		SenderNameText->SetFont(FontInfo);
+		//FSlateFontInfo FontInfo = SenderNameText->GetFont();
+		//SenderNameText->SetFont(FontInfo);
 		
 		// 색상 설정
 		SenderNameText->SetColorAndOpacity(FLinearColor::Yellow);
@@ -86,9 +85,9 @@ void UMVE_WC_ChatMessageEntry::CreateWidgets()
 	if (MessageContentText)
 	{
 		// 폰트 설정
-		FSlateFontInfo FontInfo = MessageContentText->GetFont();
-		FontInfo.Size = 13;
-		MessageContentText->SetFont(FontInfo);
+		//FSlateFontInfo FontInfo = MessageContentText->GetFont();
+		//FontInfo.Size = 13;
+		//MessageContentText->SetFont(FontInfo);
 		
 		// 색상 설정
 		MessageContentText->SetColorAndOpacity(FLinearColor::Black);
@@ -110,9 +109,9 @@ void UMVE_WC_ChatMessageEntry::CreateWidgets()
 	if (TimestampText)
 	{
 		// 폰트 설정
-		FSlateFontInfo FontInfo = TimestampText->GetFont();
-		FontInfo.Size = 10;
-		TimestampText->SetFont(FontInfo);
+		//FSlateFontInfo FontInfo = TimestampText->GetFont();
+		//FontInfo.Size = 10;
+		//TimestampText->SetFont(FontInfo);
 		
 		// 색상 설정 (회색)
 		TimestampText->SetColorAndOpacity(FLinearColor(0.5f, 0.5f, 0.5f, 1.0f));
