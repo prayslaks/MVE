@@ -92,7 +92,7 @@ protected:
 	UPROPERTY(meta=(BindWidgetOptional))
 	TObjectPtr<UTextBlock> DurationTextBlock;
 	
-	UPROPERTY(meta=(BindWidget))
+	UPROPERTY(meta=(BindWidget), BlueprintReadWrite, EditAnywhere)
 	TObjectPtr<UBorder> BackgroundBorder;
 
 	UPROPERTY(meta=(BindWidgetOptional))
