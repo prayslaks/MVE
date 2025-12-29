@@ -107,7 +107,6 @@ void UMVE_STU_BroadcastSettingTabBar::CreateTabButtons()
 	HBox_Tabs->ClearChildren();
 
 	TArray<EBroadcastSettingTab> TabOrder = {
-		EBroadcastSettingTab::CharacterSettings,
 		EBroadcastSettingTab::MusicStageSettings
 	};
 

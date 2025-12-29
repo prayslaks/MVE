@@ -14,7 +14,7 @@ void AMVE_GM_PreviewStageLevel::BeginPlay()
 	// FinalCheckSettings UI 표시
 	if (UUIManagerSubsystem* UIManager = UUIManagerSubsystem::Get(this))
 	{
-		UIManager->ShowScreen(EUIScreen::Studio_CharacterSetting);
+		UIManager->ShowScreen(EUIScreen::Studio_FinalCheckSetting);
 		PRINTLOG(TEXT("PreviewStageLevel 시작 - FinalCheckSettings UI 표시"));
 	}
 	else

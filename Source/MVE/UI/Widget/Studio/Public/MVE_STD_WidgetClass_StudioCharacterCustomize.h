@@ -5,6 +5,7 @@
 #include "Data/AvatarData.h"
 #include "MVE_STD_WidgetClass_StudioCharacterCustomize.generated.h"
 
+class UTileView;
 class UButton;
 class UTextBlock;
 class UHorizontalBox;
@@ -35,7 +36,7 @@ protected:
 	TObjectPtr<UImage> PreviewImage;
 
 	UPROPERTY(meta = (BindWidget))
-	TObjectPtr<UHorizontalBox> PresetContainer;
+	TObjectPtr<UTileView> PresetContainer;
 
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UTextBlock> FileNameText;
@@ -73,9 +74,6 @@ private:
 	UPROPERTY()
 	FString CurrentSelectedID;
 
-	UPROPERTY()
-	TArray<TObjectPtr<UUserWidget>> PresetButtons;
-
 	// 카메라 컨트롤 변수
 	bool bIsDragging = false;
 	FVector2D LastMousePosition;
@@ -90,7 +88,7 @@ private:
 	void OnNextClicked();
 
 	void RefreshPresetList();
-	void CreatePresetButton(FAvatarData& Data);
+	void OnPresetItemClicked(UObject* Item);
 	void OnPresetClicked(const FString& UniqueID);
 	void UpdatePreview(const FAvatarData& Data);
 	void InitializePreview();
