@@ -108,9 +108,7 @@ void UMVE_STU_BroadcastSettingTabBar::CreateTabButtons()
 
 	TArray<EBroadcastSettingTab> TabOrder = {
 		EBroadcastSettingTab::CharacterSettings,
-		EBroadcastSettingTab::StageSettings,
-		EBroadcastSettingTab::ChatFilter,
-		EBroadcastSettingTab::CheckSettings
+		EBroadcastSettingTab::MusicStageSettings
 	};
 
 	for (EBroadcastSettingTab TabType : TabOrder)

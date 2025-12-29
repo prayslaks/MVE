@@ -59,13 +59,15 @@ void UMVE_STU_Button_TabButton::UpdateVisuals()
 
 	FLinearColor CurrentColor = bIsSelected ? SelectedColor : UnselectedColor;
 
-	// Border 배경색 변경
-	BackgroundBorder->SetBrushColor(CurrentColor);
+	// Border 배경색 변경 - Brush를 새로 생성하여 설정
+	FSlateBrush NewBrush;
+	NewBrush.TintColor = FSlateColor(CurrentColor);
+	BackgroundBorder->SetBrush(NewBrush);
 
 	// 텍스트 색상 변경 (선택 시 흰색, 비선택 시 회색)
-	FSlateColor TextColor = bIsSelected ?
-		FSlateColor(FLinearColor::White) :
-		FSlateColor(FLinearColor(0.7f, 0.7f, 0.7f, 1.0f));
+	//FSlateColor TextColor = bIsSelected ?
+	//	FSlateColor(FLinearColor::White) :
+	//	FSlateColor(FLinearColor(0.7f, 0.7f, 0.7f, 1.0f));
 
-	Text_TabName->SetColorAndOpacity(TextColor);
+	//Text_TabName->SetColorAndOpacity(TextColor);
 }
