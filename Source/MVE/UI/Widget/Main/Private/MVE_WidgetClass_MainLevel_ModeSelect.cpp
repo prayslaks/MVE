@@ -19,11 +19,6 @@ void UMVE_WidgetClass_MainLevel_ModeSelect::NativeConstruct()
 	{
 		MoveAudienceButton.Get()->OnClicked.AddDynamic(this, &UMVE_WidgetClass_MainLevel_ModeSelect::OnMoveAudienceButtonClicked);
 	}
-
-	if (MoveMainButton)
-	{
-		MoveMainButton.Get()->OnClicked.AddDynamic(this, &UMVE_WidgetClass_MainLevel_ModeSelect::OnMoveMainButtonClicked);
-	}
 }
 
 void UMVE_WidgetClass_MainLevel_ModeSelect::OnMoveStudioButtonClicked()
@@ -38,14 +33,5 @@ void UMVE_WidgetClass_MainLevel_ModeSelect::OnMoveAudienceButtonClicked()
 	if (UIManager)
 	{
 		UGameplayStatics::OpenLevel(GetWorld(), FName(TEXT("CharacterCustomTestMap")), true);
-	}
-}
-
-void UMVE_WidgetClass_MainLevel_ModeSelect::OnMoveMainButtonClicked()
-{
-	UUIManagerSubsystem* UIManager = UUIManagerSubsystem::Get(this);
-	if (UIManager)
-	{
-		UIManager->ShowScreen(EUIScreen::Main);
 	}
 }

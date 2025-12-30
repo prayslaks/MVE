@@ -32,7 +32,4 @@ public:
 
 	UFUNCTION()
 	void OnMoveAudienceButtonClicked();
-
-	UFUNCTION()
-	void OnMoveMainButtonClicked();
 };

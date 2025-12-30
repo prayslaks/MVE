@@ -23,22 +23,10 @@ void UMVE_WidgetClass_MainLevel_Login::NativeConstruct()
 		UserPasswordEditableBox->OnTextCommitted.AddDynamic(this, &UMVE_WidgetClass_MainLevel_Login::OnUserPasswordEditableBoxCommitted);
 	}
 
-	// 메인 메뉴 이동 바인딩
-	if (MoveMainButton)
-	{
-		MoveMainButton->OnClicked.AddDynamic(this, &UMVE_WidgetClass_MainLevel_Login::OnMoveMainMenuButtonClicked);
-	}
-
 	// 로그인 시도 바인딩
 	if (TryLoginButton)
 	{
 		TryLoginButton->OnClicked.AddDynamic(this, &UMVE_WidgetClass_MainLevel_Login::OnLoginButtonClicked);
-	}
-
-	// 회원가입 이동 바인딩
-	if (MoveRegisterButton)
-	{
-		MoveRegisterButton->OnClicked.AddDynamic(this, &UMVE_WidgetClass_MainLevel_Login::OnRegisterButtonClicked);
 	}
 
 	// 로그인 검증 텍스트 블록
@@ -80,11 +68,15 @@ void UMVE_WidgetClass_MainLevel_Login::OnLoginButtonClicked()
 }
 
 // ReSharper disable once CppMemberFunctionMayBeConst
-void UMVE_WidgetClass_MainLevel_Login::OnLoginResultReceived(const bool bSuccess, const FLoginResponseData& ResponseData, const FString& ErrorCode)
+void UMVE_WidgetClass_MainLevel_Login::OnLoginResultReceived(const bool bSuccess, const FLoginResponseData& ResponseData, const FString& Code)
 {
-	if (bSuccess)
+	PRINTLOG(TEXT("%s %s %s %s"), ResponseData.Success ? TEXT("True") : TEXT("False"), *ResponseData.Code, *ResponseData.Message, *ResponseData.Token);
+	PRINTLOG(TEXT("%s"), *ResponseData.User.Email);
+	
+	if (bSuccess && ResponseData.Success)
 	{
 		PRINTLOG(TEXT("OnLoginResultReceived Success"));
+		
 		// JWT 토큰 설정
 		UMVE_API_Helper::SetAuthToken(ResponseData.Token);
 		
@@ -92,12 +84,9 @@ void UMVE_WidgetClass_MainLevel_Login::OnLoginResultReceived(const bool bSuccess
 		{
 			LoginValidationTextBlock->SetVisibility(ESlateVisibility::Hidden);
 		}
-
-		// 요청이 성공했으므로 이동
-		if (UUIManagerSubsystem* UIManager = UUIManagerSubsystem::Get(this))
-		{
-			UIManager->ShowScreen(EUIScreen::ModeSelect);
-		}
+		
+		// 블루프린트에 나머지 작업을 넘긴다
+		OnLoginSuccessBIE();
 	}
 	else
 	{
@@ -105,7 +94,7 @@ void UMVE_WidgetClass_MainLevel_Login::OnLoginResultReceived(const bool bSuccess
 		FText TranslatedErrorMessage;
 		if (const UMVE_GIS_API* Subsystem = UMVE_GIS_API::Get(this))
 		{
-			TranslatedErrorMessage = Subsystem->GetTranslatedTextFromResponseCode(ErrorCode);
+			TranslatedErrorMessage = Subsystem->GetTranslatedTextFromResponseCode(Code);
 		}
 		
 		if (LoginValidationTextBlock)
@@ -114,23 +103,5 @@ void UMVE_WidgetClass_MainLevel_Login::OnLoginResultReceived(const bool bSuccess
 			LoginValidationTextBlock->SetColorAndOpacity(FLinearColor::Red);
 			LoginValidationTextBlock->SetVisibility(ESlateVisibility::Visible);
 		}
-	}
-}
-
-// ReSharper disable once CppMemberFunctionMayBeConst
-void UMVE_WidgetClass_MainLevel_Login::OnRegisterButtonClicked()
-{
-	if (UUIManagerSubsystem* UIManager = UUIManagerSubsystem::Get(this))
-	{
-		UIManager->ShowScreen(EUIScreen::Register);
-	}
-}
-
-// ReSharper disable once CppMemberFunctionMayBeConst
-void UMVE_WidgetClass_MainLevel_Login::OnMoveMainMenuButtonClicked()
-{
-	if (UUIManagerSubsystem* UIManager = UUIManagerSubsystem::Get(this))
-	{
-		UIManager->ShowScreen(EUIScreen::Main);
 	}
 }

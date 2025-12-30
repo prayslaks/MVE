@@ -4,7 +4,7 @@
     "uniqueCodes": 40,
     "filesWithCodes": 4,
     "totalFilesScanned": 8,
-    "generatedAt": "2025-12-18T08:40:38.891Z"
+    "generatedAt": "2025-12-30T06:25:04.848Z"
   },
   "statistics": [
     {
@@ -25,23 +25,23 @@
         },
         {
           "file": "routes\\auth.js",
-          "line": 1039
+          "line": 1037
         },
         {
           "file": "routes\\auth.js",
-          "line": 1260
+          "line": 1253
         },
         {
           "file": "routes\\auth.js",
-          "line": 1359
+          "line": 1352
         },
         {
           "file": "routes\\auth.js",
-          "line": 1566
+          "line": 1559
         },
         {
           "file": "routes\\auth.js",
-          "line": 1726
+          "line": 1709
         }
       ]
     },
@@ -63,19 +63,19 @@
         },
         {
           "file": "routes\\auth.js",
-          "line": 1022
+          "line": 1020
         },
         {
           "file": "routes\\auth.js",
-          "line": 1234
+          "line": 1227
         },
         {
           "file": "routes\\auth.js",
-          "line": 1558
+          "line": 1551
         },
         {
           "file": "routes\\auth.js",
-          "line": 1718
+          "line": 1701
         }
       ]
     },
@@ -97,11 +97,11 @@
         },
         {
           "file": "routes\\auth.js",
-          "line": 889
+          "line": 883
         },
         {
           "file": "routes\\auth.js",
-          "line": 1149
+          "line": 1141
         }
       ]
     },
@@ -119,7 +119,7 @@
         },
         {
           "file": "routes\\auth.js",
-          "line": 900
+          "line": 894
         }
       ]
     },
@@ -133,11 +133,11 @@
         },
         {
           "file": "routes\\auth.js",
-          "line": 870
+          "line": 864
         },
         {
           "file": "routes\\auth.js",
-          "line": 1132
+          "line": 1124
         }
       ]
     },
@@ -147,15 +147,15 @@
       "locations": [
         {
           "file": "routes\\auth.js",
-          "line": 1166
+          "line": 1158
         },
         {
           "file": "routes\\auth.js",
-          "line": 1503
+          "line": 1496
         },
         {
           "file": "routes\\auth.js",
-          "line": 1683
+          "line": 1666
         }
       ]
     },
@@ -169,7 +169,7 @@
         },
         {
           "file": "routes\\auth.js",
-          "line": 1192
+          "line": 1184
         }
       ]
     },
@@ -197,7 +197,7 @@
         },
         {
           "file": "routes\\auth.js",
-          "line": 910
+          "line": 904
         }
       ]
     },
@@ -211,7 +211,7 @@
         },
         {
           "file": "routes\\auth.js",
-          "line": 934
+          "line": 928
         }
       ]
     },
@@ -225,7 +225,7 @@
         },
         {
           "file": "routes\\auth.js",
-          "line": 946
+          "line": 940
         }
       ]
     },
@@ -235,11 +235,11 @@
       "locations": [
         {
           "file": "routes\\auth.js",
-          "line": 1032
+          "line": 1030
         },
         {
           "file": "routes\\auth.js",
-          "line": 1244
+          "line": 1237
         }
       ]
     },
@@ -249,11 +249,11 @@
       "locations": [
         {
           "file": "routes\\auth.js",
-          "line": 1182
+          "line": 1174
         },
         {
           "file": "routes\\auth.js",
-          "line": 1518
+          "line": 1511
         }
       ]
     },
@@ -397,7 +397,7 @@
       "locations": [
         {
           "file": "routes\\auth.js",
-          "line": 920
+          "line": 914
         }
       ]
     },
@@ -407,7 +407,7 @@
       "locations": [
         {
           "file": "routes\\auth.js",
-          "line": 965
+          "line": 959
         }
       ]
     },
@@ -417,7 +417,7 @@
       "locations": [
         {
           "file": "routes\\auth.js",
-          "line": 994
+          "line": 988
         }
       ]
     },
@@ -427,7 +427,7 @@
       "locations": [
         {
           "file": "routes\\auth.js",
-          "line": 1014
+          "line": 1012
         }
       ]
     },
@@ -437,7 +437,7 @@
       "locations": [
         {
           "file": "routes\\auth.js",
-          "line": 1213
+          "line": 1205
         }
       ]
     },
@@ -447,7 +447,7 @@
       "locations": [
         {
           "file": "routes\\auth.js",
-          "line": 1253
+          "line": 1246
         }
       ]
     },
@@ -457,7 +457,7 @@
       "locations": [
         {
           "file": "routes\\auth.js",
-          "line": 1346
+          "line": 1339
         }
       ]
     },
@@ -467,7 +467,7 @@
       "locations": [
         {
           "file": "routes\\auth.js",
-          "line": 1487
+          "line": 1480
         }
       ]
     },
@@ -477,7 +477,7 @@
       "locations": [
         {
           "file": "routes\\auth.js",
-          "line": 1543
+          "line": 1536
         }
       ]
     },
@@ -487,7 +487,7 @@
       "locations": [
         {
           "file": "routes\\auth.js",
-          "line": 1696
+          "line": 1679
         }
       ]
     },

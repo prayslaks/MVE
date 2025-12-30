@@ -19,7 +19,7 @@
             StructType ParsedData; \
             if (FJsonObjectConverter::JsonObjectStringToUStruct(ResponseBody, &ParsedData, 0, 0)) \
             { \
-                OnResult.ExecuteIfBound(true, ParsedData, TEXT("")); \
+                OnResult.ExecuteIfBound(true, ParsedData, ParsedData.Code); \
             } \
             else \
             { \
