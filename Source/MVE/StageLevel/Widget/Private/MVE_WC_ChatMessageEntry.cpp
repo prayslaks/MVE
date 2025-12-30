@@ -94,6 +94,7 @@ void UMVE_WC_ChatMessageEntry::CreateWidgets()
 		
 		// 자동 줄바꿈 설정
 		MessageContentText->SetAutoWrapText(true);
+		MessageContentText->SetWrapTextAt(200.f);
 		
 		// HorizontalBox에 추가
 		UHorizontalBoxSlot* ContentSlot = RootHorizontalBox->AddChildToHorizontalBox(MessageContentText);
@@ -114,7 +115,7 @@ void UMVE_WC_ChatMessageEntry::CreateWidgets()
 		//TimestampText->SetFont(FontInfo);
 		
 		// 색상 설정 (회색)
-		TimestampText->SetColorAndOpacity(FLinearColor(0.5f, 0.5f, 0.5f, 1.0f));
+		TimestampText->SetColorAndOpacity(FLinearColor(0.f, 0.f, 0.f, 1.0f));
 		
 		// HorizontalBox에 추가
 		UHorizontalBoxSlot* TimeSlot = RootHorizontalBox->AddChildToHorizontalBox(TimestampText);

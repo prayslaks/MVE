@@ -59,7 +59,7 @@ protected:
 	TObjectPtr<UTextBlock> MessageContentText;
 
 	/** 타임스탬프 텍스트 */
-	UPROPERTY(meta=(BindWidget))
+	UPROPERTY(meta=(BindWidgetOptional))
 	TObjectPtr<UTextBlock> TimestampText;
 
 	/** 위젯 생성 완료 여부 */
