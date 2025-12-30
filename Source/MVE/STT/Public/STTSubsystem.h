@@ -22,7 +22,8 @@ enum class ESTTCommandType : uint8
     ConcertOpen UMETA(DisplayName = "콘서트 열기"),
     ConcertClose UMETA(DisplayName = "콘서트 닫기"),
     ThemeChristmas UMETA(DisplayName = "크리스마스"),
-    ThemeNewYear UMETA(DisplayName = "새해")
+    ThemeNewYear UMETA(DisplayName = "새해"),
+    ThemeClear     UMETA(DisplayName = "테마 클리어")
 };
 
 // ================================================================================================

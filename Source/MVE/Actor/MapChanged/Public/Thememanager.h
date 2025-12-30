@@ -171,4 +171,10 @@ private:
     void DestroyNonPooledActors();
     
     void CleanupPool();
+    
+    UPROPERTY(EditAnywhere, Category = "Theme|Config")
+    TArray<FString> ClearKeywords = { TEXT("되돌려"), TEXT("원래대로"), TEXT("초기화"), TEXT("끄") };
+
+private:
+    bool HasClearKeyword(const FString& Text) const;
 };

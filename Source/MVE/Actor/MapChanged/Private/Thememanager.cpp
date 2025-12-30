@@ -179,11 +179,19 @@ void AThemeManager::SetThemeActorsVisibility(int32 ThemeIndex, bool bVisible)
 void AThemeManager::OnSTTReceived(const FSTTResponse& Response)
 {
     if (!HasAuthority()) return;
+    if (!HasAuthority()) return;
     if (!Response.bSuccess || Response.TranscribedText.IsEmpty()) return;
 
     const FString& Text = Response.TranscribedText;
 
     if (!HasTrigger(Text)) return;
+
+    // 명령어 타입으로 분기 (더 정확함)
+    if (Response.CommandType == ESTTCommandType::ThemeClear)
+    {
+        ClearTheme();
+        return;
+    }
 
     int32 FoundIndex = FindThemeByKeyword(Text);
     if (FoundIndex >= 0)
@@ -453,3 +461,16 @@ void AThemeManager::CleanupPool()
     ThemeActorPool.Empty();
     bPoolInitialized = false;
 }
+
+bool AThemeManager::HasClearKeyword(const FString& Text) const
+    {
+        for (const FString& Keyword : ClearKeywords)
+        {
+            if (Text.Contains(Keyword, ESearchCase::IgnoreCase))
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+

@@ -50,6 +50,8 @@ FString USTTSubsystem::GetCommandDisplayName(ESTTCommandType CommandType)
         return TEXT("크리스마스");
     case ESTTCommandType::ThemeNewYear:
         return TEXT("새해");
+    case ESTTCommandType::ThemeClear:
+        return TEXT("테마 클리어");
     default:
         return TEXT("없음");
     }
@@ -85,6 +87,10 @@ ESTTCommandType USTTSubsystem::ParseCommandString(const FString& CommandString)
     else if (CommandString == TEXT("ThemeNewYear"))
     {
         return ESTTCommandType::ThemeNewYear;
+    }
+    else if (CommandString == TEXT("ThemeClear"))
+    {
+        return ESTTCommandType::ThemeClear;
     }
     return ESTTCommandType::None;
 }
