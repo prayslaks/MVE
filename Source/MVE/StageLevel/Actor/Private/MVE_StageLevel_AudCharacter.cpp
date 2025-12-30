@@ -570,13 +570,6 @@ void AMVE_StageLevel_AudCharacter::ThrowObject()
 		
 		if (AMVE_ThrowObject* SpawnedObject = GetWorld()->SpawnActor<AMVE_ThrowObject>(ThrowObjectClass, ThrowLocation, ThrowRotation, SpawnParams))
 		{
-			// 초기 속도 설정
-			if (auto* ProjectileComp = SpawnedObject->FindComponentByClass<UProjectileMovementComponent>())
-			{
-				ProjectileComp->InitialSpeed = ThrowSpeed;
-				ProjectileComp->MaxSpeed = ThrowSpeed;
-			}
-
 			// ⭐ Owner의 UserID 설정 후 메시 적용
 			if (APlayerController* PC = Cast<APlayerController>(GetController()))
 			{
@@ -590,8 +583,8 @@ void AMVE_StageLevel_AudCharacter::ThrowObject()
 				}
 			}
 
-			// 위치 이동
-			SpawnedObject->FireInDirection(ThrowDirection);
+			// ⭐ 모든 머신에서 동일한 속도로 발사 (Multicast)
+			SpawnedObject->Multicast_FireInDirection(ThrowDirection, ThrowSpeed);
 		}
 	}
 }

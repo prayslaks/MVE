@@ -15,7 +15,7 @@ AMVE_ThrowObject::AMVE_ThrowObject()
 	//틱 활성화
 	PrimaryActorTick.bCanEverTick = true;
 	bReplicates = true;
-	AActor::SetReplicateMovement(true);
+	AActor::SetReplicateMovement(false);  
 	
 	// 충돌체
 	SphereComp = CreateDefaultSubobject<USphereComponent>(TEXT("SphereComp"));
@@ -34,7 +34,7 @@ AMVE_ThrowObject::AMVE_ThrowObject()
 
 	// 발사체 컴포넌트
 	ProjectileMovementComp = CreateDefaultSubobject<UProjectileMovementComponent>(TEXT("ProjectileMovementComp"));
-	ProjectileMovementComp->SetIsReplicated(true);
+	ProjectileMovementComp->SetIsReplicated(false); 
 	ProjectileMovementComp->bComponentShouldUpdatePhysicsVolume = false;
 	ProjectileMovementComp->SetInterpolatedComponent(MeshComp);
 	ProjectileMovementComp->SetUpdatedComponent(RootComponent);
@@ -52,7 +52,8 @@ void AMVE_ThrowObject::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	if (HasAuthority() && ProjectileMovementComp->IsActive())
+	// ⭐ 모든 머신에서 로컬로 물리 시뮬레이션
+	if (ProjectileMovementComp->IsActive())
 	{
 		// --- 양력 연산 ---
 		if (IsValid(LiftCurve))
@@ -96,18 +97,12 @@ void AMVE_ThrowObject::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Out
 void AMVE_ThrowObject::BeginPlay()
 {
 	Super::BeginPlay();
-
-	// 서버만 물리 효과를 연산하고, 클라이언트에 리플리케이션된다
-	ProjectileMovementComp->SetActive(HasAuthority());
-
-	// ⭐ OwnerUserID가 이미 설정되어 있으면 메시 적용 (서버용)
+	
+	ProjectileMovementComp->SetActive(true);
+	
 	if (!OwnerUserID.IsEmpty())
 	{
 		OnRep_OwnerUserID();
-	}
-	else
-	{
-		PRINTLOG(TEXT("⚠️ OwnerUserID is empty in BeginPlay, waiting for replication..."));
 	}
 }
 
@@ -142,15 +137,18 @@ void AMVE_ThrowObject::OnRep_OwnerUserID()
 	}
 }
 
-void AMVE_ThrowObject::FireInDirection(const FVector& ShootDirection)
+void AMVE_ThrowObject::Multicast_FireInDirection_Implementation(const FVector& ShootDirection, float Speed)
 {
+	ProjectileMovementComp->InitialSpeed = Speed;
+	ProjectileMovementComp->MaxSpeed = Speed;
+	ProjectileMovementComp->Velocity = ShootDirection * Speed;
+
 	FTimerDelegate TimerDelegate;
 	TimerDelegate.BindLambda([this]()
 	{
 		SphereComp->SetCollisionEnabled(ECollisionEnabled::Type::QueryAndPhysics);
 	});
 	GetWorld()->GetTimerManager().SetTimer(TimerHandle, TimerDelegate, 0.5f, false);
-	ProjectileMovementComp->Velocity = ShootDirection * ProjectileMovementComp->InitialSpeed;
 }
 
 void AMVE_ThrowObject::Multicast_SetCustomMesh_Implementation(UStaticMesh* NewMesh)
