@@ -23,7 +23,13 @@ public:
 	
 	virtual void BeginPlay() override;
 
-	void FireInDirection(const FVector& ShootDirection);
+	// ⭐ 모든 머신에서 발사 (멀티캐스트 RPC)
+	UFUNCTION(NetMulticast, Reliable)
+	void Multicast_FireInDirection(const FVector& ShootDirection, float Speed);
+
+	// 커스텀 메시 설정 (멀티캐스트 RPC)
+	UFUNCTION(NetMulticast, Reliable)
+	void Multicast_SetCustomMesh(UStaticMesh* NewMesh);
 
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Projectile", meta = (ClampMin = "0.0"))
@@ -40,8 +46,16 @@ protected:
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Components")
 	TObjectPtr<UProjectileMovementComponent> ProjectileMovementComp;
-	
+
+public:
+	// Owner의 UserID (던진 사람의 UserID)
+	UPROPERTY(ReplicatedUsing = OnRep_OwnerUserID)
+	FString OwnerUserID;
+
+	UFUNCTION()
+	void OnRep_OwnerUserID();
+
 private:
 	FTimerHandle TimerHandle;
-	
+
 };

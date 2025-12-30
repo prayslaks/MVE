@@ -24,6 +24,9 @@
 #include "MVE_GM_StageLevel.h"
 #include "MVE_WC_StageLevel_AudInputHelp.h"
 #include "GameFramework/PlayerState.h"
+#include "Dom/JsonObject.h"
+#include "Serialization/JsonWriter.h"
+#include "Serialization/JsonSerializer.h"
 
 class UMVE_AUD_CustomizationManager;
 
@@ -186,23 +189,79 @@ void AMVE_PC_StageLevel::Initialize()
 
 	if (CustomizationManager)
 	{
-		// 메모리에서 직접 가져오기
-		FCustomizationData SavedData = CustomizationManager->GetSavedCustomization();
+		// ⭐ 액세서리 데이터 가져오기
+		FCustomizationData SavedAccessory = CustomizationManager->GetSavedCustomization();
 
-		if (SavedData.ModelUrl.IsEmpty())
+		// ⭐ 던지기 메시 데이터 가져오기
+		FCustomizationData SavedThrowMesh = CustomizationManager->GetSavedThrowMeshData();
+
+		// 액세서리와 던지기 메시 모두 체크
+		bool bHasAccessory = !SavedAccessory.ModelUrl.IsEmpty();
+		bool bHasThrowMesh = !SavedThrowMesh.ModelUrl.IsEmpty();
+
+		if (!bHasAccessory && !bHasThrowMesh)
 		{
 			PRINTLOG(TEXT("⚠️ No saved customization data (user hasn't customized yet)"));
 			return;
 		}
 
-		PRINTLOG(TEXT("✅ Using saved customization from memory"));
-		PRINTLOG(TEXT("   Model URL: %s"), *SavedData.ModelUrl);
-		PRINTLOG(TEXT("   Socket: %s"), *SavedData.SocketName);
-	
-		// JSON 직렬화
-		FString PresetJSON = CustomizationManager->SerializeCustomizationData(SavedData);
+		// ⭐ 배열로 직렬화 (액세서리 + 던지기 메시)
+		TArray<FCustomizationData> AllCustomizations;
+
+		if (bHasAccessory)
+		{
+			AllCustomizations.Add(SavedAccessory);
+			PRINTLOG(TEXT("✅ Accessory added to sync"));
+			PRINTLOG(TEXT("   Model URL: %s"), *SavedAccessory.ModelUrl);
+			PRINTLOG(TEXT("   Socket: %s"), *SavedAccessory.SocketName);
+		}
+
+		// ⭐ 던지기 메시 추가
+		if (bHasThrowMesh)
+		{
+			AllCustomizations.Add(SavedThrowMesh);
+			PRINTLOG(TEXT("✅ Throw mesh added to sync"));
+			PRINTLOG(TEXT("   Model URL: %s"), *SavedThrowMesh.ModelUrl);
+			PRINTLOG(TEXT("   Socket: %s"), *SavedThrowMesh.SocketName);
+
+			// ⚠️ 로컬 다운로드는 GameState의 OnAccessoryLoaded()가 처리하므로 여기서는 하지 않음
+			// CustomizationManager->LoadThrowMeshFromURL()는 호출하지 않음
+		}
+
+		// ⭐ JSON 직렬화 (올바른 배열 형식)
+		PRINTLOG(TEXT("🔍 AllCustomizations count: %d"), AllCustomizations.Num());
+
+		TArray<TSharedPtr<FJsonValue>> JsonArray;
+		for (const FCustomizationData& Data : AllCustomizations)
+		{
+			PRINTLOG(TEXT("🔍 Processing customization: Socket=%s, ModelUrl=%s"), *Data.SocketName, *Data.ModelUrl);
+			TSharedPtr<FJsonObject> JsonObject = MakeShareable(new FJsonObject);
+			JsonObject->SetStringField(TEXT("socketName"), Data.SocketName);
+
+			TSharedPtr<FJsonObject> LocationObj = MakeShareable(new FJsonObject);
+			LocationObj->SetNumberField(TEXT("x"), Data.RelativeLocation.X);
+			LocationObj->SetNumberField(TEXT("y"), Data.RelativeLocation.Y);
+			LocationObj->SetNumberField(TEXT("z"), Data.RelativeLocation.Z);
+			JsonObject->SetObjectField(TEXT("relativeLocation"), LocationObj);
+
+			TSharedPtr<FJsonObject> RotationObj = MakeShareable(new FJsonObject);
+			RotationObj->SetNumberField(TEXT("pitch"), Data.RelativeRotation.Pitch);
+			RotationObj->SetNumberField(TEXT("yaw"), Data.RelativeRotation.Yaw);
+			RotationObj->SetNumberField(TEXT("roll"), Data.RelativeRotation.Roll);
+			JsonObject->SetObjectField(TEXT("relativeRotation"), RotationObj);
+
+			JsonObject->SetNumberField(TEXT("relativeScale"), Data.RelativeScale);
+			JsonObject->SetStringField(TEXT("modelUrl"), Data.ModelUrl);
+
+			JsonArray.Add(MakeShareable(new FJsonValueObject(JsonObject)));
+		}
+
+		FString PresetJSON;
+		TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&PresetJSON);
+		FJsonSerializer::Serialize(JsonArray, Writer);
+
 		PRINTLOG(TEXT("PresetJSON: %s"), *PresetJSON);
-	
+
 		// 서버에 등록 요청
 		PRINTLOG(TEXT("Calling ServerRPC_RegisterAccessory..."));
 		ServerRPC_RegisterAccessory(UserName, PresetJSON);

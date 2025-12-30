@@ -9,6 +9,7 @@
 #include "Components/SkeletalMeshComponent.h"
 #include "GameFramework/PlayerState.h"
 #include "GameFramework/PlayerController.h"
+#include "MVE_AUD_CustomizationManager.h"
 
 AMVE_GS_StageLevel::AMVE_GS_StageLevel()
 {
@@ -202,7 +203,31 @@ void AMVE_GS_StageLevel::ApplyAccessoryToCharacter(const FString& UserID, UObjec
 
 	PRINTLOG(TEXT("✅ Character found: %s"), *Character->GetName());
 
-	// 2. Skeletal Mesh Component 가져오기
+	// ⭐ THROW_MESH 특수 처리 (소켓에 부착하지 않고 GameState에 UserID별로 저장)
+	if (Data.SocketName == TEXT("THROW_MESH"))
+	{
+		PRINTLOG(TEXT("✅ THROW_MESH detected - storing in GameState by UserID"));
+
+		UStaticMesh* ThrowMesh = Cast<UStaticMesh>(Asset);
+		if (ThrowMesh)
+		{
+			// ⭐ GameState에 UserID별로 저장
+			UserThrowMeshes.Add(UserID, ThrowMesh);
+			PRINTLOG(TEXT("✅ Throw mesh stored for UserID: %s"), *UserID);
+
+			// ⭐ 로컬 플레이어의 CustomizationManager에도 저장 (자신이 던질 때 사용)
+			if (UGameInstance* GameInstance = GetWorld()->GetGameInstance())
+			{
+				if (UMVE_AUD_CustomizationManager* CustomizationManager = GameInstance->GetSubsystem<UMVE_AUD_CustomizationManager>())
+				{
+					CustomizationManager->SetThrowMeshDirect(ThrowMesh);
+				}
+			}
+		}
+		return;  // 소켓 부착하지 않고 종료
+	}
+
+	// 2. Skeletal Mesh Component 가져오기 (일반 액세서리용)
 	USkeletalMeshComponent* SkelMesh = Character->FindComponentByClass<USkeletalMeshComponent>();
 	if (!SkelMesh)
 	{
@@ -210,7 +235,7 @@ void AMVE_GS_StageLevel::ApplyAccessoryToCharacter(const FString& UserID, UObjec
 		return;
 	}
 
-	// 3. Socket 존재 확인
+	// 3. Socket 존재 확인 (일반 액세서리용)
 	FName SocketName = FName(*Data.SocketName);
 	if (!SkelMesh->DoesSocketExist(SocketName))
 	{
@@ -290,4 +315,10 @@ void AMVE_GS_StageLevel::ApplyAccessoryToCharacter(const FString& UserID, UObjec
 	PRINTLOG(TEXT("   Scale: %.2f"), Data.RelativeScale);
 
 	PRINTLOG(TEXT("✅ Accessory successfully applied to character!"));
+}
+
+UStaticMesh* AMVE_GS_StageLevel::GetThrowMeshForUser(const FString& UserID) const
+{
+	// FindRef는 키가 없으면 nullptr 반환
+	return UserThrowMeshes.FindRef(UserID);
 }
