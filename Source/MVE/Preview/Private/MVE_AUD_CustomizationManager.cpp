@@ -28,6 +28,7 @@ void UMVE_AUD_CustomizationManager::Initialize(FSubsystemCollectionBase& Collect
 
 	PRINTLOG(TEXT("=== CustomizationManager Initialize ==="));
 
+	// 액세서리용 Render Target
 	MeshRenderTarget = LoadObject<UTextureRenderTarget2D>(nullptr,
 		TEXT("/Game/Blueprints/Preview/RT_Preview.RT_Preview"));
 
@@ -38,6 +39,19 @@ void UMVE_AUD_CustomizationManager::Initialize(FSubsystemCollectionBase& Collect
 	else
 	{
 		PRINTLOG(TEXT("✅ Mesh Render Target loaded successfully"));
+	}
+
+	// 던지기용 Render Target
+	ThrowMeshRenderTarget = LoadObject<UTextureRenderTarget2D>(nullptr,
+		TEXT("/Game/Blueprints/Preview/RT_ThrowPreview.RT_ThrowPreview"));
+
+	if (!ThrowMeshRenderTarget)
+	{
+		PRINTLOG(TEXT("❌ Failed to load Throw Mesh Render Target: /Game/Blueprints/Preview/RT_ThrowPreview.RT_ThrowPreview"));
+	}
+	else
+	{
+		PRINTLOG(TEXT("✅ Throw Mesh Render Target loaded successfully"));
 	}
 }
 
@@ -1097,15 +1111,28 @@ void UMVE_AUD_CustomizationManager::SaveAccessoryPresetToServer(const FString& P
 	PRINTLOG(TEXT("=== SaveAccessoryPresetToServer ==="));
 
     // 1. 저장된 커스터마이징 데이터 확인
-    if (SavedCustomization.ModelUrl.IsEmpty())
+    bool bHasAccessory = !SavedCustomization.ModelUrl.IsEmpty();
+    bool bHasThrowMesh = !SavedThrowMeshData.ModelUrl.IsEmpty();
+
+    if (!bHasAccessory && !bHasThrowMesh)
     {
-        PRINTLOG(TEXT("⚠️ No customization data to save"));
+        PRINTLOG(TEXT("⚠️ No customization data to save (neither accessory nor throw mesh)"));
         return;
     }
 
-    PRINTLOG(TEXT("✅ Saved customization data found"));
-    PRINTLOG(TEXT("   Model URL: %s"), *SavedCustomization.ModelUrl);
-    PRINTLOG(TEXT("   Socket: %s"), *SavedCustomization.SocketName);
+    if (bHasAccessory)
+    {
+        PRINTLOG(TEXT("✅ Accessory data found"));
+        PRINTLOG(TEXT("   Model URL: %s"), *SavedCustomization.ModelUrl);
+        PRINTLOG(TEXT("   Socket: %s"), *SavedCustomization.SocketName);
+    }
+
+    if (bHasThrowMesh)
+    {
+        PRINTLOG(TEXT("✅ Throw mesh data found"));
+        PRINTLOG(TEXT("   Model URL: %s"), *SavedThrowMeshData.ModelUrl);
+        PRINTLOG(TEXT("   Socket: %s"), *SavedThrowMeshData.SocketName);
+    }
 
     // ⭐ 기즈모로 변경된 최신 트랜스폼 반영
     if (AttachedMesh)
@@ -1137,49 +1164,117 @@ void UMVE_AUD_CustomizationManager::SaveAccessoryPresetToServer(const FString& P
     
     // 2. Accessories 배열 생성 (API 형식)
     TArray<TSharedPtr<FJsonValue>> AccessoriesArray;
-    
-    TSharedPtr<FJsonObject> AccessoryObject = MakeShareable(new FJsonObject);
-    AccessoryObject->SetStringField(TEXT("socketName"), SavedCustomization.SocketName);
-    
-    // RelativeLocation
-    TSharedPtr<FJsonObject> LocationObj = MakeShareable(new FJsonObject);
-    LocationObj->SetNumberField(TEXT("x"), SavedCustomization.RelativeLocation.X);
-    LocationObj->SetNumberField(TEXT("y"), SavedCustomization.RelativeLocation.Y);
-    LocationObj->SetNumberField(TEXT("z"), SavedCustomization.RelativeLocation.Z);
-    AccessoryObject->SetObjectField(TEXT("relativeLocation"), LocationObj);
-    
-    // RelativeRotation
-    TSharedPtr<FJsonObject> RotationObj = MakeShareable(new FJsonObject);
-    RotationObj->SetNumberField(TEXT("pitch"), SavedCustomization.RelativeRotation.Pitch);
-    RotationObj->SetNumberField(TEXT("yaw"), SavedCustomization.RelativeRotation.Yaw);
-    RotationObj->SetNumberField(TEXT("roll"), SavedCustomization.RelativeRotation.Roll);
-    AccessoryObject->SetObjectField(TEXT("relativeRotation"), RotationObj);
-    
-    // RelativeScale
-    AccessoryObject->SetNumberField(TEXT("relativeScale"), SavedCustomization.RelativeScale);
-    
-    // ModelUrl (PresignedURL)
-    AccessoryObject->SetStringField(TEXT("modelUrl"), SavedCustomization.ModelUrl);
-    
-    // 배열에 추가
-    AccessoriesArray.Add(MakeShareable(new FJsonValueObject(AccessoryObject)));
-    
-    PRINTLOG(TEXT("✅ Accessory data prepared for API"));
-    
-    // 3. API 호출 준비
-    FOnSavePresetComplete OnResult;
-    OnResult.BindUObject(this, &UMVE_AUD_CustomizationManager::HandleSavePresetComplete);
-    
-    // 4. ⭐ API Helper 호출
-    UMVE_API_Helper::SaveAccessoryPreset(
-        PresetName,              // PresetName
-        AccessoriesArray,        // Accessories (JSON 배열)
-        TEXT(""),                // Description (선택)
-        false,                   // bIsPublic (private)
-        OnResult                 // 콜백
-    );
-    
-    PRINTLOG(TEXT("✅ API call sent to save preset"));
+
+    // ⭐ 액세서리 데이터 추가
+    if (bHasAccessory)
+    {
+        TSharedPtr<FJsonObject> AccessoryObject = MakeShareable(new FJsonObject);
+        AccessoryObject->SetStringField(TEXT("socketName"), SavedCustomization.SocketName);
+
+        // RelativeLocation
+        TSharedPtr<FJsonObject> LocationObj = MakeShareable(new FJsonObject);
+        LocationObj->SetNumberField(TEXT("x"), SavedCustomization.RelativeLocation.X);
+        LocationObj->SetNumberField(TEXT("y"), SavedCustomization.RelativeLocation.Y);
+        LocationObj->SetNumberField(TEXT("z"), SavedCustomization.RelativeLocation.Z);
+        AccessoryObject->SetObjectField(TEXT("relativeLocation"), LocationObj);
+
+        // RelativeRotation
+        TSharedPtr<FJsonObject> RotationObj = MakeShareable(new FJsonObject);
+        RotationObj->SetNumberField(TEXT("pitch"), SavedCustomization.RelativeRotation.Pitch);
+        RotationObj->SetNumberField(TEXT("yaw"), SavedCustomization.RelativeRotation.Yaw);
+        RotationObj->SetNumberField(TEXT("roll"), SavedCustomization.RelativeRotation.Roll);
+        AccessoryObject->SetObjectField(TEXT("relativeRotation"), RotationObj);
+
+        // RelativeScale
+        AccessoryObject->SetNumberField(TEXT("relativeScale"), SavedCustomization.RelativeScale);
+
+        // ModelUrl (PresignedURL)
+        AccessoryObject->SetStringField(TEXT("modelUrl"), SavedCustomization.ModelUrl);
+
+        // 배열에 추가
+        AccessoriesArray.Add(MakeShareable(new FJsonValueObject(AccessoryObject)));
+        PRINTLOG(TEXT("✅ Accessory data added to array"));
+    }
+
+    // ⭐ 던지기 메시 데이터 추가
+    if (bHasThrowMesh)
+    {
+        TSharedPtr<FJsonObject> ThrowMeshObject = MakeShareable(new FJsonObject);
+        ThrowMeshObject->SetStringField(TEXT("socketName"), SavedThrowMeshData.SocketName);
+
+        // RelativeLocation
+        TSharedPtr<FJsonObject> ThrowLocationObj = MakeShareable(new FJsonObject);
+        ThrowLocationObj->SetNumberField(TEXT("x"), SavedThrowMeshData.RelativeLocation.X);
+        ThrowLocationObj->SetNumberField(TEXT("y"), SavedThrowMeshData.RelativeLocation.Y);
+        ThrowLocationObj->SetNumberField(TEXT("z"), SavedThrowMeshData.RelativeLocation.Z);
+        ThrowMeshObject->SetObjectField(TEXT("relativeLocation"), ThrowLocationObj);
+
+        // RelativeRotation
+        TSharedPtr<FJsonObject> ThrowRotationObj = MakeShareable(new FJsonObject);
+        ThrowRotationObj->SetNumberField(TEXT("pitch"), SavedThrowMeshData.RelativeRotation.Pitch);
+        ThrowRotationObj->SetNumberField(TEXT("yaw"), SavedThrowMeshData.RelativeRotation.Yaw);
+        ThrowRotationObj->SetNumberField(TEXT("roll"), SavedThrowMeshData.RelativeRotation.Roll);
+        ThrowMeshObject->SetObjectField(TEXT("relativeRotation"), ThrowRotationObj);
+
+        // RelativeScale
+        ThrowMeshObject->SetNumberField(TEXT("relativeScale"), SavedThrowMeshData.RelativeScale);
+
+        // ModelUrl (PresignedURL)
+        ThrowMeshObject->SetStringField(TEXT("modelUrl"), SavedThrowMeshData.ModelUrl);
+
+        // 배열에 추가
+        AccessoriesArray.Add(MakeShareable(new FJsonValueObject(ThrowMeshObject)));
+        PRINTLOG(TEXT("✅ Throw mesh data added to array"));
+    }
+
+    PRINTLOG(TEXT("✅ Total accessories in array: %d"), AccessoriesArray.Num());
+
+    // 3. ⭐ 첫 저장 vs 업데이트 분기
+    if (CachedPresetId == -1)
+    {
+        // 첫 저장: Create
+        PRINTLOG(TEXT("📝 First save - Creating new preset"));
+        FOnSavePresetComplete OnResult;
+        OnResult.BindUObject(this, &UMVE_AUD_CustomizationManager::HandleSavePresetComplete);
+
+        UMVE_API_Helper::SaveAccessoryPreset(
+            PresetName,              // PresetName
+            AccessoriesArray,        // Accessories (JSON 배열)
+            TEXT(""),                // Description (선택)
+            false,                   // bIsPublic (private)
+            OnResult                 // 콜백
+        );
+
+        PRINTLOG(TEXT("✅ Create preset API called"));
+    }
+    else
+    {
+        // 업데이트: Update
+        PRINTLOG(TEXT("📝 Updating existing preset (ID: %d)"), CachedPresetId);
+        FOnGenericApiComplete OnResult;
+        OnResult.BindLambda([this](bool bSuccess, const FString& ErrorCode)
+        {
+            if (bSuccess)
+            {
+                PRINTLOG(TEXT("✅ Preset updated successfully (ID: %d)"), CachedPresetId);
+            }
+            else
+            {
+                PRINTLOG(TEXT("❌ Failed to update preset: %s"), *ErrorCode);
+            }
+        });
+
+        UMVE_API_Helper::UpdatePreset(
+            CachedPresetId,          // PresetId
+            PresetName,              // PresetName
+            AccessoriesArray,        // Accessories (JSON 배열)
+            TEXT(""),                // Description (선택)
+            false,                   // bIsPublic (private)
+            OnResult                 // 콜백
+        );
+
+        PRINTLOG(TEXT("✅ Update preset API called"));
+    }
 }
 
 void UMVE_AUD_CustomizationManager::HandleSavePresetComplete(bool bSuccess, const FSavePresetResponseData& Data,
@@ -1190,6 +1285,34 @@ void UMVE_AUD_CustomizationManager::HandleSavePresetComplete(bool bSuccess, cons
 		PRINTLOG(TEXT("✅ Preset saved successfully to server"));
 		PRINTLOG(TEXT("   Preset Description: %s"), *Data.Description);
 		PRINTLOG(TEXT("   Preset Name: %s"), *Data.PresetName);
+
+		// ⭐ PresetId 캐싱: 서버에서 최신 프리셋 ID 가져오기
+		PRINTLOG(TEXT("📥 Fetching preset ID from server..."));
+		FOnGetPresetListComplete OnGetList;
+		OnGetList.BindLambda([this, PresetName = Data.PresetName](bool bListSuccess, const FGetPresetListResponseData& ListData, const FString& ListError)
+		{
+			if (bListSuccess && ListData.Presets.Num() > 0)
+			{
+				// PresetName으로 찾기
+				for (const FAccessoryPreset& Preset : ListData.Presets)
+				{
+					if (Preset.PresetName == PresetName)
+					{
+						CachedPresetId = Preset.Id;
+						PRINTLOG(TEXT("✅ PresetId cached: %d"), CachedPresetId);
+						return;
+					}
+				}
+				PRINTLOG(TEXT("⚠️ Preset not found in list (using first preset)"));
+				CachedPresetId = ListData.Presets[0].Id;
+			}
+			else
+			{
+				PRINTLOG(TEXT("❌ Failed to fetch preset list for ID caching: %s"), *ListError);
+			}
+		});
+
+		UMVE_API_Helper::GetPresetList(false, OnGetList);
 	}
 	else
 	{
@@ -1233,6 +1356,10 @@ void UMVE_AUD_CustomizationManager::HandleLoadPresetComplete(bool bSuccess, cons
 	PRINTLOG(TEXT("   Preset Name: %s"), *FirstPreset.PresetName);
 	PRINTLOG(TEXT("   Created At: %s"), *FirstPreset.CreatedAt);
 
+	// ⭐ PresetId 캐싱
+	CachedPresetId = FirstPreset.Id;
+	PRINTLOG(TEXT("✅ PresetId cached: %d"), CachedPresetId);
+
 	// Accessories 배열 파싱
 	if (FirstPreset.Accessories.Num() == 0)
 	{
@@ -1240,27 +1367,38 @@ void UMVE_AUD_CustomizationManager::HandleLoadPresetComplete(bool bSuccess, cons
 		return;
 	}
 
-	// 첫 번째 액세서리 데이터 추출
-	const FAccessory& FirstAccessory = FirstPreset.Accessories[0];
-
-	// FCustomizationData로 변환
-	SavedCustomization.SocketName = FirstAccessory.SocketName;
-	SavedCustomization.RelativeLocation = FirstAccessory.RelativeLocation;
-	SavedCustomization.RelativeRotation = FirstAccessory.RelativeRotation;
-	SavedCustomization.RelativeScale = FirstAccessory.RelativeScale;
-	SavedCustomization.ModelUrl = FirstAccessory.ModelUrl;
-
-	PRINTLOG(TEXT("✅ Customization data loaded:"));
-	PRINTLOG(TEXT("   Model URL: %s"), *SavedCustomization.ModelUrl);
-	PRINTLOG(TEXT("   Socket: %s"), *SavedCustomization.SocketName);
-	PRINTLOG(TEXT("   Location: %s"), *SavedCustomization.RelativeLocation.ToString());
-	PRINTLOG(TEXT("   Rotation: %s"), *SavedCustomization.RelativeRotation.ToString());
-	PRINTLOG(TEXT("   Scale: %.2f"), SavedCustomization.RelativeScale);
-
-	// 델리게이트 호출 (PlayerController에서 사용)
-	if (OnPresetLoadedDelegate.IsBound())
+	// 모든 액세서리 순회하며 SocketName으로 구분
+	for (const FAccessory& Accessory : FirstPreset.Accessories)
 	{
-		OnPresetLoadedDelegate.Execute(SavedCustomization);
+		if (Accessory.SocketName == TEXT("THROW_MESH"))
+		{
+			// 던지기 메시 로드
+			PRINTLOG(TEXT("✅ Throw mesh preset found"));
+			PRINTLOG(TEXT("   Model URL: %s"), *Accessory.ModelUrl);
+			LoadThrowMeshFromURL(Accessory.ModelUrl);
+		}
+		else
+		{
+			// 일반 액세서리 로드 (기존 로직)
+			SavedCustomization.SocketName = Accessory.SocketName;
+			SavedCustomization.RelativeLocation = Accessory.RelativeLocation;
+			SavedCustomization.RelativeRotation = Accessory.RelativeRotation;
+			SavedCustomization.RelativeScale = Accessory.RelativeScale;
+			SavedCustomization.ModelUrl = Accessory.ModelUrl;
+
+			PRINTLOG(TEXT("✅ Accessory customization data loaded:"));
+			PRINTLOG(TEXT("   Model URL: %s"), *SavedCustomization.ModelUrl);
+			PRINTLOG(TEXT("   Socket: %s"), *SavedCustomization.SocketName);
+			PRINTLOG(TEXT("   Location: %s"), *SavedCustomization.RelativeLocation.ToString());
+			PRINTLOG(TEXT("   Rotation: %s"), *SavedCustomization.RelativeRotation.ToString());
+			PRINTLOG(TEXT("   Scale: %.2f"), SavedCustomization.RelativeScale);
+
+			// 델리게이트 호출 (PlayerController에서 사용)
+			if (OnPresetLoadedDelegate.IsBound())
+			{
+				OnPresetLoadedDelegate.Execute(SavedCustomization);
+			}
+		}
 	}
 }
 
@@ -1349,4 +1487,232 @@ void UMVE_AUD_CustomizationManager::TestLoadLocalGLBWithFakeURL(const FString& L
 	PRINTLOG(TEXT("   Now you can:"));
 	PRINTLOG(TEXT("   1. Attach mesh to socket (Head/LeftHand/RightHand buttons)"));
 	PRINTLOG(TEXT("   2. Click Save button to test preset saving"));
+}
+
+// ========== 던지기 메시 프리뷰 함수 구현 ==========
+
+void UMVE_AUD_CustomizationManager::StartThrowMeshPreview(const FString& GLBFilePath, UMVE_AUD_WidgetClass_PreviewWidget* InPreviewWidget)
+{
+	PRINTLOG(TEXT("=== StartThrowMeshPreview called ==="));
+	PRINTLOG(TEXT("GLB Path: %s"), *GLBFilePath);
+
+	StopThrowMeshPreview();
+
+	ThrowMeshPreviewWidget = InPreviewWidget;
+
+	if (!ThrowMeshPreviewWidget)
+	{
+		PRINTLOG(TEXT("❌ ThrowMeshPreviewWidget is null"));
+		return;
+	}
+
+	if (!ThrowMeshRenderTarget)
+	{
+		PRINTLOG(TEXT("❌ ThrowMeshRenderTarget is null"));
+		return;
+	}
+
+	PRINTLOG(TEXT("✅ ThrowMeshPreviewWidget and ThrowMeshRenderTarget are valid"));
+
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		PRINTLOG(TEXT("❌ World is null"));
+		return;
+	}
+
+	ThrowMeshCaptureActor = World->SpawnActor<AMVE_AUD_PreviewCaptureActor>();
+	if (!ThrowMeshCaptureActor)
+	{
+		PRINTLOG(TEXT("❌ Failed to spawn ThrowMeshCaptureActor"));
+		return;
+	}
+
+	PRINTLOG(TEXT("✅ ThrowMeshCaptureActor spawned successfully"));
+
+	ThrowMeshCaptureActor->RenderTarget = ThrowMeshRenderTarget;
+
+	if (GLBFilePath == FString(""))
+	{
+		UClass* ActorClass = LoadObject<UClass>(nullptr,
+		TEXT("/Game/Blueprints/Preview/BP_EmptyActor.BP_EmptyActor_C"));
+		AActor* SpawnedActor = GetWorld()->SpawnActor<AActor>(ActorClass);
+		OnThrowMeshLoaded(SpawnedActor);
+	}
+	else
+	{
+		LoadMeshFromGLB(GLBFilePath, [this](AActor* LoadedActor)
+		{
+			OnThrowMeshLoaded(LoadedActor);
+		});
+	}
+}
+
+void UMVE_AUD_CustomizationManager::OnThrowMeshLoaded(AActor* LoadedActor)
+{
+	if (!LoadedActor)
+	{
+		PRINTLOG(TEXT("❌ Throw mesh loading failed"));
+		return;
+	}
+
+	ThrowPreviewedMesh = LoadedActor;
+	PRINTLOG(TEXT("✅ Throw mesh actor loaded"));
+
+	FVector MeshLocation = ThrowPreviewedMesh->GetActorLocation();
+	PRINTLOG(TEXT("✅ Mesh location: %s"), *MeshLocation.ToString());
+
+	ThrowMeshCaptureActor->SetCaptureTarget(ThrowPreviewedMesh);
+	PRINTLOG(TEXT("✅ Capture target set"));
+
+	FVector CameraLocation = MeshLocation + FVector(150, 0, 50);
+	ThrowMeshCaptureActor->SetActorLocation(CameraLocation);
+	ThrowMeshCaptureActor->SetActorRotation((MeshLocation - CameraLocation).Rotation());
+	PRINTLOG(TEXT("✅ Camera positioned at: %s"), *CameraLocation.ToString());
+
+	ThrowMeshPreviewWidget->SetRenderTarget(ThrowMeshRenderTarget);
+	PRINTLOG(TEXT("✅ Render target connected to widget"));
+
+	ThrowMeshPreviewWidget->SetCaptureActor(ThrowMeshCaptureActor);
+	PRINTLOG(TEXT("✅ Capture actor connected to widget"));
+
+	AutoAdjustThrowCameraDistance();
+
+	// ThrowMesh로 캐싱 (StaticMesh 추출)
+	if (UStaticMeshComponent* MeshComp = ThrowPreviewedMesh->FindComponentByClass<UStaticMeshComponent>())
+	{
+		ThrowMesh = MeshComp->GetStaticMesh();
+		PRINTLOG(TEXT("✅ ThrowMesh cached for spawning"));
+	}
+
+	PRINTLOG(TEXT("✅ Throw mesh preview setup complete"));
+}
+
+void UMVE_AUD_CustomizationManager::StopThrowMeshPreview()
+{
+	if (ThrowMeshCaptureActor)
+	{
+		ThrowMeshCaptureActor->Destroy();
+		ThrowMeshCaptureActor = nullptr;
+	}
+
+	if (ThrowPreviewedMesh)
+	{
+		ThrowPreviewedMesh->Destroy();
+		ThrowPreviewedMesh = nullptr;
+	}
+
+	ThrowMeshPreviewWidget = nullptr;
+
+	PRINTLOG(TEXT("✅ Throw mesh preview stopped"));
+}
+
+void UMVE_AUD_CustomizationManager::AutoAdjustThrowCameraDistance()
+{
+	if (!ThrowPreviewedMesh || !ThrowMeshCaptureActor)
+	{
+		return;
+	}
+
+	FVector Origin, BoxExtent;
+	ThrowPreviewedMesh->GetActorBounds(false, Origin, BoxExtent);
+
+	float MaxDimension = FMath::Max3(BoxExtent.X, BoxExtent.Y, BoxExtent.Z);
+	float OptimalDistance = MaxDimension * 3.0f;
+	OptimalDistance = FMath::Clamp(OptimalDistance, 100.0f, 1000.0f);
+
+	FVector MeshLocation = ThrowPreviewedMesh->GetActorLocation();
+	FVector CameraLocation = MeshLocation + FVector(OptimalDistance, 0, BoxExtent.Z * 0.5f);
+	ThrowMeshCaptureActor->SetActorLocation(CameraLocation);
+	ThrowMeshCaptureActor->SetActorRotation((MeshLocation - CameraLocation).Rotation());
+
+	if (ThrowMeshPreviewWidget)
+	{
+		ThrowMeshPreviewWidget->SetInitialDistance(OptimalDistance);
+	}
+
+	PRINTLOG(TEXT("✅ Throw camera auto-adjusted: Distance=%.1f"), OptimalDistance);
+}
+
+void UMVE_AUD_CustomizationManager::SaveThrowMeshPreset(const FString& ModelUrl)
+{
+	PRINTLOG(TEXT("=== SaveThrowMeshPreset called ==="));
+	PRINTLOG(TEXT("Model URL: %s"), *ModelUrl);
+
+	// FCustomizationData 구조 사용 (SocketName으로 구분)
+	SavedThrowMeshData.SocketName = TEXT("THROW_MESH");  // 특수 키워드
+	SavedThrowMeshData.ModelUrl = ModelUrl;
+	SavedThrowMeshData.RelativeLocation = FVector::ZeroVector;
+	SavedThrowMeshData.RelativeRotation = FRotator::ZeroRotator;
+	SavedThrowMeshData.RelativeScale = 1.0f;
+
+	PRINTLOG(TEXT("✅ Throw mesh data saved to SavedThrowMeshData"));
+
+	// 서버에 저장 (액세서리 + 던지기 메시 모두)
+	// ⭐ PresetName 통일: "MyCustomization" 사용
+	SaveAccessoryPresetToServer(TEXT("MyCustomization"));
+
+	PRINTLOG(TEXT("✅ Throw mesh preset saved to server"));
+}
+
+void UMVE_AUD_CustomizationManager::LoadThrowMeshPreset()
+{
+	PRINTLOG(TEXT("=== LoadThrowMeshPreset called ==="));
+
+	// 기존 LoadAccessoryPresetFromServer 사용
+	// HandleLoadPresetComplete에서 SocketName으로 구분
+	LoadAccessoryPresetFromServer();
+}
+
+void UMVE_AUD_CustomizationManager::LoadThrowMeshFromURL(const FString& ModelUrl)
+{
+	PRINTLOG(TEXT("=== LoadThrowMeshFromURL called ==="));
+	PRINTLOG(TEXT("Model URL: %s"), *ModelUrl);
+
+	FString SaveDir = FPaths::ProjectSavedDir() / TEXT("ThrowMesh");
+	IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
+	if (!PlatformFile.DirectoryExists(*SaveDir))
+	{
+		PlatformFile.CreateDirectoryTree(*SaveDir);
+	}
+
+	FString SavePath = SaveDir / TEXT("ThrowMesh.glb");
+
+	FOnHttpDownloadResult OnDownloadComplete;
+	OnDownloadComplete.BindLambda([this, SavePath](bool bSuccess, const TArray<uint8>& FileData, const FString& Error)
+	{
+		if (bSuccess && FileData.Num() > 0)
+		{
+			if (FFileHelper::SaveArrayToFile(FileData, *SavePath))
+			{
+				PRINTLOG(TEXT("✅ Throw mesh downloaded successfully: %s"), *SavePath);
+
+				// GLB 로드 → StaticMesh 변환
+				LoadMeshFromGLB(SavePath, [this](AActor* LoadedActor)
+				{
+					if (LoadedActor)
+					{
+						if (UStaticMeshComponent* MeshComp = LoadedActor->FindComponentByClass<UStaticMeshComponent>())
+						{
+							ThrowMesh = MeshComp->GetStaticMesh();
+							PRINTLOG(TEXT("✅ ThrowMesh loaded and cached"));
+						}
+
+						// 프리뷰용 액터는 제거
+						LoadedActor->Destroy();
+					}
+				});
+			}
+			else
+			{
+				PRINTLOG(TEXT("❌ Failed to save throw mesh file"));
+			}
+		}
+		else
+		{
+			PRINTLOG(TEXT("❌ Throw mesh download failed: %s"), *Error);
+		}
+	});
+
+	FMVE_HTTP_Client::DownloadFile(ModelUrl, TEXT(""), OnDownloadComplete);
 }

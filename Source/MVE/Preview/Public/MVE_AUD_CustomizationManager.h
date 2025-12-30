@@ -126,6 +126,23 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Customization")
 	AActor* GetPreviewedMesh() const { return PreviewedMesh; }
 
+	// ========== 던지기 메시 프리뷰 ==========
+	// 던지기 메시 프리뷰 시작
+	UFUNCTION(BlueprintCallable, Category = "Customization")
+	void StartThrowMeshPreview(const FString& GLBFilePath, UMVE_AUD_WidgetClass_PreviewWidget* InPreviewWidget);
+
+	// 던지기 프리뷰 종료
+	UFUNCTION(BlueprintCallable, Category = "Customization")
+	void StopThrowMeshPreview();
+
+	// 던지기 메시 가져오기
+	UFUNCTION(BlueprintCallable, Category = "Customization")
+	UStaticMesh* GetThrowMesh() const { return ThrowMesh; }
+
+	// 던지기 메시 직접 설정 (멀티플레이 동기화용)
+	UFUNCTION(BlueprintCallable, Category = "Customization")
+	void SetThrowMeshDirect(UStaticMesh* NewMesh) { ThrowMesh = NewMesh; }
+
 	// 프리뷰 캐릭터 가져오기 (GameMode에서)
 	UFUNCTION(BlueprintCallable, Category = "Customization")
 	AActor* GetPreviewCharacter() const;
@@ -133,6 +150,10 @@ public:
 	// 저장된 커스터마이징 데이터 가져오기
 	UFUNCTION(BlueprintCallable, Category = "Customization")
 	FCustomizationData GetSavedCustomization() const { return SavedCustomization; }
+
+	// 저장된 던지기 메시 데이터 가져오기
+	UFUNCTION(BlueprintCallable, Category = "Customization")
+	FCustomizationData GetSavedThrowMeshData() const { return SavedThrowMeshData; }
 
 	// Transform 저장
 	UFUNCTION(BlueprintCallable, Category = "Customization")
@@ -149,27 +170,55 @@ private:
 	// 프리뷰용 캐릭터 생성
 	AActor* SpawnPreviewCharacter();
 	
+	// ========== 액세서리용 프리뷰 (기존) ==========
 	// Render Target (에디터에서 만든 RT)
 	UPROPERTY()
 	UTextureRenderTarget2D* MeshRenderTarget;
-    
+
 	// Scene Capture Actor
 	UPROPERTY()
 	AMVE_AUD_PreviewCaptureActor* MeshCaptureActor;
-    
+
 	// 프리뷰 중인 액세서리 액터
 	UPROPERTY()
 	AActor* PreviewedMesh;
-    
+
 	// 프리뷰 위젯 참조
 	UPROPERTY()
 	UMVE_AUD_WidgetClass_PreviewWidget* MeshPreviewWidget;
+
+	// ========== 던지기용 프리뷰 (새로 추가) ==========
+	// 던지기 메시용 Render Target
+	UPROPERTY()
+	UTextureRenderTarget2D* ThrowMeshRenderTarget;
+
+	// 던지기 메시용 Scene Capture Actor
+	UPROPERTY()
+	AMVE_AUD_PreviewCaptureActor* ThrowMeshCaptureActor;
+
+	// 던지기 메시 프리뷰 중인 액터
+	UPROPERTY()
+	AActor* ThrowPreviewedMesh;
+
+	// 던지기 메시 프리뷰 위젯 참조
+	UPROPERTY()
+	UMVE_AUD_WidgetClass_PreviewWidget* ThrowMeshPreviewWidget;
+
+	// 던지기용 메시 (캐싱)
+	UPROPERTY()
+	UStaticMesh* ThrowMesh;
     
 	// GLB 로딩 완료 콜백
 	void OnMeshLoaded(AActor* LoadedActor);
-    
+
+	// 던지기 메시 GLB 로딩 완료 콜백
+	void OnThrowMeshLoaded(AActor* LoadedActor);
+
 	// 바운딩 박스 기반 자동 카메라 거리 조정
 	void AutoAdjustCameraDistance();
+
+	// 던지기 메시용 카메라 거리 조정
+	void AutoAdjustThrowCameraDistance();
 	
 	// GLB 파일 로딩 (비동기)
 	void LoadMeshFromGLB(const FString& GLBFilePath, TFunction<void(AActor*)> OnLoadComplete);
@@ -188,7 +237,13 @@ private:
 	UPROPERTY()
 	FCustomizationData SavedCustomization;
 
-	
+	// 던지기 메시 데이터 (별도 저장)
+	UPROPERTY()
+	FCustomizationData SavedThrowMeshData;
+
+	// 서버에 저장된 프리셋 ID (-1이면 아직 저장 안 함)
+	UPROPERTY()
+	int32 CachedPresetId = -1;
 
 private:
 	// 캐릭터 대비 메시의 최대 크기 비율 (예: 0.3 = 캐릭터의 30%)
@@ -231,6 +286,18 @@ public:
 	void LoadAccessoryPresetFromServer();
 
 	void HandleLoadPresetComplete(bool bSuccess, const FGetPresetListResponseData& Data, const FString& ErrorCode);
+
+	// ========== 던지기 메시 저장/로드 ==========
+	// 던지기 메시 프리셋 서버에 저장
+	UFUNCTION(BlueprintCallable, Category = "Customization")
+	void SaveThrowMeshPreset(const FString& ModelUrl);
+
+	// 서버에서 던지기 메시 프리셋 로드
+	UFUNCTION(BlueprintCallable, Category = "Customization")
+	void LoadThrowMeshPreset();
+
+	// 던지기 메시 URL에서 GLB 다운로드 및 로드
+	void LoadThrowMeshFromURL(const FString& ModelUrl);
 
 private:
 	// HTTP 응답 콜백 (Deprecated - HandleLoadPresetComplete 사용)

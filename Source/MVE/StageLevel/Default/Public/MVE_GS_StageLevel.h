@@ -30,6 +30,10 @@ public:
 	
 	void SetViewerCount(int32 NewCount);
 
+	// UserID로 던지기 메시 가져오기 (ThrowObject에서 사용)
+	UFUNCTION(BlueprintCallable, Category = "MVE|Customization")
+	UStaticMesh* GetThrowMeshForUser(const FString& UserID) const;
+
 protected:
 	UPROPERTY(ReplicatedUsing = OnRep_ViewerCount)
 	int32 ViewerCount;
@@ -53,11 +57,18 @@ public:
 protected:
 	virtual void BeginPlay() override;
 
+	
+
 private:
 	// 액세서리 다운로드 진행 중인 세션
 	// Key: UserID, Value: CustomizationData
 	UPROPERTY()
 	TMap<FString, FCustomizationData> PendingAccessories;
+
+	// UserID별 던지기 메시 저장
+	// Key: UserID, Value: ThrowMesh
+	UPROPERTY()
+	TMap<FString, UStaticMesh*> UserThrowMeshes;
 
 	// SenderReceiver 델리게이트 콜백
 	UFUNCTION()

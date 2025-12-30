@@ -6,6 +6,9 @@
 #include "Components/SphereComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "GameFramework/ProjectileMovementComponent.h"
+#include "Net/UnrealNetwork.h"
+#include "MVE_GS_StageLevel.h"
+#include "MVE.h"
 
 AMVE_ThrowObject::AMVE_ThrowObject()
 {
@@ -84,12 +87,59 @@ void AMVE_ThrowObject::Tick(float DeltaTime)
 	}
 }
 
+void AMVE_ThrowObject::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	DOREPLIFETIME(AMVE_ThrowObject, OwnerUserID);
+}
+
 void AMVE_ThrowObject::BeginPlay()
 {
 	Super::BeginPlay();
-	
+
 	// 서버만 물리 효과를 연산하고, 클라이언트에 리플리케이션된다
 	ProjectileMovementComp->SetActive(HasAuthority());
+
+	// ⭐ OwnerUserID가 이미 설정되어 있으면 메시 적용 (서버용)
+	if (!OwnerUserID.IsEmpty())
+	{
+		OnRep_OwnerUserID();
+	}
+	else
+	{
+		PRINTLOG(TEXT("⚠️ OwnerUserID is empty in BeginPlay, waiting for replication..."));
+	}
+}
+
+void AMVE_ThrowObject::OnRep_OwnerUserID()
+{
+	PRINTLOG(TEXT("=== OnRep_OwnerUserID called ==="));
+	PRINTLOG(TEXT("OwnerUserID: %s"), *OwnerUserID);
+
+	if (OwnerUserID.IsEmpty())
+	{
+		PRINTLOG(TEXT("⚠️ OwnerUserID is empty, using default mesh"));
+		return;
+	}
+
+	// GameState에서 Owner의 던지기 메시 가져오기
+	if (AMVE_GS_StageLevel* GameState = GetWorld()->GetGameState<AMVE_GS_StageLevel>())
+	{
+		UStaticMesh* OwnerThrowMesh = GameState->GetThrowMeshForUser(OwnerUserID);
+		if (OwnerThrowMesh && MeshComp)
+		{
+			MeshComp->SetStaticMesh(OwnerThrowMesh);
+			PRINTLOG(TEXT("✅ Throw mesh applied for UserID: %s"), *OwnerUserID);
+		}
+		else
+		{
+			PRINTLOG(TEXT("⚠️ No throw mesh found for UserID: %s, using default"), *OwnerUserID);
+		}
+	}
+	else
+	{
+		PRINTLOG(TEXT("❌ GameState not found"));
+	}
 }
 
 void AMVE_ThrowObject::FireInDirection(const FVector& ShootDirection)
@@ -101,4 +151,12 @@ void AMVE_ThrowObject::FireInDirection(const FVector& ShootDirection)
 	});
 	GetWorld()->GetTimerManager().SetTimer(TimerHandle, TimerDelegate, 0.5f, false);
 	ProjectileMovementComp->Velocity = ShootDirection * ProjectileMovementComp->InitialSpeed;
+}
+
+void AMVE_ThrowObject::Multicast_SetCustomMesh_Implementation(UStaticMesh* NewMesh)
+{
+	if (MeshComp && NewMesh)
+	{
+		MeshComp->SetStaticMesh(NewMesh);
+	}
 }

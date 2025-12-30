@@ -13,11 +13,13 @@
 #include "StageLevel/Actor/Public/MVE_StageLevel_AudCharacterShooterComponent.h"
 #include "StageLevel/Default/Public/MVE_PC_StageLevel.h"
 #include "Curves/CurveFloat.h"
+#include "GameFramework/PlayerState.h"
 #include "GameFramework/ProjectileMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "Net/UnrealNetwork.h"
 #include "StageLevel/Actor/Public/MVE_StageLevel_AudCamera.h"
 #include "StageLevel/Actor/Public/MVE_ThrowObject.h"
+#include "Preview/Public/MVE_AUD_CustomizationManager.h"
 
 AMVE_StageLevel_AudCharacter::AMVE_StageLevel_AudCharacter()
 {
@@ -537,11 +539,17 @@ void AMVE_StageLevel_AudCharacter::Multicast_ExecuteThrow_Implementation()
 
 void AMVE_StageLevel_AudCharacter::ThrowObject()
 {
+	PRINTLOG(TEXT("=== ThrowObject called ==="));
+	PRINTLOG(TEXT("HasAuthority: %d"), HasAuthority());
+
 	if (HasAuthority() == false)
 	{
+		PRINTLOG(TEXT("⚠️ Not authority, skipping throw"));
 		return;
 	}
-	
+
+	PRINTLOG(TEXT("ThrowObjectClass valid: %d"), ThrowObjectClass != nullptr);
+
 	if (ThrowObjectClass)
 	{
 		// 소켓을 통해 던지는 위치 획득
@@ -568,7 +576,20 @@ void AMVE_StageLevel_AudCharacter::ThrowObject()
 				ProjectileComp->InitialSpeed = ThrowSpeed;
 				ProjectileComp->MaxSpeed = ThrowSpeed;
 			}
-			
+
+			// ⭐ Owner의 UserID 설정 후 메시 적용
+			if (APlayerController* PC = Cast<APlayerController>(GetController()))
+			{
+				if (APlayerState* PS = PC->GetPlayerState<APlayerState>())
+				{
+					SpawnedObject->OwnerUserID = PS->GetPlayerName();
+					PRINTLOG(TEXT("✅ ThrowObject OwnerUserID set: %s"), *SpawnedObject->OwnerUserID);
+
+					// ⭐ 서버에서는 OnRep이 호출되지 않으므로 수동으로 메시 설정
+					SpawnedObject->OnRep_OwnerUserID();
+				}
+			}
+
 			// 위치 이동
 			SpawnedObject->FireInDirection(ThrowDirection);
 		}
