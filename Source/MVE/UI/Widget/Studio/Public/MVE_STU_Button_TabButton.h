@@ -54,10 +54,10 @@ protected:
 	TObjectPtr<UTextBlock> Text_TabName;
 
 	UPROPERTY(EditDefaultsOnly, Category = "TabColor")
-	FLinearColor SelectedColor;
+	FLinearColor SelectedColor = FLinearColor(0.0f, 0.48f, 1.0f, 1.0f); // 밝은 파란색
 
 	UPROPERTY(EditDefaultsOnly, Category = "TabColor")
-	FLinearColor UnselectedColor;
+	FLinearColor UnselectedColor = FLinearColor(0.2f, 0.2f, 0.2f, 1.0f); // 어두운 회색
 
 	UFUNCTION()
 	void OnTabClicked();

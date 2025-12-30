@@ -2,6 +2,8 @@
 
 #include "MVE_StageLevel_EffectSequenceManager.h"
 #include "MVE_StageLevel_SpotlightManager.h"
+#include "MVE_StageLevel_FlameManager.h"
+#include "MVE_StageLevel_FanfareManager.h"
 #include "MVE.h"
 #include "Kismet/GameplayStatics.h"
 
@@ -15,7 +17,8 @@ AMVE_StageLevel_EffectSequenceManager::AMVE_StageLevel_EffectSequenceManager()
 	bIsPlaying = false;
 	AccumulatedTime = 0.0f;
 	SpotlightManager = nullptr;
-	//PerformanceManager = nullptr;
+	FlameManager = nullptr;
+	FanfareManager = nullptr;
 }
 
 void AMVE_StageLevel_EffectSequenceManager::BeginPlay()
@@ -175,22 +178,49 @@ void AMVE_StageLevel_EffectSequenceManager::ExecuteEffectAtTimeStamp(const FEffe
 			PRINTLOG(TEXT("❌ SpotlightManager를 찾을 수 없습니다"));
 		}
 	}
-	else if (TagString.StartsWith(TEXT("VFX.Flame")) || TagString.StartsWith(TEXT("VFX.Fanfare")))
+	else if (TagString.StartsWith(TEXT("VFX.Flame")))
 	{
-		/*
-		// Flame 또는 Fanfare 이펙트
-		if (PerformanceManager)
+		// Flame 이펙트
+		if (FlameManager)
 		{
-			// TODO: PerformanceManager에 GameplayTag 기반 실행 함수 추가 필요
-			// PerformanceManager->ExecuteByTag(Data.AssetID);
-			PRINTLOG(TEXT("PerformanceManager 호출: %s"), *TagString);
+			int32 SequenceNumber = GetFlameSequenceNumber(Data.AssetID);
+			if (SequenceNumber >= 0)
+			{
+				float DelayBetweenOrder = 0.0f; // 동시 실행
+				FlameManager->ExecuteSequenceNumber(SequenceNumber, DelayBetweenOrder);
+				PRINTLOG(TEXT("✅ FlameManager 실행 - SequenceNumber: %d, AssetID: %s"), SequenceNumber, *TagString);
+			}
+			else
+			{
+				PRINTLOG(TEXT("⚠️ 유효하지 않은 Flame AssetID: %s"), *TagString);
+			}
 		}
 		else
 		{
-			PRINTLOG(TEXT("PerformanceManager를 찾을 수 없습니다"));
+			PRINTLOG(TEXT("❌ FlameManager를 찾을 수 없습니다"));
 		}
-		*/
-		PRINTLOG(TEXT("🔜 PerformanceManager 연동 예정 - AssetID: %s"), *TagString);
+	}
+	else if (TagString.StartsWith(TEXT("VFX.Fanfare")))
+	{
+		// Fanfare 이펙트
+		if (FanfareManager)
+		{
+			int32 SequenceNumber = GetFanfareSequenceNumber(Data.AssetID);
+			if (SequenceNumber >= 0)
+			{
+				float DelayBetweenOrder = 0.0f; // 동시 실행
+				FanfareManager->ExecuteSequenceNumber(SequenceNumber, DelayBetweenOrder);
+				PRINTLOG(TEXT("✅ FanfareManager 실행 - SequenceNumber: %d, AssetID: %s"), SequenceNumber, *TagString);
+			}
+			else
+			{
+				PRINTLOG(TEXT("⚠️ 유효하지 않은 Fanfare AssetID: %s"), *TagString);
+			}
+		}
+		else
+		{
+			PRINTLOG(TEXT("❌ FanfareManager를 찾을 수 없습니다"));
+		}
 	}
 	else
 	{
@@ -234,36 +264,120 @@ int32 AMVE_StageLevel_EffectSequenceManager::GetSpotlightSequenceNumber(const FG
 	}
 }
 
+int32 AMVE_StageLevel_EffectSequenceManager::GetFlameSequenceNumber(const FGameplayTag& AssetID) const
+{
+	FString TagString = AssetID.ToString();
+
+	// VFX.Flame.VerySmallSizeAndVerySlowSpeed → 0
+	if (TagString == TEXT("VFX.Flame.VerySmallSizeAndVerySlowSpeed"))
+	{
+		return 0;
+	}
+	// VFX.Flame.SmallSizeAndSlowSpeed → 1
+	else if (TagString == TEXT("VFX.Flame.SmallSizeAndSlowSpeed"))
+	{
+		return 1;
+	}
+	// VFX.Flame.NormalSmallSizeAndNormalSpeed → 2
+	else if (TagString == TEXT("VFX.Flame.NormalSmallSizeAndNormalSpeed"))
+	{
+		return 2;
+	}
+	// VFX.Flame.FastSizeAndFastSpeed → 3
+	else if (TagString == TEXT("VFX.Flame.FastSizeAndFastSpeed"))
+	{
+		return 3;
+	}
+	// VFX.Flame.VeryFastSizeAndVeryFastSpeed → 4
+	else if (TagString == TEXT("VFX.Flame.VeryFastSizeAndVeryFastSpeed"))
+	{
+		return 4;
+	}
+	else
+	{
+		// 변환 실패
+		return -1;
+	}
+}
+
+int32 AMVE_StageLevel_EffectSequenceManager::GetFanfareSequenceNumber(const FGameplayTag& AssetID) const
+{
+	FString TagString = AssetID.ToString();
+
+	// VFX.Fanfare.VeryLowSpawnRate → 0
+	if (TagString == TEXT("VFX.Fanfare.VeryLowSpawnRate"))
+	{
+		return 0;
+	}
+	// VFX.Fanfare.LowSpawnRate → 1
+	else if (TagString == TEXT("VFX.Fanfare.LowSpawnRate"))
+	{
+		return 1;
+	}
+	// VFX.Fanfare.NormalSpawnRate → 2
+	else if (TagString == TEXT("VFX.Fanfare.NormalSpawnRate"))
+	{
+		return 2;
+	}
+	// VFX.Fanfare.HighSpawnRate → 3
+	else if (TagString == TEXT("VFX.Fanfare.HighSpawnRate"))
+	{
+		return 3;
+	}
+	// VFX.Fanfare.VeryHighSpawnRate → 4
+	else if (TagString == TEXT("VFX.Fanfare.VeryHighSpawnRate"))
+	{
+		return 4;
+	}
+	else
+	{
+		// 변환 실패
+		return -1;
+	}
+}
+
 void AMVE_StageLevel_EffectSequenceManager::FindManagers()
 {
-	// SpotlightManager 찾기
 	TArray<AActor*> FoundActors;
+
+	// SpotlightManager 찾기
 	UGameplayStatics::GetAllActorsOfClass(this, AMVE_StageLevel_SpotlightManager::StaticClass(), FoundActors);
 
 	if (FoundActors.Num() > 0)
 	{
 		SpotlightManager = Cast<AMVE_StageLevel_SpotlightManager>(FoundActors[0]);
-		PRINTLOG(TEXT("SpotlightManager 찾음"));
+		PRINTLOG(TEXT("✅ SpotlightManager 찾음"));
 	}
 	else
 	{
-		PRINTLOG(TEXT("SpotlightManager를 찾을 수 없습니다"));
+		PRINTLOG(TEXT("⚠️ SpotlightManager를 찾을 수 없습니다"));
 	}
 
-	// PerformanceManager 찾기
-	// TODO: PerformanceManager 클래스가 구현되면 주석 해제
-	/*
+	// FlameManager 찾기
 	FoundActors.Empty();
-	UGameplayStatics::GetAllActorsOfClass(this, AMVE_StageLevel_PerformanceManager::StaticClass(), FoundActors);
+	UGameplayStatics::GetAllActorsOfClass(this, AMVE_StageLevel_FlameManager::StaticClass(), FoundActors);
 
 	if (FoundActors.Num() > 0)
 	{
-		PerformanceManager = Cast<AMVE_StageLevel_PerformanceManager>(FoundActors[0]);
-		PRINTLOG(TEXT("PerformanceManager 찾음"));
+		FlameManager = Cast<AMVE_StageLevel_FlameManager>(FoundActors[0]);
+		PRINTLOG(TEXT("✅ FlameManager 찾음"));
 	}
 	else
 	{
-		PRINTLOG(TEXT("PerformanceManager를 찾을 수 없습니다"));
+		PRINTLOG(TEXT("⚠️ FlameManager를 찾을 수 없습니다"));
 	}
-	*/
+
+	// FanfareManager 찾기
+	FoundActors.Empty();
+	UGameplayStatics::GetAllActorsOfClass(this, AMVE_StageLevel_FanfareManager::StaticClass(), FoundActors);
+
+	if (FoundActors.Num() > 0)
+	{
+		FanfareManager = Cast<AMVE_StageLevel_FanfareManager>(FoundActors[0]);
+		PRINTLOG(TEXT("✅ FanfareManager 찾음"));
+	}
+	else
+	{
+		PRINTLOG(TEXT("⚠️ FanfareManager를 찾을 수 없습니다"));
+	}
 }

@@ -43,12 +43,20 @@ public:
     UPROPERTY(BlueprintAssignable, Category = "GenAI|Delegate")
     FOnGenerationResponse OnGenerationResponse;
 
-    // 다운로드 진행률 
+    // 다운로드 진행률
     UPROPERTY(BlueprintAssignable, Category = "GenAI|Delegate")
     FOnDownloadProgress OnDownloadProgress;
 
+    //
+     // 음악 분석 완료 시 발동
+     //
+     // AI 서버가 음악 메타데이터 분석 후 타임라인별 이펙트 데이터 반환
+     // Widget에서 이 델리게이트에 바인딩하여 EffectSequenceManager에 데이터 전달
+    UPROPERTY(BlueprintAssignable, Category = "GenAI|Delegate")
+    FOnMusicAnalysisComplete OnMusicAnalysisComplete;
+
     // ========================================================================
-    //                          서버 설정  
+    //                          서버 설정
     // ========================================================================
 
     // AI 서버 URL  //TODO
@@ -59,7 +67,11 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GenAI|Config")
     FString GenerateEndpoint = TEXT("/generate_3D_obj");
 
-    // 다운로드 파일 저장 폴더명 
+    // 음악 분석 API 엔드포인트
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GenAI|Config")
+    FString MusicAnalysisEndpoint = TEXT("/analyze_music");
+
+    // 다운로드 파일 저장 폴더명
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GenAI|Config")
     FString LocalSaveFolder = TEXT("GenAIAssets");
 
@@ -93,6 +105,41 @@ public:
         const FString& Prompt,
         const FString& UserEmail,
         const FString& ImagePath = TEXT("")
+    );
+
+    // SendMusicAnalysisRequest
+     //
+     // AI 서버에 음악 분석 요청 전송
+     // 음악 메타데이터(Title, Artist)를 JSON으로 전송하여
+     // TimeStamp별 이펙트 AssetID 배열 수신
+     //
+     // @param Title  - 음악 제목
+     // @param Artist - 아티스트 이름
+     //
+     // [전송 데이터 (JSON)]
+     // {
+     //   "title": "노래 제목",
+     //   "artist": "가수 이름"
+     // }
+     //
+     // [응답 데이터 (JSON)]
+     // {
+     //   "success": true,
+     //   "data": [
+     //     {"timestamp": 50, "category": "Spotlight", "asset_id": "VFX.Spotlight.FastSpeed"},
+     //     {"timestamp": 120, "category": "Flame", "asset_id": "VFX.Flame.VeryFastSizeAndVeryFastSpeed"},
+     //     ...
+     //   ]
+     // }
+     //
+     // [결과]
+     // - 성공 시: OnMusicAnalysisComplete 발동 (TArray<FEffectSequenceData> 전달)
+     // - 실패 시: OnMusicAnalysisComplete에서 에러 메시지 전달
+
+    UFUNCTION(BlueprintCallable, Category = "GenAI|Send")
+    void SendMusicAnalysisRequest(
+        const FString& Title,
+        const FString& Artist
     );
 
     // ========================================================================
@@ -151,14 +198,21 @@ private:
     //                          내부 HTTP 콜백
     // ========================================================================
 
-    // 생성 요청 응답 처리 → 메타데이터 파싱 → 자동 다운로드 
+    // 생성 요청 응답 처리 → 메타데이터 파싱 → 자동 다운로드
     void HandleGenerationResponse(
         TSharedPtr<class IHttpRequest, ESPMode::ThreadSafe> Request,
         TSharedPtr<class IHttpResponse, ESPMode::ThreadSafe> Response,
         bool bWasSuccessful
     );
 
-    // 다운로드 완료 처리 → 파일 저장 → UE 에셋 변환 → 델리게이트 발동 
+    // 음악 분석 요청 응답 처리 → JSON 파싱 → FEffectSequenceData 배열 생성 → 델리게이트 발동
+    void HandleMusicAnalysisResponse(
+        TSharedPtr<class IHttpRequest, ESPMode::ThreadSafe> Request,
+        TSharedPtr<class IHttpResponse, ESPMode::ThreadSafe> Response,
+        bool bWasSuccessful
+    );
+
+    // 다운로드 완료 처리 → 파일 저장 → UE 에셋 변환 → 델리게이트 발동
     void HandleDownloadComplete(
         TSharedPtr<class IHttpRequest, ESPMode::ThreadSafe> Request,
         TSharedPtr<class IHttpResponse, ESPMode::ThreadSafe> Response,

@@ -13,6 +13,11 @@
 #include "glTFRuntimeFunctionLibrary.h"
 #include "MVE.h"
 #include "Engine/StaticMesh.h"
+#include "StageLevel/Data/MVE_EffectSequenceData.h"
+#include "Dom/JsonObject.h"
+#include "Serialization/JsonReader.h"
+#include "Serialization/JsonSerializer.h"
+#include "GameplayTagsManager.h"
 
 // ============================================================================
 //                          정적 멤버 초기화
@@ -303,6 +308,92 @@ void USenderReceiver::SendGenerationRequest(
     LogNetworkDiagnostics(FullURL);
 }
 
+// ============================================================================
+//                          송신부: 음악 분석 요청 (JSON)
+// ============================================================================
+
+void USenderReceiver::SendMusicAnalysisRequest(
+    const FString& Title,
+    const FString& Artist)
+{
+    UE_LOG(LogMVE, Log, TEXT(""));
+    UE_LOG(LogMVE, Log, TEXT("╔════════════════════════════════════════════════════════════╗"));
+    UE_LOG(LogMVE, Log, TEXT("║              송신: AI 서버 음악 분석 요청 (JSON)             ║"));
+    UE_LOG(LogMVE, Log, TEXT("╚════════════════════════════════════════════════════════════╝"));
+    UE_LOG(LogMVE, Log, TEXT(""));
+
+    // 설정 확인
+    UE_LOG(LogMVE, Warning, TEXT("🔍 설정 확인:"));
+    UE_LOG(LogMVE, Warning, TEXT("  ServerURL = %s"), *ServerURL);
+    UE_LOG(LogMVE, Warning, TEXT("  MusicAnalysisEndpoint = %s"), *MusicAnalysisEndpoint);
+    UE_LOG(LogMVE, Warning, TEXT("  Title = %s"), *Title);
+    UE_LOG(LogMVE, Warning, TEXT("  Artist = %s"), *Artist);
+
+    // ------------------------------------------------------------------------
+    // HTTP 요청 생성
+    // ------------------------------------------------------------------------
+    TSharedRef<IHttpRequest, ESPMode::ThreadSafe> HttpRequest =
+        FHttpModule::Get().CreateRequest();
+
+    FString FullURL = ServerURL + MusicAnalysisEndpoint;
+    UE_LOG(LogMVE, Warning, TEXT("  FullURL = %s"), *FullURL);
+
+    HttpRequest->SetURL(FullURL);
+    HttpRequest->SetVerb(TEXT("POST"));
+    HttpRequest->SetTimeout(RequestTimeout);
+    HttpRequest->SetHeader(TEXT("Content-Type"), TEXT("application/json"));
+
+    UE_LOG(LogMVE, Log, TEXT("  [요청 URL] %s"), *FullURL);
+
+    // ------------------------------------------------------------------------
+    // JSON 요청 본문 생성
+    // ------------------------------------------------------------------------
+    TSharedPtr<FJsonObject> JsonObject = MakeShareable(new FJsonObject());
+    JsonObject->SetStringField(TEXT("title"), Title);
+    JsonObject->SetStringField(TEXT("artist"), Artist);
+
+    FString JsonString;
+    TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&JsonString);
+    if (FJsonSerializer::Serialize(JsonObject.ToSharedRef(), Writer))
+    {
+        UE_LOG(LogMVE, Log, TEXT("  [JSON 요청]"));
+        UE_LOG(LogMVE, Log, TEXT("  %s"), *JsonString);
+    }
+    else
+    {
+        UE_LOG(LogMVE, Error, TEXT("  [상태] ✗ JSON 직렬화 실패"));
+
+        TArray<FEffectSequenceData> EmptyArray;
+        OnMusicAnalysisComplete.Broadcast(false, EmptyArray, TEXT("JSON 직렬화 실패"));
+        return;
+    }
+
+    // ------------------------------------------------------------------------
+    // 전송
+    // ------------------------------------------------------------------------
+    HttpRequest->SetContentAsString(JsonString);
+
+    HttpRequest->OnProcessRequestComplete().BindUObject(
+        this, &USenderReceiver::HandleMusicAnalysisResponse
+    );
+
+    if (HttpRequest->ProcessRequest())
+    {
+        UE_LOG(LogMVE, Log, TEXT("  [상태] ✓ 요청 전송 성공"));
+    }
+    else
+    {
+        UE_LOG(LogMVE, Error, TEXT("  [상태] ✗ 요청 전송 실패"));
+
+        TArray<FEffectSequenceData> EmptyArray;
+        OnMusicAnalysisComplete.Broadcast(false, EmptyArray, TEXT("HTTP 요청 전송 실패"));
+    }
+
+    UE_LOG(LogMVE, Log, TEXT(""));
+
+    LogNetworkDiagnostics(FullURL);
+}
+
 
 // ============================================================================
 //                          수신부: GLB 바이너리 직접 수신
@@ -468,6 +559,154 @@ void USenderReceiver::HandleGenerationResponse(
         UE_LOG(LogMVE, Error, TEXT("  [상태] ✗ UE 에셋 변환 실패"));
     }
     
+    UE_LOG(LogMVE, Log, TEXT(""));
+}
+
+// ============================================================================
+//                          수신부: 음악 분석 응답 (JSON)
+// ============================================================================
+
+void USenderReceiver::HandleMusicAnalysisResponse(
+    TSharedPtr<IHttpRequest, ESPMode::ThreadSafe> Request,
+    TSharedPtr<IHttpResponse, ESPMode::ThreadSafe> Response,
+    bool bWasSuccessful)
+{
+    UE_LOG(LogMVE, Log, TEXT(""));
+    UE_LOG(LogMVE, Log, TEXT("╔════════════════════════════════════════════════════════════╗"));
+    UE_LOG(LogMVE, Log, TEXT("║              수신: AI 서버 음악 분석 응답 (JSON)             ║"));
+    UE_LOG(LogMVE, Log, TEXT("╚════════════════════════════════════════════════════════════╝"));
+    UE_LOG(LogMVE, Log, TEXT(""));
+
+    TArray<FEffectSequenceData> SequenceDataArray;
+
+    // ------------------------------------------------------------------------
+    // 응답 유효성 검사
+    // ------------------------------------------------------------------------
+
+    if (!bWasSuccessful || !Response.IsValid())
+    {
+        AnalyzeConnectionError(Response, bWasSuccessful);
+
+        UE_LOG(LogMVE, Error, TEXT("  [상태] ✗ HTTP 요청 실패 - 연결 오류"));
+
+        OnMusicAnalysisComplete.Broadcast(false, SequenceDataArray, TEXT("HTTP 연결 실패"));
+        return;
+    }
+
+    int32 ResponseCode = Response->GetResponseCode();
+
+    UE_LOG(LogMVE, Log, TEXT("  [응답 코드] %d"), ResponseCode);
+
+    // ------------------------------------------------------------------------
+    // 응답 코드 확인
+    // ------------------------------------------------------------------------
+
+    if (ResponseCode != 200)
+    {
+        FString ResponseContent = Response->GetContentAsString();
+        UE_LOG(LogMVE, Error, TEXT("  [서버 응답] %s"), *ResponseContent);
+
+        if (ResponseCode >= 400 && ResponseCode < 500)
+        {
+            UE_LOG(LogMVE, Error, TEXT("  [상태] ✗ 클라이언트 에러 (%d)"), ResponseCode);
+            OnMusicAnalysisComplete.Broadcast(false, SequenceDataArray,
+                FString::Printf(TEXT("클라이언트 에러: %d"), ResponseCode));
+        }
+        else if (ResponseCode >= 500)
+        {
+            UE_LOG(LogMVE, Error, TEXT("  [상태] ✗ 서버 에러 (%d)"), ResponseCode);
+            OnMusicAnalysisComplete.Broadcast(false, SequenceDataArray,
+                FString::Printf(TEXT("서버 에러: %d"), ResponseCode));
+        }
+        return;
+    }
+
+    // ------------------------------------------------------------------------
+    // JSON 응답 파싱
+    // ------------------------------------------------------------------------
+
+    FString ResponseContent = Response->GetContentAsString();
+    UE_LOG(LogMVE, Log, TEXT("  [응답 내용] %s"), *ResponseContent);
+
+    TSharedPtr<FJsonObject> JsonObject;
+    TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(ResponseContent);
+
+    if (!FJsonSerializer::Deserialize(Reader, JsonObject) || !JsonObject.IsValid())
+    {
+        UE_LOG(LogMVE, Error, TEXT("  [상태] ✗ JSON 파싱 실패"));
+        OnMusicAnalysisComplete.Broadcast(false, SequenceDataArray, TEXT("JSON 파싱 실패"));
+        return;
+    }
+
+    // success 필드 확인
+    bool bSuccess = JsonObject->GetBoolField(TEXT("success"));
+    if (!bSuccess)
+    {
+        FString ErrorMessage = JsonObject->HasField(TEXT("error"))
+            ? JsonObject->GetStringField(TEXT("error"))
+            : TEXT("알 수 없는 오류");
+
+        UE_LOG(LogMVE, Error, TEXT("  [상태] ✗ AI 분석 실패: %s"), *ErrorMessage);
+        OnMusicAnalysisComplete.Broadcast(false, SequenceDataArray, ErrorMessage);
+        return;
+    }
+
+    // data 배열 추출
+    const TArray<TSharedPtr<FJsonValue>>* DataArray;
+    if (!JsonObject->TryGetArrayField(TEXT("data"), DataArray))
+    {
+        UE_LOG(LogMVE, Error, TEXT("  [상태] ✗ 'data' 필드 없음"));
+        OnMusicAnalysisComplete.Broadcast(false, SequenceDataArray, TEXT("'data' 필드 없음"));
+        return;
+    }
+
+    UE_LOG(LogMVE, Log, TEXT("  [분석 결과] %d개 이펙트"), DataArray->Num());
+
+    // ------------------------------------------------------------------------
+    // FEffectSequenceData 배열 생성
+    // ------------------------------------------------------------------------
+
+    for (const TSharedPtr<FJsonValue>& Value : *DataArray)
+    {
+        TSharedPtr<FJsonObject> ItemObject = Value->AsObject();
+        if (!ItemObject.IsValid())
+        {
+            UE_LOG(LogMVE, Warning, TEXT("  [경고] 유효하지 않은 배열 항목 건너뜀"));
+            continue;
+        }
+
+        // timestamp, category, asset_id 추출
+        int32 TimeStamp = ItemObject->GetIntegerField(TEXT("timestamp"));
+        FString Category = ItemObject->GetStringField(TEXT("category"));
+        FString AssetIDString = ItemObject->GetStringField(TEXT("asset_id"));
+
+        // asset_id 문자열을 FGameplayTag로 변환
+        FGameplayTag AssetTag = FGameplayTag::RequestGameplayTag(FName(*AssetIDString));
+
+        if (!AssetTag.IsValid())
+        {
+            UE_LOG(LogMVE, Warning, TEXT("  [경고] 유효하지 않은 GameplayTag: %s - 건너뜀"), *AssetIDString);
+            continue;
+        }
+
+        // FEffectSequenceData 생성 및 추가
+        FEffectSequenceData SequenceData(TimeStamp, AssetTag);
+        SequenceDataArray.Add(SequenceData);
+
+        UE_LOG(LogMVE, Log, TEXT("  ✓ TimeStamp: %d, Category: %s, AssetID: %s"),
+            TimeStamp, *Category, *AssetIDString);
+    }
+
+    UE_LOG(LogMVE, Log, TEXT(""));
+    UE_LOG(LogMVE, Log, TEXT("  [상태] ✓ 음악 분석 완료"));
+    UE_LOG(LogMVE, Log, TEXT("  [결과] %d개 이펙트 시퀀스 데이터 생성"), SequenceDataArray.Num());
+
+    // ------------------------------------------------------------------------
+    // 델리게이트 발동
+    // ------------------------------------------------------------------------
+
+    OnMusicAnalysisComplete.Broadcast(true, SequenceDataArray, TEXT(""));
+
     UE_LOG(LogMVE, Log, TEXT(""));
 }
 

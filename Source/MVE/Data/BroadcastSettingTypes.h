@@ -13,7 +13,8 @@ enum class EBroadcastSettingTab : uint8
 	CharacterSettings,
 	StageSettings,
 	ChatFilter,
-	CheckSettings
+	CheckSettings,
+	MusicStageSettings
 };
 
 USTRUCT(BlueprintType)

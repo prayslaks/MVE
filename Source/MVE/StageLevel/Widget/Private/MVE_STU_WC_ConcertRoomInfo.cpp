@@ -98,7 +98,7 @@ void UMVE_STU_WC_ConcertRoomInfo::UpdateViewerCount(int32 Count)
 	}
 
 	PRINTLOG(TEXT("ViewerCount : %d"), Count);
-	FString ViewerText = FString::Printf(TEXT("시청자: %d명"), Count);
+	FString ViewerText = FString::Printf(TEXT("%d"), Count);
 	ViewerCountText->SetText(FText::FromString(ViewerText));
 	
 }

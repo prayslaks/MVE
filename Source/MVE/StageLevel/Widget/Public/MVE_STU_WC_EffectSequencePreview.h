@@ -70,6 +70,12 @@ public:
 	void ResetPreview();
 
 	/**
+	 * 음악 총 길이 가져오기 (1/10초 단위)
+	 */
+	UFUNCTION(BlueprintPure, Category = "Effect Preview")
+	int32 GetTotalDurationTimeStamp() const { return TotalDurationTimeStamp; }
+
+	/**
 	 * EffectSequenceManager 설정
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Effect Preview")

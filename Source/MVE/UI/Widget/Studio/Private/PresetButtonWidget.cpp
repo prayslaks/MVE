@@ -3,6 +3,7 @@
 #include "Components/Button.h"
 #include "Components/Image.h"
 #include "Components/TextBlock.h"
+#include "Data/AvatarDataObject.h"
 
 void UPresetButtonWidget::NativeConstruct()
 {
@@ -14,8 +15,19 @@ void UPresetButtonWidget::NativeConstruct()
 	}
 }
 
+void UPresetButtonWidget::NativeOnListItemObjectSet(UObject* ListItemObject)
+{
+	IUserObjectListEntry::NativeOnListItemObjectSet(ListItemObject);
 
-void UPresetButtonWidget::SetAvatarData(FAvatarData& InData)
+	UAvatarDataObject* DataObject = Cast<UAvatarDataObject>(ListItemObject);
+	if (DataObject)
+	{
+		SetAvatarData(DataObject->AvatarData);
+	}
+}
+
+
+void UPresetButtonWidget::SetAvatarData(const FAvatarData& InData)
 {
 	AvatarData = InData;
 

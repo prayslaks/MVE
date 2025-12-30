@@ -38,4 +38,7 @@ private:
 
 	UFUNCTION()
 	void OnAudioFileSelected(const FAudioFile& SelectedAudio);
+
+	UFUNCTION()
+	void OnMusicAnalysisReceived(bool bSuccess, const TArray<struct FEffectSequenceData>& SequenceData, const FString& ErrorMessage);
 };

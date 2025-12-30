@@ -132,9 +132,9 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(
 
 /**
  * FOnDownloadProgress
- * 
+ *
  * 다운로드 진행률 업데이트 시 발동
- * 
+ *
  * @param AssetID       - 다운로드 중인 에셋 ID
  * @param BytesReceived - 현재까지 수신한 바이트
  * @param TotalBytes    - 전체 바이트 (0이면 알 수 없음)
@@ -144,4 +144,21 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(
     FGuid, AssetID,
     int32, BytesReceived,
     int32, TotalBytes
+);
+
+/**
+ * FOnMusicAnalysisComplete
+ *
+ * 음악 분석 완료 시 발동
+ * AI 서버가 음악 메타데이터 분석 후 타임라인별 이펙트 데이터 반환
+ *
+ * @param bSuccess     - 성공 여부
+ * @param SequenceData - 분석된 이펙트 시퀀스 데이터 배열
+ * @param ErrorMessage - 실패 시 에러 메시지
+ */
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(
+    FOnMusicAnalysisComplete,
+    bool, bSuccess,
+    const TArray<struct FEffectSequenceData>&, SequenceData,
+    const FString&, ErrorMessage
 );

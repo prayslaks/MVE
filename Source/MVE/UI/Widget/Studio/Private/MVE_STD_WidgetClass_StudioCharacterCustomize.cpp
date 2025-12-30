@@ -9,7 +9,9 @@
 #include "Engine/TextureRenderTarget2D.h"
 #include "MVE/UI/Widget/Studio/Public/AvatarPreviewActor.h"
 #include "PresetButtonWidget.h"
+#include "Components/TileView.h"
 #include "Data/AvatarStorageSubsystem.h"
+#include "Data/AvatarDataObject.h"
 
 void UMVE_STD_WidgetClass_StudioCharacterCustomize::NativeConstruct()
 {
@@ -29,6 +31,12 @@ void UMVE_STD_WidgetClass_StudioCharacterCustomize::NativeConstruct()
 	
 	// 프리뷰 초기화
 	InitializePreview();
+
+	// TileView 이벤트 바인딩
+	if (PresetContainer)
+	{
+		PresetContainer->OnItemClicked().AddUObject(this, &UMVE_STD_WidgetClass_StudioCharacterCustomize::OnPresetItemClicked);
+	}
 
 	// 버튼 바인딩
 	if (AttachFileButton)
@@ -50,8 +58,6 @@ void UMVE_STD_WidgetClass_StudioCharacterCustomize::NativeConstruct()
 
 void UMVE_STD_WidgetClass_StudioCharacterCustomize::NativeDestruct()
 {
-	PresetButtons.Empty();
-
 	// 프리뷰 액터 정리
 	if (PreviewActor)
 	{
@@ -446,73 +452,44 @@ void UMVE_STD_WidgetClass_StudioCharacterCustomize::OnNextClicked()
 void UMVE_STD_WidgetClass_StudioCharacterCustomize::RefreshPresetList()
 {
 	PRINTLOG(TEXT("FileNameText [5] RefreshPresetList 시작"));
-	
+
 	if (!PresetContainer || !StorageSubsystem)
 	{
 		PRINTLOG(TEXT("FileNameText [5] PresetContainer or StorageSubsystem is null"));
 		return;
 	}
 
-	PresetContainer->ClearChildren();
-	PresetButtons.Empty();
+	// TileView 초기화
+	PresetContainer->ClearListItems();
 
+	// 데이터 객체 배열 생성
 	TArray<FAvatarData> Avatars = StorageSubsystem->GetSavedAvatars();
-	
+
 	PRINTLOG(TEXT("FileNameText [5] 저장된 Avatar 개수: %d"), Avatars.Num());
-	
+
 	for (int32 i = 0; i < Avatars.Num(); i++)
 	{
 		FAvatarData& Data = Avatars[i];
-		PRINTLOG(TEXT("FileNameText [5] Avatar[%d]: %s, Thumbnail: %s"), 
-			i, 
+		PRINTLOG(TEXT("FileNameText [5] Avatar[%d]: %s, Thumbnail: %s"),
+			i,
 			*Data.FileName,
 			Data.ThumbnailTexture ? TEXT("있음") : TEXT("없음"));
-		
-		CreatePresetButton(Data);
+
+		// UAvatarDataObject 생성 및 TileView에 추가
+		UAvatarDataObject* DataObject = NewObject<UAvatarDataObject>(this);
+		DataObject->AvatarData = Data;
+		PresetContainer->AddItem(DataObject);
 	}
 
 	PRINTLOG(TEXT("FileNameText [5] RefreshPresetList 완료"));
 }
 
-void UMVE_STD_WidgetClass_StudioCharacterCustomize::CreatePresetButton(FAvatarData& Data)
+void UMVE_STD_WidgetClass_StudioCharacterCustomize::OnPresetItemClicked(UObject* Item)
 {
-	PRINTLOG(TEXT("FileNameText [4] CreatePresetButton: %s"), *Data.FileName);
-	
-	if (!PresetButtonClass)
+	UAvatarDataObject* DataObject = Cast<UAvatarDataObject>(Item);
+	if (DataObject)
 	{
-		PRINTLOG(TEXT("FileNameText [4] PresetButtonClass not set"));
-		return;
-	}
-
-	UPresetButtonWidget* PresetButton = CreateWidget<UPresetButtonWidget>(this, PresetButtonClass);
-	if (PresetButton)
-	{
-		// FileNameText 썸네일 확인
-		if (Data.ThumbnailTexture)
-		{
-			PRINTLOG(TEXT("FileNameText [4] Data.ThumbnailTexture 있음: %dx%d"), 
-				Data.ThumbnailTexture->GetSizeX(), 
-				Data.ThumbnailTexture->GetSizeY());
-		}
-		else
-		{
-			PRINTLOG(TEXT("FileNameText [4] Data.ThumbnailTexture 없음 (null)"));
-		}
-		
-		// AvatarData 설정
-		PresetButton->SetAvatarData(Data);
-		
-		// 클릭 이벤트 바인딩
-		PresetButton->OnButtonClicked.BindUObject(this, &UMVE_STD_WidgetClass_StudioCharacterCustomize::OnPresetClicked);
-
-		PresetButtons.Add(PresetButton);
-		PresetContainer->AddChild(PresetButton);
-		
-		PRINTLOG(TEXT("FileNameText [4] PresetButton 생성 완료"));
-	}
-	else
-	{
-		PRINTLOG(TEXT("FileNameText [4] PresetButton 생성 실패"));
+		OnPresetClicked(DataObject->AvatarData.UniqueID);
 	}
 }
 

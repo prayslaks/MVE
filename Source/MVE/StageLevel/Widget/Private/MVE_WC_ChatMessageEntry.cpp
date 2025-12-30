@@ -65,9 +65,8 @@ void UMVE_WC_ChatMessageEntry::CreateWidgets()
 	if (SenderNameText)
 	{
 		// 폰트 설정
-		FSlateFontInfo FontInfo = SenderNameText->GetFont();
-		FontInfo.Size = 14;
-		SenderNameText->SetFont(FontInfo);
+		//FSlateFontInfo FontInfo = SenderNameText->GetFont();
+		//SenderNameText->SetFont(FontInfo);
 		
 		// 색상 설정
 		SenderNameText->SetColorAndOpacity(FLinearColor::Yellow);
@@ -86,15 +85,16 @@ void UMVE_WC_ChatMessageEntry::CreateWidgets()
 	if (MessageContentText)
 	{
 		// 폰트 설정
-		FSlateFontInfo FontInfo = MessageContentText->GetFont();
-		FontInfo.Size = 13;
-		MessageContentText->SetFont(FontInfo);
+		//FSlateFontInfo FontInfo = MessageContentText->GetFont();
+		//FontInfo.Size = 13;
+		//MessageContentText->SetFont(FontInfo);
 		
 		// 색상 설정
 		MessageContentText->SetColorAndOpacity(FLinearColor::Black);
 		
 		// 자동 줄바꿈 설정
 		MessageContentText->SetAutoWrapText(true);
+		MessageContentText->SetWrapTextAt(200.f);
 		
 		// HorizontalBox에 추가
 		UHorizontalBoxSlot* ContentSlot = RootHorizontalBox->AddChildToHorizontalBox(MessageContentText);
@@ -110,12 +110,12 @@ void UMVE_WC_ChatMessageEntry::CreateWidgets()
 	if (TimestampText)
 	{
 		// 폰트 설정
-		FSlateFontInfo FontInfo = TimestampText->GetFont();
-		FontInfo.Size = 10;
-		TimestampText->SetFont(FontInfo);
+		//FSlateFontInfo FontInfo = TimestampText->GetFont();
+		//FontInfo.Size = 10;
+		//TimestampText->SetFont(FontInfo);
 		
 		// 색상 설정 (회색)
-		TimestampText->SetColorAndOpacity(FLinearColor(0.5f, 0.5f, 0.5f, 1.0f));
+		TimestampText->SetColorAndOpacity(FLinearColor(0.f, 0.f, 0.f, 1.0f));
 		
 		// HorizontalBox에 추가
 		UHorizontalBoxSlot* TimeSlot = RootHorizontalBox->AddChildToHorizontalBox(TimestampText);
