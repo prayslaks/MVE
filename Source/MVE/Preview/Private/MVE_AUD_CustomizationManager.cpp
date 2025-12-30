@@ -404,12 +404,15 @@ void UMVE_AUD_CustomizationManager::AttachMeshToSocket(const FName& SocketName)
     UWorld* World = GetWorld();
     if (!World) return;
 
+	
+
     // 기존 액세서리 제거
     if (AttachedMesh)
     {
         AttachedMesh->Destroy();
         AttachedMesh = nullptr;
-    }
+    } 
+	
 
     // 새 액세서리 생성
     AActor* NewAccessory = World->SpawnActor<AActor>(
@@ -515,6 +518,13 @@ void UMVE_AUD_CustomizationManager::AttachMeshToSocket(const FName& SocketName)
             AMVE_AUD_PreviewCameraPawn* CameraPawn = Cast<AMVE_AUD_PreviewCameraPawn>(PC->GetPawn());
             if (CameraPawn)
             {
+                // 기존 Gizmo Mode가 활성화되어 있으면 먼저 종료
+                if (CameraPawn->IsGizmoMode())
+                {
+                    PRINTLOG(TEXT("🔄 Exiting previous Gizmo mode..."));
+                    CameraPawn->SwitchToViewMode();
+                }
+
                 PRINTLOG(TEXT("🎯 Switching to Gizmo mode via CameraPawn..."));
                 CameraPawn->SwitchToGizmoMode(AttachedMesh);
             }
