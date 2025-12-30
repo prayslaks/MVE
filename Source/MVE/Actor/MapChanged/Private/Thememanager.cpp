@@ -2,7 +2,6 @@
 
 #include "ThemeManager.h"
 #include "Net/UnrealNetwork.h"
-#include "Kismet/GameplayStatics.h"
 #include "Components/PrimitiveComponent.h"
 
 AThemeManager::AThemeManager()
@@ -179,19 +178,11 @@ void AThemeManager::SetThemeActorsVisibility(int32 ThemeIndex, bool bVisible)
 void AThemeManager::OnSTTReceived(const FSTTResponse& Response)
 {
     if (!HasAuthority()) return;
-    if (!HasAuthority()) return;
     if (!Response.bSuccess || Response.TranscribedText.IsEmpty()) return;
 
     const FString& Text = Response.TranscribedText;
 
     if (!HasTrigger(Text)) return;
-
-    // 명령어 타입으로 분기 (더 정확함)
-    if (Response.CommandType == ESTTCommandType::ThemeClear)
-    {
-        ClearTheme();
-        return;
-    }
 
     int32 FoundIndex = FindThemeByKeyword(Text);
     if (FoundIndex >= 0)
@@ -259,12 +250,6 @@ bool AThemeManager::ActivateThemeByKeyword(const FString& Keyword)
         return true;
     }
     return false;
-}
-
-void AThemeManager::ClearTheme()
-{
-    if (!HasAuthority()) return;
-    ActivateTheme(-1);
 }
 
 FName AThemeManager::GetCurrentThemeName() const

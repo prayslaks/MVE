@@ -115,10 +115,6 @@ public:
     UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Theme")
     bool ActivateThemeByKeyword(const FString& Keyword);
 
-    // 현재 테마 제거
-    UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Theme")
-    void ClearTheme();
-
     // 현재 활성 테마 이름 가져오기
     UFUNCTION(BlueprintPure, Category = "Theme")
     FName GetCurrentThemeName() const;
@@ -158,7 +154,8 @@ private:
     UPROPERTY()
     TArray<TObjectPtr<AActor>> NonPooledSpawnedActors;
     
-
+    
+    UFUNCTION()
     void OnSTTReceived(const FSTTResponse& Response);
     int32 FindThemeByKeyword(const FString& Text) const;
     bool HasTrigger(const FString& Text) const;
