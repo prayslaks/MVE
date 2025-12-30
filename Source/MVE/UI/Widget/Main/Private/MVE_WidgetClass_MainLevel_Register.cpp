@@ -11,12 +11,6 @@
 void UMVE_WidgetClass_MainLevel_Register::NativeConstruct()
 {
 	Super::NativeConstruct();
-
-	// 로그인 화면으로 돌아가는 버튼 바인딩
-	if (MoveLoginButton)
-	{
-		MoveLoginButton->OnClicked.AddDynamic(this, &UMVE_WidgetClass_MainLevel_Register::OnMoveLoginButtonClicked);
-	}
 	
 	// 회원가입 시도 버튼 바인딩
 	if (TryRegisterButton)
@@ -63,39 +57,31 @@ void UMVE_WidgetClass_MainLevel_Register::NativeConstruct()
 	// 회원가입 피드백 위젯 초기 상태 설정
 	if(RegisterFeedbackTextBlock)
 	{
-		RegisterFeedbackTextBlock->SetVisibility(ESlateVisibility::Collapsed);
+		RegisterFeedbackTextBlock->SetVisibility(ESlateVisibility::Hidden);
 	}
 	
 	// 이메일 확인 피드백 위젯 초기 상태 설정
 	if(EmailConfirmFeedbackTextBlock)
 	{
-		EmailConfirmFeedbackTextBlock->SetVisibility(ESlateVisibility::Collapsed);
+		EmailConfirmFeedbackTextBlock->SetVisibility(ESlateVisibility::Hidden);
 	}
 	
 	// 암호 확인 피드백 위젯 초기 상태 설정
 	if(PasswordConfirmFeedbackTextBlock)
 	{
-		PasswordConfirmFeedbackTextBlock->SetVisibility(ESlateVisibility::Collapsed);
+		PasswordConfirmFeedbackTextBlock->SetVisibility(ESlateVisibility::Hidden);
 	}
 	
 	UpdateRegisterButtonState();
-}
-
-// ReSharper disable once CppMemberFunctionMayBeConst
-void UMVE_WidgetClass_MainLevel_Register::OnMoveLoginButtonClicked()
-{
-	if (UUIManagerSubsystem* UIManager = UUIManagerSubsystem::Get(this))
-	{
-		UIManager->ShowScreen(EUIScreen::Login);
-	}
 }
 
 void UMVE_WidgetClass_MainLevel_Register::OnUserEmailEditableBoxCommitted(const FText& Text, ETextCommit::Type CommitMethod)
 {
 	if (CommitMethod == ETextCommit::Type::OnEnter || CommitMethod == ETextCommit::Type::OnUserMovedFocus)
 	{
+		// 이메일이 변경되었으므로 인증 상태 초기화
 		CommittedUserEmail = Text.ToString();
-		bIsEmailVerified = false; // 이메일이 변경되었으므로 인증 상태 초기화
+		bIsEmailVerified = false;
 		UpdateRegisterButtonState();
 	
 		// 이메일 중복 확인 API 호출
@@ -190,7 +176,7 @@ void UMVE_WidgetClass_MainLevel_Register::UpdatePasswordConfirmationUI()
 	if (CommittedUserPassword.IsEmpty() && CommittedVerificationPassword.IsEmpty())
 	{
 		PasswordConfirmFeedbackTextBlock->SetText(FText::FromString(TEXT("")));
-		PasswordConfirmFeedbackTextBlock->SetVisibility(ESlateVisibility::Collapsed);
+		PasswordConfirmFeedbackTextBlock->SetVisibility(ESlateVisibility::Hidden);
 		return;
 	}
 	
@@ -283,7 +269,7 @@ void UMVE_WidgetClass_MainLevel_Register::OnTryRegisterButtonClicked()
 // ReSharper disable once CppMemberFunctionMayBeConst
 void UMVE_WidgetClass_MainLevel_Register::OnCheckEmailResult(const bool bSuccess, const FCheckEmailResponseData& ResponseData, const FString& ErrorCode)
 {
-	if (bSuccess)
+	if (bSuccess && ResponseData.Success)
 	{
 		if(EmailConfirmFeedbackTextBlock)
 		{
@@ -291,9 +277,22 @@ void UMVE_WidgetClass_MainLevel_Register::OnCheckEmailResult(const bool bSuccess
 			EmailConfirmFeedbackTextBlock->SetColorAndOpacity(FLinearColor::Green);
 			EmailConfirmFeedbackTextBlock->SetVisibility(ESlateVisibility::Visible);
 		}
+		
+		// 버튼 활성화
+		if (SendVerificationCodeButton)
+		{
+			SendVerificationCodeButton->SetIsEnabled(true);	
+		}
 	}
 	else
 	{
+		// 버튼 비활성화
+		if (SendVerificationCodeButton)
+		{
+			SendVerificationCodeButton->SetIsEnabled(false);	
+		}
+		
+		// 변역된 메시지 출력
 		FText TranslatedErrorMessage;
 		if (const UGameInstance* GameInstance = GetGameInstance())
 		{
@@ -302,7 +301,6 @@ void UMVE_WidgetClass_MainLevel_Register::OnCheckEmailResult(const bool bSuccess
 				TranslatedErrorMessage = Subsystem->GetTranslatedTextFromResponseCode(ErrorCode);
 			}
 		}
-		
 		if (EmailConfirmFeedbackTextBlock)
 		{
 			EmailConfirmFeedbackTextBlock->SetText(TranslatedErrorMessage);
@@ -381,24 +379,10 @@ void UMVE_WidgetClass_MainLevel_Register::OnTryConfirmVerifyCodeResult(const boo
 // ReSharper disable once CppMemberFunctionMayBeConst
 void UMVE_WidgetClass_MainLevel_Register::OnSignUpResult(const bool bSuccess, const FSignUpResponseData& ResponseData, const FString& ErrorCode)
 {
-	if (bSuccess)
+	if (bSuccess && ResponseData.Success)
 	{
-		if(RegisterFeedbackTextBlock)
-		{
-			RegisterFeedbackTextBlock->SetText(FText::FromString(TEXT("회원가입에 성공했습니다! 잠시 후 로그인 화면으로 이동합니다.")));
-			RegisterFeedbackTextBlock->SetColorAndOpacity(FLinearColor::Green);
-			RegisterFeedbackTextBlock->SetVisibility(ESlateVisibility::Visible);
-		}
-
-		// 2초 후 로그인 화면으로 전환
-		FTimerHandle TimerHandle;
-		GetWorld()->GetTimerManager().SetTimer(TimerHandle, [this]()
-		{
-			if (UUIManagerSubsystem* UIManager = UUIManagerSubsystem::Get(this))
-			{
-				UIManager->ShowScreen(EUIScreen::Login);
-			}
-		}, 2.0f, false);
+		// 나머지 처리는 블루프린트에서
+		OnSignUpSuccessBIE();
 	}
 	else
 	{

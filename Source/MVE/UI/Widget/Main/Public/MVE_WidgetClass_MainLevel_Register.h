@@ -50,6 +50,9 @@ protected:
 	
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UTextBlock> RegisterFeedbackTextBlock;
+	
+	UFUNCTION(BlueprintImplementableEvent)
+	void OnSignUpSuccessBIE();
 
 private:	
 	UFUNCTION()
@@ -75,9 +78,6 @@ private:
 	
 	UFUNCTION()
 	void OnTryRegisterButtonClicked();
-	
-	UFUNCTION()
-	void OnMoveLoginButtonClicked();
 
 	UFUNCTION()
 	void OnCheckEmailResult(const bool bSuccess, const FCheckEmailResponseData& ResponseData, const FString& ErrorCode);

@@ -3,16 +3,6 @@
 #include "CoreMinimal.h"
 #include "MVE_API_ResponseData.generated.h"
 
-// [공용] 모든 MVE API 리스폰스에 포함되는 구조를 매크로화
-
-#define MVE_API_RESPONSE_BASE() \
-    UPROPERTY(BlueprintReadOnly, Category="MVE|API Response") \
-    bool Success = false; \
-    UPROPERTY(BlueprintReadOnly, Category="MVE|API Response") \
-    FString Code; \
-    UPROPERTY(BlueprintReadOnly, Category="MVE|API Response") \
-    FString Message;
-
 // [공용] 일반적인 성공 여부 대응하는 데이터 구조체
 
 /**
@@ -23,7 +13,7 @@ struct FSuccessResponse
 {
 	GENERATED_BODY()
     UPROPERTY(BlueprintReadOnly, Category="MVE|API Response")
-    bool Success = false;
+    bool Success;
     UPROPERTY(BlueprintReadOnly, Category="MVE|API Response")
     FString Code;
     UPROPERTY(BlueprintReadOnly, Category="MVE|API Response")
@@ -91,7 +81,12 @@ USTRUCT(BlueprintType)
 struct FCheckEmailResponseData
 {
     GENERATED_BODY()
-    MVE_API_RESPONSE_BASE()
+    UPROPERTY(BlueprintReadOnly, Category="MVE|API Response") 
+    bool Success; 
+    UPROPERTY(BlueprintReadOnly, Category="MVE|API Response") 
+    FString Code; 
+    UPROPERTY(BlueprintReadOnly, Category="MVE|API Response") 
+    FString Message;
     UPROPERTY(BlueprintReadOnly, Category="MVE|API Response")
     bool Exists = false;
 };
@@ -120,7 +115,12 @@ USTRUCT(BlueprintType)
 struct FSignUpResponseData
 {
     GENERATED_BODY()
-    MVE_API_RESPONSE_BASE()
+    UPROPERTY(BlueprintReadOnly, Category="MVE|API Response") 
+    bool Success; 
+    UPROPERTY(BlueprintReadOnly, Category="MVE|API Response") 
+    FString Code; 
+    UPROPERTY(BlueprintReadOnly, Category="MVE|API Response") 
+    FString Message;
     UPROPERTY(BlueprintReadOnly, Category="MVE|API Response")
     FUser User;
 };
@@ -134,7 +134,12 @@ USTRUCT(BlueprintType)
 struct FLoginResponseData
 {
     GENERATED_BODY()
-    MVE_API_RESPONSE_BASE()
+    UPROPERTY(BlueprintReadOnly, Category="MVE|API Response") 
+    bool Success; 
+    UPROPERTY(BlueprintReadOnly, Category="MVE|API Response") 
+    FString Code; 
+    UPROPERTY(BlueprintReadOnly, Category="MVE|API Response") 
+    FString Message;
     UPROPERTY(BlueprintReadOnly, Category="MVE|API Response")
     FString Token;
     UPROPERTY(BlueprintReadOnly, Category="MVE|API Response")
@@ -150,7 +155,12 @@ USTRUCT(BlueprintType)
 struct FProfileResponseData
 {
     GENERATED_BODY()
-    MVE_API_RESPONSE_BASE()
+    UPROPERTY(BlueprintReadOnly, Category="MVE|API Response") 
+    bool Success; 
+    UPROPERTY(BlueprintReadOnly, Category="MVE|API Response") 
+    FString Code; 
+    UPROPERTY(BlueprintReadOnly, Category="MVE|API Response") 
+    FString Message;
     UPROPERTY(BlueprintReadOnly, Category="MVE|API Response")
     FUser User;
 };
@@ -170,7 +180,12 @@ USTRUCT(BlueprintType)
 struct FSavePresetResponseData
 {
     GENERATED_BODY()
-    MVE_API_RESPONSE_BASE()
+    UPROPERTY(BlueprintReadOnly, Category="MVE|API Response") 
+    bool Success; 
+    UPROPERTY(BlueprintReadOnly, Category="MVE|API Response") 
+    FString Code; 
+    UPROPERTY(BlueprintReadOnly, Category="MVE|API Response") 
+    FString Message;
     UPROPERTY(BlueprintReadOnly, Category="MVE|API Response")
     FString PresetName;
     UPROPERTY(BlueprintReadOnly, Category="MVE|API Response")
@@ -231,7 +246,12 @@ USTRUCT(BlueprintType)
 struct FGetPresetListResponseData
 {
     GENERATED_BODY()
-    MVE_API_RESPONSE_BASE()
+    UPROPERTY(BlueprintReadOnly, Category="MVE|API Response") 
+    bool Success; 
+    UPROPERTY(BlueprintReadOnly, Category="MVE|API Response") 
+    FString Code; 
+    UPROPERTY(BlueprintReadOnly, Category="MVE|API Response") 
+    FString Message;
     UPROPERTY(BlueprintReadOnly, Category="MVE|API Response")
     int32 Count = 0;
     UPROPERTY(BlueprintReadOnly, Category="MVE|API Response")
@@ -246,7 +266,12 @@ USTRUCT(BlueprintType)
 struct FGetPresetDetailResponseData
 {
     GENERATED_BODY()
-    MVE_API_RESPONSE_BASE()
+    UPROPERTY(BlueprintReadOnly, Category="MVE|API Response") 
+    bool Success; 
+    UPROPERTY(BlueprintReadOnly, Category="MVE|API Response") 
+    FString Code; 
+    UPROPERTY(BlueprintReadOnly, Category="MVE|API Response") 
+    FString Message;
     UPROPERTY(BlueprintReadOnly, Category="MVE|API Response")
     FAccessoryPreset Preset;
 };
@@ -261,7 +286,12 @@ USTRUCT(BlueprintType)
 struct FAudioListResponseData
 {
     GENERATED_BODY()
-    MVE_API_RESPONSE_BASE()
+    UPROPERTY(BlueprintReadOnly, Category="MVE|API Response") 
+    bool Success; 
+    UPROPERTY(BlueprintReadOnly, Category="MVE|API Response") 
+    FString Code; 
+    UPROPERTY(BlueprintReadOnly, Category="MVE|API Response") 
+    FString Message;
     UPROPERTY(BlueprintReadOnly, Category="MVE|API Response")
     int32 Count = 0;
     UPROPERTY(BlueprintReadOnly, Category="MVE|API Response")
@@ -279,7 +309,12 @@ USTRUCT(BlueprintType)
 struct FStreamAudioResponseData
 {
     GENERATED_BODY()
-    MVE_API_RESPONSE_BASE()
+    UPROPERTY(BlueprintReadOnly, Category="MVE|API Response") 
+    bool Success; 
+    UPROPERTY(BlueprintReadOnly, Category="MVE|API Response") 
+    FString Code; 
+    UPROPERTY(BlueprintReadOnly, Category="MVE|API Response") 
+    FString Message;
     UPROPERTY(BlueprintReadOnly, Category="MVE|API Response")
     FString StreamUrl;
     UPROPERTY(BlueprintReadOnly, Category="MVE|API Response")
@@ -295,7 +330,12 @@ USTRUCT(BlueprintType)
 struct FUploadAudioResponseData
 {
     GENERATED_BODY()
-    MVE_API_RESPONSE_BASE()
+    UPROPERTY(BlueprintReadOnly, Category="MVE|API Response") 
+    bool Success; 
+    UPROPERTY(BlueprintReadOnly, Category="MVE|API Response") 
+    FString Code; 
+    UPROPERTY(BlueprintReadOnly, Category="MVE|API Response") 
+    FString Message;
     UPROPERTY(BlueprintReadOnly, Category="MVE|API Response")
     FAudioFile AudioFile;
 };
@@ -311,7 +351,12 @@ USTRUCT(BlueprintType)
 struct FGetAudioDetailResponseData
 {
     GENERATED_BODY()
-    MVE_API_RESPONSE_BASE()
+    UPROPERTY(BlueprintReadOnly, Category="MVE|API Response") 
+    bool Success; 
+    UPROPERTY(BlueprintReadOnly, Category="MVE|API Response") 
+    FString Code; 
+    UPROPERTY(BlueprintReadOnly, Category="MVE|API Response") 
+    FString Message;
     UPROPERTY(BlueprintReadOnly, Category="MVE|API Response")
     FAudioFile AudioFile;
 };
@@ -326,7 +371,12 @@ USTRUCT(BlueprintType)
 struct FConcertCreationData
 {
 	GENERATED_BODY()
-    MVE_API_RESPONSE_BASE()
+    UPROPERTY(BlueprintReadOnly, Category="MVE|API Response") 
+    bool Success; 
+    UPROPERTY(BlueprintReadOnly, Category="MVE|API Response") 
+    FString Code; 
+    UPROPERTY(BlueprintReadOnly, Category="MVE|API Response") 
+    FString Message;
 	UPROPERTY(BlueprintReadOnly, Category="MVE|API Response")
 	FString RoomId;
 	UPROPERTY(BlueprintReadOnly, Category="MVE|API Response")
@@ -359,7 +409,12 @@ USTRUCT(BlueprintType)
 struct FRegisterListenServerData
 {
     GENERATED_BODY()
-    MVE_API_RESPONSE_BASE()
+    UPROPERTY(BlueprintReadOnly, Category="MVE|API Response") 
+    bool Success; 
+    UPROPERTY(BlueprintReadOnly, Category="MVE|API Response") 
+    FString Code; 
+    UPROPERTY(BlueprintReadOnly, Category="MVE|API Response") 
+    FString Message;
     UPROPERTY(BlueprintReadOnly, Category="MVE|API Response")
     FListenServer ListenServer;
 };
@@ -424,7 +479,12 @@ USTRUCT(BlueprintType)
 struct FGetConcertInfoResponseData
 {
     GENERATED_BODY()
-    MVE_API_RESPONSE_BASE()
+    UPROPERTY(BlueprintReadOnly, Category="MVE|API Response") 
+    bool Success; 
+    UPROPERTY(BlueprintReadOnly, Category="MVE|API Response") 
+    FString Code; 
+    UPROPERTY(BlueprintReadOnly, Category="MVE|API Response") 
+    FString Message;
     UPROPERTY(BlueprintReadOnly, Category="MVE|API Response")
     FConcertInfo Concert;
 };
@@ -439,7 +499,12 @@ USTRUCT(BlueprintType)
 struct FGetConcertListData
 {
     GENERATED_BODY()
-    MVE_API_RESPONSE_BASE()
+    UPROPERTY(BlueprintReadOnly, Category="MVE|API Response") 
+    bool Success; 
+    UPROPERTY(BlueprintReadOnly, Category="MVE|API Response") 
+    FString Code; 
+    UPROPERTY(BlueprintReadOnly, Category="MVE|API Response") 
+    FString Message;
     UPROPERTY(BlueprintReadOnly, Category="MVE|API Response")
     int32 Count = 0;
     UPROPERTY(BlueprintReadOnly, Category="MVE|API Response")
@@ -458,7 +523,12 @@ USTRUCT(BlueprintType)
 struct FGenerateModelResponseData
 {
     GENERATED_BODY()
-    MVE_API_RESPONSE_BASE()
+    UPROPERTY(BlueprintReadOnly, Category="MVE|API Response") 
+    bool Success; 
+    UPROPERTY(BlueprintReadOnly, Category="MVE|API Response") 
+    FString Code; 
+    UPROPERTY(BlueprintReadOnly, Category="MVE|API Response") 
+    FString Message;
     UPROPERTY(BlueprintReadOnly, Category="MVE|API Response")
     FString JobId;
 };
@@ -497,7 +567,12 @@ USTRUCT(BlueprintType)
 struct FGetJobStatusResponseData
 {
     GENERATED_BODY()
-    MVE_API_RESPONSE_BASE()
+    UPROPERTY(BlueprintReadOnly, Category="MVE|API Response") 
+    bool Success; 
+    UPROPERTY(BlueprintReadOnly, Category="MVE|API Response") 
+    FString Code; 
+    UPROPERTY(BlueprintReadOnly, Category="MVE|API Response") 
+    FString Message;
     UPROPERTY(BlueprintReadOnly, Category="MVE|API Response")
     FAIJobStatus Data;
 };
@@ -511,7 +586,12 @@ USTRUCT(BlueprintType)
 struct FModelListResponseData
 {
     GENERATED_BODY()
-    MVE_API_RESPONSE_BASE()
+    UPROPERTY(BlueprintReadOnly, Category="MVE|API Response") 
+    bool Success; 
+    UPROPERTY(BlueprintReadOnly, Category="MVE|API Response") 
+    FString Code; 
+    UPROPERTY(BlueprintReadOnly, Category="MVE|API Response") 
+    FString Message;
     UPROPERTY(BlueprintReadOnly, Category="MVE|API Response")
     int32 Count = 0;
     UPROPERTY(BlueprintReadOnly, Category="MVE|API Response")
@@ -527,7 +607,12 @@ USTRUCT(BlueprintType)
 struct FUploadModelResponseData
 {
     GENERATED_BODY()
-    MVE_API_RESPONSE_BASE()
+    UPROPERTY(BlueprintReadOnly, Category="MVE|API Response") 
+    bool Success; 
+    UPROPERTY(BlueprintReadOnly, Category="MVE|API Response") 
+    FString Code; 
+    UPROPERTY(BlueprintReadOnly, Category="MVE|API Response") 
+    FString Message;
     UPROPERTY(BlueprintReadOnly, Category="MVE|API Response")
     FModelInfo Model;
 };
@@ -553,7 +638,12 @@ USTRUCT(BlueprintType)
 struct FDeleteModelResponseData
 {
     GENERATED_BODY()
-    MVE_API_RESPONSE_BASE()
+    UPROPERTY(BlueprintReadOnly, Category="MVE|API Response") 
+    bool Success; 
+    UPROPERTY(BlueprintReadOnly, Category="MVE|API Response") 
+    FString Code; 
+    UPROPERTY(BlueprintReadOnly, Category="MVE|API Response") 
+    FString Message;
     UPROPERTY(BlueprintReadOnly, Category="MVE|API Response")
     FDeletedModelInfo DeletedModel;
 };
@@ -567,7 +657,12 @@ USTRUCT(BlueprintType)
 struct FGetModelDownloadUrlResponseData
 {
     GENERATED_BODY()
-    MVE_API_RESPONSE_BASE()
+    UPROPERTY(BlueprintReadOnly, Category="MVE|API Response") 
+    bool Success; 
+    UPROPERTY(BlueprintReadOnly, Category="MVE|API Response") 
+    FString Code; 
+    UPROPERTY(BlueprintReadOnly, Category="MVE|API Response") 
+    FString Message;
     UPROPERTY(BlueprintReadOnly, Category="MVE|API Response")
     FString Url;
     UPROPERTY(BlueprintReadOnly, Category="MVE|API Response")

@@ -193,6 +193,9 @@ void UUIManagerSubsystem::ShowScreen(EUIScreen ScreenType)
 		return;
 	}
     
+	// 현재 스크린은 이제 이전 스크린이 된다
+	BeforeScreen = CurrentScreen;
+	
 	// 화면 전환
 	NewWidget->AddToViewport();
     
