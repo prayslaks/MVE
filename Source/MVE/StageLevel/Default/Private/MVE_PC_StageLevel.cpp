@@ -27,6 +27,7 @@
 #include "Dom/JsonObject.h"
 #include "Serialization/JsonWriter.h"
 #include "Serialization/JsonSerializer.h"
+#include "StageLevel/Default/Public/MVE_PS_StageLevel.h"
 
 class UMVE_AUD_CustomizationManager;
 
@@ -537,4 +538,16 @@ void AMVE_PC_StageLevel::ServerSetPlayerName_Implementation(const FString& InPla
 		PRINTNETLOG(this, TEXT("Server set PlayerName to: %s"), *InPlayerName);
 	}
 	
+}
+
+void AMVE_PC_StageLevel::NotifyAudioReady()
+{
+	if (IsLocalController())
+	{
+		if (AMVE_PS_StageLevel* PS = GetPlayerState<AMVE_PS_StageLevel>())
+		{
+			PRINTNETLOG(this, TEXT("Local player audio is ready. Notifying server."));
+			PS->Server_SetIsAudioReady(true);
+		}
+	}
 }

@@ -25,6 +25,9 @@ class MVE_API AMVE_PC_StageLevel : public APlayerController
 
 public:
 	AMVE_PC_StageLevel();
+
+	/** StudioComponent 등에서 오디오 로딩이 완료되었을 때 호출하여 서버에 준비 상태를 알립니다. */
+	void NotifyAudioReady();
 	
 	virtual void BeginPlay() override;
 	virtual void OnPossess(APawn* InPawn) override;

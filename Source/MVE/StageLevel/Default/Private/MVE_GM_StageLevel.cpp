@@ -13,6 +13,7 @@
 #include "StageLevel/Default/Public/MVE_PC_StageLevel.h"
 #include "StageLevel/Default/Public/MVE_GS_StageLevel.h"
 #include "STT/Public/STTSubsystem.h"
+#include "StageLevel/Default/Public/MVE_PS_StageLevel.h"
 
 AMVE_GM_StageLevel::AMVE_GM_StageLevel()
 {
@@ -34,8 +35,6 @@ AMVE_GM_StageLevel::AMVE_GM_StageLevel()
 	if (ConstructorHelpers::FClassFinder<APawn> 
 		Finder(TEXT("/Remocapp/Features/BP_Orlando.BP_Orlando_C"));
 		Finder.Succeeded())
-
-		
 	{
 		// 할당
 		HostCharacterClass = Finder.Class;
@@ -218,17 +217,22 @@ void AMVE_GM_StageLevel::SendPresignedUrlToAllClients(const FString& PresignedUr
 		return;
 	}
 
-	// 모든 플레이어 상태를 순회하며 RPC 호출
+	// 모든 플레이어 상태를 순회하며 RPC 호출 및 준비 상태 초기화
 	for (APlayerState* PlayerState : GameState->PlayerArray)
 	{
 		if (PlayerState)
 		{
-			APlayerController* PC = PlayerState->GetPlayerController();
-			if (PC)
+			// 오디오 준비 상태 초기화
+			if (AMVE_PS_StageLevel* PS = Cast<AMVE_PS_StageLevel>(PlayerState))
+			{
+				PS->Server_SetIsAudioReady(false);
+				PRINTNETLOG(this, TEXT("게임모드: 플레이어 %s의 오디오 준비 상태를 초기화합니다."), *PS->GetPlayerName());
+			}
+			
+			if (const APlayerController* PC = PlayerState->GetPlayerController())
 			{
 				// 플레이어 컨트롤러에서 StdComponent를 찾음
-				UMVE_PC_StageLevel_StudioComponent* StdComponent = PC->FindComponentByClass<UMVE_PC_StageLevel_StudioComponent>();
-				if (StdComponent)
+				if (UMVE_PC_StageLevel_StudioComponent* StdComponent = PC->FindComponentByClass<UMVE_PC_StageLevel_StudioComponent>())
 				{
 					PRINTNETLOG(this, TEXT("게임모드: 플레이어 %s에게 URL 전송 중"), *PlayerState->GetPlayerName());
 					// 클라이언트에게 오디오 준비를 요청하는 RPC 호출
@@ -245,7 +249,7 @@ void AMVE_GM_StageLevel::SendPresignedUrlToAllClients(const FString& PresignedUr
 
 void AMVE_GM_StageLevel::SendPlayCommandToAllClients()
 {
-	PRINTNETLOG(this, TEXT("게임모드: 모든 클라이언트에게 재생 명령 전송."));
+	PRINTNETLOG(this, TEXT("게임모드: 모든 클라이언트에게 재생 명령 전송 요청."));
 
 	if (!GetWorld() || !GameState)
 	{
@@ -253,15 +257,31 @@ void AMVE_GM_StageLevel::SendPlayCommandToAllClients()
 		return;
 	}
 
-	for (APlayerState* PlayerState : GameState->PlayerArray)
+	// 모든 플레이어가 준비되었는지 확인
+	for (const APlayerState* PlayerState : GameState->PlayerArray)
+	{
+		if (const AMVE_PS_StageLevel* PS = Cast<AMVE_PS_StageLevel>(PlayerState))
+		{
+			if (PS->GetIsAudioReady() == false)
+			{
+				// 준비되지 않은 플레이어가 있으면 호스트에게 알리고, 명령을 중단할 수 있습니다.
+				// 여기서는 간단히 로그만 남기고 중단합니다.
+				PRINTNETLOG(this, TEXT("게임모드: 플레이어 %s가 아직 준비되지 않았으므로 재생 명령을 중단합니다."), *PS->GetPlayerName());
+				return;
+			}
+		}
+		// PlayerState가 AMVE_PS_StageLevel이 아닌 경우(예: 전환 중) 어떻게 처리할지 정책 필요. 지금은 무시.
+	}
+	
+	PRINTNETLOG(this, TEXT("게임모드: 모든 플레이어가 준비되었습니다. 재생 명령을 모든 클라이언트에게 전송합니다."));
+
+	for (const APlayerState* PlayerState : GameState->PlayerArray)
 	{
 		if (PlayerState)
 		{
-			APlayerController* PC = PlayerState->GetPlayerController();
-			if (PC)
+			if (const APlayerController* PC = PlayerState->GetPlayerController())
 			{
-				UMVE_PC_StageLevel_StudioComponent* StdComponent = PC->FindComponentByClass<UMVE_PC_StageLevel_StudioComponent>();
-				if (StdComponent)
+				if (UMVE_PC_StageLevel_StudioComponent* StdComponent = PC->FindComponentByClass<UMVE_PC_StageLevel_StudioComponent>())
 				{
 					PRINTNETLOG(this, TEXT("게임모드: 플레이어 %s에게 재생 명령 전송 중"), *PlayerState->GetPlayerName());
 					// 클라이언트에게 오디오 재생을 요청하는 RPC 호출
@@ -286,15 +306,13 @@ void AMVE_GM_StageLevel::SendStopCommandToAllClients()
 		return;
 	}
 
-	for (APlayerState* PlayerState : GameState->PlayerArray)
+	for (const APlayerState* PlayerState : GameState->PlayerArray)
 	{
 		if (PlayerState)
 		{
-			APlayerController* PC = PlayerState->GetPlayerController();
-			if (PC)
+			if (const APlayerController* PC = PlayerState->GetPlayerController())
 			{
-				UMVE_PC_StageLevel_StudioComponent* StdComponent = PC->FindComponentByClass<UMVE_PC_StageLevel_StudioComponent>();
-				if (StdComponent)
+				if (UMVE_PC_StageLevel_StudioComponent* StdComponent = PC->FindComponentByClass<UMVE_PC_StageLevel_StudioComponent>())
 				{
 					PRINTNETLOG(this, TEXT("게임모드: 플레이어 %s에게 중지 명령 전송 중"), *PlayerState->GetPlayerName());
 					// 클라이언트에게 오디오 중지를 요청하는 RPC 호출
@@ -308,6 +326,8 @@ void AMVE_GM_StageLevel::SendStopCommandToAllClients()
 		}
 	}
 }
+
+// 채팅 관련
 
 void AMVE_GM_StageLevel::SpawnChatManager()
 {

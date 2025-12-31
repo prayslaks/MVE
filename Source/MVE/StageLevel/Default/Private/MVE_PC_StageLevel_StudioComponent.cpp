@@ -76,9 +76,8 @@ void UMVE_PC_StageLevel_StudioComponent::OnAudioLoadedFromUrl(UglTFRuntimeAsset*
 	// 다운로드된 바이너리 데이터를 사운드 웨이브 에셋으로 변환합니다.
 	const EglTFRuntimeAudioDecoder Decoder{};
 	const FglTFRuntimeAudioConfig Config{};
-	USoundWave* LoadedSoundWave = UglTFRuntimeAudioFunctionLibrary::LoadSoundFromBlob(Asset, Decoder, Config);
 
-	if (LoadedSoundWave)
+	if (USoundWave* LoadedSoundWave = UglTFRuntimeAudioFunctionLibrary::LoadSoundFromBlob(Asset, Decoder, Config))
 	{
 		PRINTNETLOG(this, TEXT("[오디오 동기화] 사운드 로드 성공. %d개의 스피커에 사운드를 설정합니다."), FoundSpeakers.Num());
 
