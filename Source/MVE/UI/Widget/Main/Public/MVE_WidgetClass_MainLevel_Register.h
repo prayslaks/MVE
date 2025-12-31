@@ -51,8 +51,11 @@ protected:
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UTextBlock> RegisterFeedbackTextBlock;
 	
+	// 회원가입 성공-실패 블루프린트 구현 이벤트
 	UFUNCTION(BlueprintImplementableEvent)
 	void OnSignUpSuccessBIE();
+	UFUNCTION(BlueprintImplementableEvent)
+	void OnSignUpFailBIE();
 
 private:	
 	UFUNCTION()

@@ -386,21 +386,24 @@ void UMVE_WidgetClass_MainLevel_Register::OnSignUpResult(const bool bSuccess, co
 	}
 	else
 	{
-		FText TranslatedErrorMessage;
-		if (const UGameInstance* GameInstance = GetGameInstance())
+		// 나머지 처리는 블루프린트에서
+		OnSignUpFailBIE();
+	}
+	
+	// 회원가입 피드백
+	FText TranslatedErrorMessage;
+	if (const UGameInstance* GameInstance = GetGameInstance())
+	{
+		if (const UMVE_GIS_API* Subsystem = GameInstance->GetSubsystem<UMVE_GIS_API>())
 		{
-			if (const UMVE_GIS_API* Subsystem = GameInstance->GetSubsystem<UMVE_GIS_API>())
-			{
-				TranslatedErrorMessage = Subsystem->GetTranslatedTextFromResponseCode(ErrorCode);
-			}
+			TranslatedErrorMessage = Subsystem->GetTranslatedTextFromResponseCode(ErrorCode);
 		}
-
-		if (RegisterFeedbackTextBlock)
-		{
-			RegisterFeedbackTextBlock->SetText(TranslatedErrorMessage);
-			RegisterFeedbackTextBlock->SetColorAndOpacity(FLinearColor::Red);
-			RegisterFeedbackTextBlock->SetVisibility(ESlateVisibility::Visible);
-		}
+	}
+	if (RegisterFeedbackTextBlock)
+	{
+		RegisterFeedbackTextBlock->SetText(TranslatedErrorMessage);
+		RegisterFeedbackTextBlock->SetColorAndOpacity(bSuccess && ResponseData.Success ? FLinearColor::Green : FLinearColor::Red);
+		RegisterFeedbackTextBlock->SetVisibility(ESlateVisibility::Visible);
 	}
 }
 

@@ -10,11 +10,6 @@
 void UMVE_WidgetClass_MainLevel::NativeConstruct()
 {
 	Super::NativeConstruct();
-
-	if (ReturnDesktopButton)
-	{
-		ReturnDesktopButton->OnClicked.AddDynamic(this, &UMVE_WidgetClass_MainLevel::OnReturnDesktopButtonClicked);
-	}
 	
 	if (StdBypassButton)
 	{
@@ -24,16 +19,6 @@ void UMVE_WidgetClass_MainLevel::NativeConstruct()
 	if (AudBypassButton)
 	{
 		AudBypassButton->OnClicked.AddDynamic(this, &UMVE_WidgetClass_MainLevel::OnAudBypassButtonClicked);
-	}
-}
-
-// ReSharper disable once CppMemberFunctionMayBeConst
-void UMVE_WidgetClass_MainLevel::OnReturnDesktopButtonClicked()
-{
-	PRINTLOG(TEXT("OnReturnDesktopButtonClicked Called"));
-	if (APlayerController* PC = GetOwningPlayer())
-	{
-		UKismetSystemLibrary::QuitGame(this, PC, EQuitPreference::Quit, false);
 	}
 }
 
