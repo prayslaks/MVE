@@ -83,7 +83,7 @@ void AMVE_PC_StageLevel::BeginPlay()
 	}
 	else
 	{
-		PRINTLOG(TEXT("경고: FlashPostProcessCurve 또는 FlashPostProcessMaterialBase가 설정되지 않았습니다."));
+		PRINTERROR(TEXT("경고: FlashPostProcessCurve 또는 FlashPostProcessMaterialBase가 설정되지 않았습니다."));
 	}
 	// ------------------------------------
 
@@ -116,7 +116,7 @@ void AMVE_PC_StageLevel::OnFlashPostProcessUpdate(const float Value) const
 	}
 }
 
-void AMVE_PC_StageLevel::SetUserInfo(bool bSuccess, const FProfileResponseData& Data, const FString& ErrorCode)
+void AMVE_PC_StageLevel::SetUserInfo(const bool bSuccess, const FProfileResponseData& Data, const FString& ErrorCode)
 {
 	PRINTNETLOG(this, TEXT("SetUserInfo Called"));
 	

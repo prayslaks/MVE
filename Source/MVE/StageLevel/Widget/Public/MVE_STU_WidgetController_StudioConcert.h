@@ -97,7 +97,9 @@ private:
 	 */
 	int32 FindTrackIndex(const FMVE_STD_AudioSearchResultData& TrackData) const;
 
-private:
+	UPROPERTY(VisibleAnywhere)
+	bool bIsPlaying;
+	
 	/** AudioPlayer 위젯 참조 */
 	UPROPERTY()
 	TObjectPtr<UMVE_STD_WC_AudioPlayer> PlayerWidget;

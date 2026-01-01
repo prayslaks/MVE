@@ -6,6 +6,7 @@
 #include "Blueprint/UserWidget.h"
 #include "MVE_STD_WC_AudioSearch.generated.h"
 
+struct FAudioFile;
 class UMVE_STU_WC_ConcertStudioPanel;
 class UButton;
 class UScrollBox;

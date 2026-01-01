@@ -36,6 +36,9 @@ protected:
 	/** 총 재생 시간 (초 단위) */
 	float TotalPlaybackDuration = 0.f;
 
+	/** 마지막으로 오디오가 중지된 시점의 재생 시간 */
+	float LastPlaybackTime = 0.f;
+
 	/** 오디오 재생 진행률 콜백 */
 	UFUNCTION()
 	void OnAudioPlaybackPercentUpdate(const USoundWave* PlayingSoundWave, const float PlaybackPercent);
