@@ -16,7 +16,6 @@ class UAudioComponent;
 class USoundWave;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnAudioPlayerPlayClicked);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnAudioPlayerStopClicked);
 
 // 오디오 플레이어
 UCLASS()
@@ -27,9 +26,6 @@ class MVE_API UMVE_STD_WC_AudioPlayer : public UUserWidget
 public:
 	UPROPERTY(BlueprintAssignable, Category = "AudioPlayer|Event")
 	FOnAudioPlayerPlayClicked OnPlayClicked;
-
-	UPROPERTY(BlueprintAssignable, Category = "AudioPlayer|Event")
-	FOnAudioPlayerStopClicked OnStopClicked;
 	
 	void SetAudioData(const FMVE_STD_AudioSearchResultData& AudioData) const;
 
@@ -40,7 +36,9 @@ public:
 	void ResetPlaybackUI() const;
 
 	// This function can be called to update the time and slider
-	void UpdatePlaybackProgress(float CurrentTime, float TotalDuration);
+	void UpdatePlaybackProgress(float CurrentTime, float TotalDuration) const;
+	
+	void UpdateTotalTime(const float TotalDuration) const;
 
 protected:
 	virtual void NativeConstruct() override;

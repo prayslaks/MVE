@@ -30,12 +30,11 @@ void UMVE_STU_WC_ConcertStudioPanel::NativeConstruct()
 		PRINTNETLOG(this, TEXT("AudioSearch events connected to Controller"));
 
 		// SessionManager에서 PlaylistBuilder로부터 받은 재생목록 가져오기
-		if (UGameInstance* GameInstance = GetGameInstance())
+		if (const UGameInstance* GameInstance = GetGameInstance())
 		{
 			if (UMVE_GIS_SessionManager* SessionManager = GameInstance->GetSubsystem<UMVE_GIS_SessionManager>())
 			{
-				TArray<FAudioFile> PendingPlaylist = SessionManager->GetPendingPlaylist();
-				if (PendingPlaylist.Num() > 0)
+				if (TArray<FAudioFile> PendingPlaylist = SessionManager->GetPendingPlaylist(); PendingPlaylist.Num() > 0)
 				{
 					PRINTNETLOG(this, TEXT("PlaylistBuilder에서 받은 재생목록 적용: %d곡"), PendingPlaylist.Num());
 					AudioSearch->SetPlaylistFromBuilder(PendingPlaylist);

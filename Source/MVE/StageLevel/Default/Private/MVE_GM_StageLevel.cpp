@@ -247,14 +247,14 @@ void AMVE_GM_StageLevel::SendPresignedUrlToAllClients(const FString& PresignedUr
 	}
 }
 
-void AMVE_GM_StageLevel::SendPlayCommandToAllClients()
+bool AMVE_GM_StageLevel::SendPlayCommandToAllClients()
 {
 	PRINTNETLOG(this, TEXT("게임모드: 모든 클라이언트에게 재생 명령 전송 요청."));
 
 	if (!GetWorld() || !GameState)
 	{
 		PRINTNETLOG(this, TEXT("게임모드: World 또는 GameState가 null이므로 재생 명령을 전송할 수 없습니다."));
-		return;
+		return false;
 	}
 
 	// 모든 플레이어가 준비되었는지 확인
@@ -267,7 +267,7 @@ void AMVE_GM_StageLevel::SendPlayCommandToAllClients()
 				// 준비되지 않은 플레이어가 있으면 호스트에게 알리고, 명령을 중단할 수 있습니다.
 				// 여기서는 간단히 로그만 남기고 중단합니다.
 				PRINTNETLOG(this, TEXT("게임모드: 플레이어 %s가 아직 준비되지 않았으므로 재생 명령을 중단합니다."), *PS->GetPlayerName());
-				return;
+				return false;
 			}
 		}
 		// PlayerState가 AMVE_PS_StageLevel이 아닌 경우(예: 전환 중) 어떻게 처리할지 정책 필요. 지금은 무시.
@@ -284,6 +284,7 @@ void AMVE_GM_StageLevel::SendPlayCommandToAllClients()
 				if (UMVE_PC_StageLevel_StudioComponent* StdComponent = PC->FindComponentByClass<UMVE_PC_StageLevel_StudioComponent>())
 				{
 					PRINTNETLOG(this, TEXT("게임모드: 플레이어 %s에게 재생 명령 전송 중"), *PlayerState->GetPlayerName());
+					
 					// 클라이언트에게 오디오 재생을 요청하는 RPC 호출
 					StdComponent->Client_PlayPreparedAudio();
 				}
@@ -294,16 +295,18 @@ void AMVE_GM_StageLevel::SendPlayCommandToAllClients()
 			}
 		}
 	}
+	
+	return true;
 }
 
-void AMVE_GM_StageLevel::SendStopCommandToAllClients()
+bool AMVE_GM_StageLevel::SendStopCommandToAllClients()
 {
 	PRINTNETLOG(this, TEXT("게임모드: 모든 클라이언트에게 중지 명령 전송."));
 
 	if (!GetWorld() || !GameState)
 	{
 		PRINTNETLOG(this, TEXT("게임모드: World 또는 GameState가 null이므로 중지 명령을 전송할 수 없습니다."));
-		return;
+		return false;
 	}
 
 	for (const APlayerState* PlayerState : GameState->PlayerArray)
@@ -325,6 +328,8 @@ void AMVE_GM_StageLevel::SendStopCommandToAllClients()
 			}
 		}
 	}
+	
+	return true;
 }
 
 // 채팅 관련
@@ -419,8 +424,7 @@ void AMVE_GM_StageLevel::PostLogin(APlayerController* NewPlayer)
 
 // 플래시 눈부심 효과 적용 여부 제어
 
-void AMVE_GM_StageLevel::HandleFlashEffect(const AController* FlashManController,
-	const TArray<AActor*>& IgnoreActors, const FVector& FlashLocation, const FVector& FlashDirection, const float EffectiveDistance, const float FlashAngleDotThreshold) const
+void AMVE_GM_StageLevel::HandleFlashEffect(const AController* FlashManController, const TArray<AActor*>& IgnoreActors, const FVector& FlashLocation, const FVector& FlashDirection, const float EffectiveDistance, const float FlashAngleDotThreshold) const
 {
 	// 서버 전용 로직
 	if (HasAuthority() == false)
