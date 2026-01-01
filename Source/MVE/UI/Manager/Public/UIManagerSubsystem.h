@@ -93,7 +93,13 @@ protected:
 	UPROPERTY()
 	UUserWidget* CurrentWidget;
     
+	UPROPERTY(BlueprintReadOnly)
 	EUIScreen CurrentScreen;
+	
+	UPROPERTY(BlueprintReadOnly)
+	EUIScreen BeforeScreen;
+	
+	UPROPERTY(VisibleAnywhere)
 	TArray<EUIScreen> ScreenHistory;
     
 	UPROPERTY()

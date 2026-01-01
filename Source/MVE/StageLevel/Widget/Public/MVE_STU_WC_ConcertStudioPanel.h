@@ -12,8 +12,8 @@ class UMVE_STU_WidgetController_StudioConcert;
 class UglTFRuntimeAsset;
 class UMVE_STD_WC_AudioPlayer;
 class UMVE_STD_WC_AudioSearch;
-struct FMVE_STD_AudioSearchResultData; // Forward declare
-class USoundWave; // Forward declare
+struct FMVE_STD_AudioSearchResultData;
+class USoundWave;
 
 UCLASS()
 class MVE_API UMVE_STU_WC_ConcertStudioPanel : public UUserWidget
@@ -36,8 +36,6 @@ public:
 	UPROPERTY(meta=(BindWidget), BlueprintReadOnly)
 	TObjectPtr<UMVE_STD_WC_AudioPlayer> AudioPlayer;
 
-
-	
 private:
 	/** Audio 관련 모든 로직을 담당하는 Controller */
 	UPROPERTY()

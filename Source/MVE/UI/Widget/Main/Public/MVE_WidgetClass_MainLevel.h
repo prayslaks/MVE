@@ -14,16 +14,6 @@ class MVE_API UMVE_WidgetClass_MainLevel : public UUserWidget
 
 protected:
 	virtual void NativeConstruct() override;
-
-	// 버튼 콜백
-	UFUNCTION()
-	void OnLoginButtonClicked();
-
-	UFUNCTION()
-	void OnReturnDesktopButtonClicked();
-
-	UFUNCTION()
-	void OnCreditButtonClicked();
 	
 	UFUNCTION()
 	void OnStdBypassButtonClicked();

@@ -17,7 +17,4 @@ protected:
 	
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UButton> MoveMainButton;
-
-	UFUNCTION()
-	void OnMoveMainButtonClicked();
 };

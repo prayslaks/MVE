@@ -60,14 +60,13 @@ public:
 	 * 모든 클라이언트에게 준비된 오디오 재생을 요청합니다.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "MVE|Audio")
-	void SendPlayCommandToAllClients();
-
-
+	bool SendPlayCommandToAllClients();
+	
 	/**
 	 * 모든 클라이언트에게 오디오 재생 중지를 요청합니다.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "MVE|Audio")
-	void SendStopCommandToAllClients();
+	bool SendStopCommandToAllClients();
 
 	/**
 	 * 카메라 플래시 효과를 처리합니다.

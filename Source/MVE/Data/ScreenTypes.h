@@ -26,6 +26,7 @@ enum class EUIScreen : uint8
 	AudienceStation,
 	AudienceCustomizing,
 	AudienceGenerateMesh,
+	AudienceThrowMeshGenScreen,
 	AudienceConcertRoom
 };
 

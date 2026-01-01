@@ -203,8 +203,8 @@ void UMVE_AUD_WidgetClass_GenerateMesh::OnSaveButtonClicked()
 {
 	if (UMVE_AUD_CustomizationManager* CustomizationManager = GetGameInstance()->GetSubsystem<UMVE_AUD_CustomizationManager>())
 	{
-		FDateTime Now = FDateTime::Now();
-		CustomizationManager->SaveAccessoryPresetToServer(Now.ToString());
+		// ⭐ PresetName 통일: "MyCustomization" 사용 (덮어쓰기 방식)
+		CustomizationManager->SaveAccessoryPresetToServer(TEXT("MyCustomization"));
 	}
 }
 

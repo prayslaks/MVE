@@ -57,7 +57,7 @@
         "required": [
           "id",
           "email",
-          "created_at"
+          "createdAt"
         ],
         "properties": {
           "id": {
@@ -71,7 +71,7 @@
             "description": "사용자 이메일",
             "example": "test@example.com"
           },
-          "created_at": {
+          "createdAt": {
             "type": "string",
             "format": "date-time",
             "description": "계정 생성 시간",
@@ -653,6 +653,12 @@
               "application/json": {
                 "schema": {
                   "type": "object",
+                  "required": [
+                    "success",
+                    "code",
+                    "message",
+                    "user"
+                  ],
                   "properties": {
                     "success": {
                       "type": "boolean",
@@ -667,17 +673,7 @@
                       "example": "User created"
                     },
                     "user": {
-                      "type": "object",
-                      "properties": {
-                        "id": {
-                          "type": "integer",
-                          "example": 1
-                        },
-                        "email": {
-                          "type": "string",
-                          "example": "test@example.com"
-                        }
-                      }
+                      "$ref": "#/components/schemas/User"
                     }
                   }
                 }
@@ -847,6 +843,13 @@
               "application/json": {
                 "schema": {
                   "type": "object",
+                  "required": [
+                    "success",
+                    "code",
+                    "message",
+                    "token",
+                    "user"
+                  ],
                   "properties": {
                     "success": {
                       "type": "boolean",
@@ -866,17 +869,7 @@
                       "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
                     },
                     "user": {
-                      "type": "object",
-                      "properties": {
-                        "id": {
-                          "type": "integer",
-                          "example": 1
-                        },
-                        "email": {
-                          "type": "string",
-                          "example": "test@example.com"
-                        }
-                      }
+                      "$ref": "#/components/schemas/User"
                     }
                   }
                 }
@@ -1180,6 +1173,12 @@
               "application/json": {
                 "schema": {
                   "type": "object",
+                  "required": [
+                    "success",
+                    "code",
+                    "message",
+                    "user"
+                  ],
                   "properties": {
                     "success": {
                       "type": "boolean",
@@ -1194,22 +1193,7 @@
                       "example": "Profile retrieved successfully"
                     },
                     "user": {
-                      "type": "object",
-                      "properties": {
-                        "id": {
-                          "type": "integer",
-                          "example": 1
-                        },
-                        "email": {
-                          "type": "string",
-                          "example": "test@example.com"
-                        },
-                        "created_at": {
-                          "type": "string",
-                          "format": "date-time",
-                          "example": "2024-01-01T00:00:00.000Z"
-                        }
-                      }
+                      "$ref": "#/components/schemas/User"
                     }
                   }
                 }

@@ -1,10 +1,10 @@
 {
   "summary": {
-    "totalCodes": 177,
-    "uniqueCodes": 64,
+    "totalCodes": 178,
+    "uniqueCodes": 65,
     "filesWithCodes": 7,
     "totalFilesScanned": 15,
-    "generatedAt": "2025-12-18T08:40:39.169Z"
+    "generatedAt": "2025-12-30T06:25:05.466Z"
   },
   "statistics": [
     {
@@ -109,59 +109,59 @@
         },
         {
           "file": "routes\\concert.js",
-          "line": 1310
+          "line": 1317
         },
         {
           "file": "routes\\concert.js",
-          "line": 1418
+          "line": 1425
         },
         {
           "file": "routes\\concert.js",
-          "line": 1501
+          "line": 1508
         },
         {
           "file": "routes\\concert.js",
-          "line": 1575
+          "line": 1582
         },
         {
           "file": "routes\\models.js",
-          "line": 99
+          "line": 103
         },
         {
           "file": "routes\\models.js",
-          "line": 387
+          "line": 433
         },
         {
           "file": "routes\\models.js",
-          "line": 589
+          "line": 633
         },
         {
           "file": "routes\\models.js",
-          "line": 830
+          "line": 876
         },
         {
           "file": "routes\\models.js",
-          "line": 933
+          "line": 979
         },
         {
           "file": "routes\\models.js",
-          "line": 1050
+          "line": 1096
         },
         {
           "file": "routes\\models.js",
-          "line": 1215
+          "line": 1261
         },
         {
           "file": "routes\\models.js",
-          "line": 1446
+          "line": 1492
         },
         {
           "file": "routes\\models.js",
-          "line": 1646
+          "line": 1692
         },
         {
           "file": "routes\\models.js",
-          "line": 2302
+          "line": 2348
         }
       ]
     },
@@ -183,55 +183,55 @@
         },
         {
           "file": "routes\\models.js",
-          "line": 140
+          "line": 144
         },
         {
           "file": "routes\\models.js",
-          "line": 444
+          "line": 488
         },
         {
           "file": "routes\\models.js",
-          "line": 746
+          "line": 792
         },
         {
           "file": "routes\\models.js",
-          "line": 848
+          "line": 894
         },
         {
           "file": "routes\\models.js",
-          "line": 958
+          "line": 1004
         },
         {
           "file": "routes\\models.js",
-          "line": 1083
+          "line": 1129
         },
         {
           "file": "routes\\models.js",
-          "line": 1274
+          "line": 1320
         },
         {
           "file": "routes\\models.js",
-          "line": 1485
+          "line": 1531
         },
         {
           "file": "routes\\models.js",
-          "line": 1682
+          "line": 1728
         },
         {
           "file": "routes\\models.js",
-          "line": 1889
+          "line": 1935
         },
         {
           "file": "routes\\models.js",
-          "line": 2049
+          "line": 2095
         },
         {
           "file": "routes\\models.js",
-          "line": 2183
+          "line": 2229
         },
         {
           "file": "routes\\models.js",
-          "line": 2329
+          "line": 2375
         }
       ]
     },
@@ -257,47 +257,47 @@
         },
         {
           "file": "routes\\models.js",
-          "line": 132
+          "line": 136
         },
         {
           "file": "routes\\models.js",
-          "line": 436
+          "line": 480
         },
         {
           "file": "routes\\models.js",
-          "line": 950
+          "line": 996
         },
         {
           "file": "routes\\models.js",
-          "line": 1075
+          "line": 1121
         },
         {
           "file": "routes\\models.js",
-          "line": 1266
+          "line": 1312
         },
         {
           "file": "routes\\models.js",
-          "line": 1477
+          "line": 1523
         },
         {
           "file": "routes\\models.js",
-          "line": 1674
+          "line": 1720
         },
         {
           "file": "routes\\models.js",
-          "line": 1882
+          "line": 1928
         },
         {
           "file": "routes\\models.js",
-          "line": 2042
+          "line": 2088
         },
         {
           "file": "routes\\models.js",
-          "line": 2175
+          "line": 2221
         },
         {
           "file": "routes\\models.js",
-          "line": 2321
+          "line": 2367
         }
       ]
     },
@@ -343,11 +343,11 @@
         },
         {
           "file": "routes\\concert.js",
-          "line": 1406
+          "line": 1413
         },
         {
           "file": "routes\\concert.js",
-          "line": 1489
+          "line": 1496
         }
       ]
     },
@@ -381,7 +381,7 @@
         },
         {
           "file": "routes\\concert.js",
-          "line": 1396
+          "line": 1403
         }
       ]
     },
@@ -391,31 +391,31 @@
       "locations": [
         {
           "file": "routes\\models.js",
-          "line": 1037
+          "line": 1083
         },
         {
           "file": "routes\\models.js",
-          "line": 1393
+          "line": 1439
         },
         {
           "file": "routes\\models.js",
-          "line": 1608
+          "line": 1654
         },
         {
           "file": "routes\\models.js",
-          "line": 1821
+          "line": 1867
         },
         {
           "file": "routes\\models.js",
-          "line": 2002
+          "line": 2048
         },
         {
           "file": "routes\\models.js",
-          "line": 2124
+          "line": 2170
         },
         {
           "file": "routes\\models.js",
-          "line": 2262
+          "line": 2308
         }
       ]
     },
@@ -477,11 +477,11 @@
         },
         {
           "file": "routes\\models.js",
-          "line": 2018
+          "line": 2064
         },
         {
           "file": "routes\\models.js",
-          "line": 2152
+          "line": 2198
         }
       ]
     },
@@ -549,11 +549,11 @@
         },
         {
           "file": "routes\\models.js",
-          "line": 340
+          "line": 386
         },
         {
           "file": "routes\\models.js",
-          "line": 1175
+          "line": 1221
         }
       ]
     },
@@ -619,7 +619,7 @@
       "locations": [
         {
           "file": "routes\\concert.js",
-          "line": 1563
+          "line": 1570
         },
         {
           "file": "routes\\models.js",
@@ -633,11 +633,11 @@
       "locations": [
         {
           "file": "routes\\models.js",
-          "line": 276
+          "line": 280
         },
         {
           "file": "routes\\models.js",
-          "line": 814
+          "line": 860
         }
       ]
     },
@@ -647,11 +647,11 @@
       "locations": [
         {
           "file": "routes\\models.js",
-          "line": 1258
+          "line": 1304
         },
         {
           "file": "routes\\models.js",
-          "line": 1469
+          "line": 1515
         }
       ]
     },
@@ -935,7 +935,7 @@
       "locations": [
         {
           "file": "routes\\concert.js",
-          "line": 1318
+          "line": 1325
         }
       ]
     },
@@ -945,7 +945,7 @@
       "locations": [
         {
           "file": "routes\\concert.js",
-          "line": 1426
+          "line": 1433
         }
       ]
     },
@@ -955,7 +955,7 @@
       "locations": [
         {
           "file": "routes\\concert.js",
-          "line": 1510
+          "line": 1517
         }
       ]
     },
@@ -965,7 +965,7 @@
       "locations": [
         {
           "file": "routes\\concert.js",
-          "line": 1584
+          "line": 1591
         }
       ]
     },
@@ -975,7 +975,7 @@
       "locations": [
         {
           "file": "routes\\models.js",
-          "line": 253
+          "line": 257
         }
       ]
     },
@@ -985,7 +985,7 @@
       "locations": [
         {
           "file": "routes\\models.js",
-          "line": 298
+          "line": 302
         }
       ]
     },
@@ -995,7 +995,17 @@
       "locations": [
         {
           "file": "routes\\models.js",
-          "line": 318
+          "line": 322
+        }
+      ]
+    },
+    {
+      "code": "MODEL_ALREADY_EXISTS",
+      "count": 1,
+      "locations": [
+        {
+          "file": "routes\\models.js",
+          "line": 367
         }
       ]
     },
@@ -1005,7 +1015,7 @@
       "locations": [
         {
           "file": "routes\\models.js",
-          "line": 557
+          "line": 601
         }
       ]
     },
@@ -1015,7 +1025,7 @@
       "locations": [
         {
           "file": "routes\\models.js",
-          "line": 823
+          "line": 869
         }
       ]
     },
@@ -1025,7 +1035,7 @@
       "locations": [
         {
           "file": "routes\\models.js",
-          "line": 1423
+          "line": 1469
         }
       ]
     },
@@ -1035,7 +1045,7 @@
       "locations": [
         {
           "file": "routes\\models.js",
-          "line": 1585
+          "line": 1631
         }
       ]
     },
@@ -1045,7 +1055,7 @@
       "locations": [
         {
           "file": "routes\\models.js",
-          "line": 1864
+          "line": 1910
         }
       ]
     },
@@ -1055,7 +1065,7 @@
       "locations": [
         {
           "file": "routes\\models.js",
-          "line": 2137
+          "line": 2183
         }
       ]
     },

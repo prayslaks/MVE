@@ -10,21 +10,6 @@
 void UMVE_WidgetClass_MainLevel::NativeConstruct()
 {
 	Super::NativeConstruct();
-
-	// 버튼 바인딩
-	if (LoginButton)
-	{
-		LoginButton->OnClicked.AddDynamic(this, &UMVE_WidgetClass_MainLevel::OnLoginButtonClicked);
-	}
-	if (CreditButton)
-	{
-		CreditButton->OnClicked.AddDynamic(this, &UMVE_WidgetClass_MainLevel::OnCreditButtonClicked);
-	}
-
-	if (ReturnDesktopButton)
-	{
-		ReturnDesktopButton->OnClicked.AddDynamic(this, &UMVE_WidgetClass_MainLevel::OnReturnDesktopButtonClicked);
-	}
 	
 	if (StdBypassButton)
 	{
@@ -34,36 +19,6 @@ void UMVE_WidgetClass_MainLevel::NativeConstruct()
 	if (AudBypassButton)
 	{
 		AudBypassButton->OnClicked.AddDynamic(this, &UMVE_WidgetClass_MainLevel::OnAudBypassButtonClicked);
-	}
-}
-
-// ReSharper disable once CppMemberFunctionMayBeConst
-void UMVE_WidgetClass_MainLevel::OnLoginButtonClicked()
-{
-	PRINTLOG(TEXT("OnLoginButtonClicked Called"));
-	if (UUIManagerSubsystem* UIManager = UUIManagerSubsystem::Get(this))
-	{
-		UIManager->ShowScreen(EUIScreen::Login);
-	}
-}
-
-// ReSharper disable once CppMemberFunctionMayBeConst
-void UMVE_WidgetClass_MainLevel::OnReturnDesktopButtonClicked()
-{
-	PRINTLOG(TEXT("OnReturnDesktopButtonClicked Called"));
-	if (APlayerController* PC = GetOwningPlayer())
-	{
-		UKismetSystemLibrary::QuitGame(this, PC, EQuitPreference::Quit, false);
-	}
-}
-
-// ReSharper disable once CppMemberFunctionMayBeConst
-void UMVE_WidgetClass_MainLevel::OnCreditButtonClicked()
-{
-	PRINTLOG(TEXT("OnCreditButtonClicked Called"));
-	if (UUIManagerSubsystem* UIManager = UUIManagerSubsystem::Get(this))
-	{
-		UIManager->ShowScreen(EUIScreen::Credit);
 	}
 }
 

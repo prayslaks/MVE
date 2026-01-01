@@ -45,147 +45,29 @@ void UMVE_STU_WidgetController_StudioConcert::OnTrackSelected(const FMVE_STD_Aud
     LoadPresignedUrlAndBroadcast(AudioData);
 }
 
+// ReSharper disable once CppMemberFunctionMayBeConst
 void UMVE_STU_WidgetController_StudioConcert::OnPlayRequested()
 {
-    PRINTNETLOG(this, TEXT("Play requested for track: %s"), *CurrentTrackData.Title);
-    SendPlayCommandToClients();
+    if (bIsPlaying)
+    {
+        PRINTNETLOG(this, TEXT("Stop requested"));
+        SendStopCommandToClients();
+    }
+    else
+    {
+        PRINTNETLOG(this, TEXT("Play requested for track: %s"), *CurrentTrackData.Title);
+        SendPlayCommandToClients();   
+    }
 }
 
+// ReSharper disable once CppMemberFunctionMayBeConst
 void UMVE_STU_WidgetController_StudioConcert::OnStopRequested()
 {
     PRINTNETLOG(this, TEXT("Stop requested"));
     SendStopCommandToClients();
 }
 
-void UMVE_STU_WidgetController_StudioConcert::SetCurrentTrackData(const FMVE_STD_AudioSearchResultData& Data)
-{
-    CurrentTrackData = Data;
-}
-
-void UMVE_STU_WidgetController_StudioConcert::LoadPresignedUrlAndBroadcast(const FMVE_STD_AudioSearchResultData& AudioData)
-{
-    PRINTNETLOG(this, TEXT("Requesting Presigned URL for Title: %s"), *AudioData.Title);
-
-    FOnStreamAudioComplete OnResult;
-    OnResult.BindLambda([this](const bool bSuccess, const FStreamAudioResponseData& ResponseData, const FString& ErrorCode)
-    {
-        if (bSuccess)
-        {
-            const FString PresignedUrl = ResponseData.StreamUrl;
-            PRINTNETLOG(this, TEXT("Got PresignedUrl = {%s}, sending to all clients"), *PresignedUrl);
-
-            // GameMode를 통해 모든 클라이언트에 URL 전송
-            if (UWorld* World = GetWorld())
-            {
-                if (AMVE_GM_StageLevel* GameMode = World->GetAuthGameMode<AMVE_GM_StageLevel>())
-                {
-                    GameMode->SendPresignedUrlToAllClients(PresignedUrl);
-
-                    // 🔥 자동 재생 플래그가 설정되어 있으면 재생 명령 전송
-                    if (bAutoPlayAfterSelection)
-                    {
-                        PRINTNETLOG(this, TEXT("🎵 자동 재생: URL 로드 완료, 재생 명령 전송"));
-                        bAutoPlayAfterSelection = false; // 플래그 리셋
-                        SendPlayCommandToClients();
-                    }
-                }
-                else
-                {
-                    PRINTNETLOG(this, TEXT("Failed to get AMVE_API_GMTest GameMode"));
-                }
-            }
-        }
-        else
-        {
-            PRINTNETLOG(this, TEXT("Failed to get Presigned URL. Error: %s"), *ErrorCode);
-            bAutoPlayAfterSelection = false; // 실패 시 플래그 리셋
-        }
-    });
-
-    UMVE_API_Helper::StreamAudio(AudioData.Id, OnResult);
-}
-
-void UMVE_STU_WidgetController_StudioConcert::SendPlayCommandToClients()
-{
-    PRINTNETLOG(this, TEXT("Sending play command to all clients"));
-    
-    if (UWorld* World = GetWorld())
-    {
-        if (AMVE_GM_StageLevel* GameMode = World->GetAuthGameMode<AMVE_GM_StageLevel>())
-        {
-            GameMode->SendPlayCommandToAllClients();
-        }
-        else
-        {
-            PRINTNETLOG(this, TEXT("Failed to get AMVE_API_GMTest GameMode"));
-        }
-    }
-}
-
-void UMVE_STU_WidgetController_StudioConcert::SendStopCommandToClients()
-{
-    PRINTNETLOG(this, TEXT("Sending stop command to all clients"));
-    
-    if (UWorld* World = GetWorld())
-    {
-        if (AMVE_GM_StageLevel* GameMode = World->GetAuthGameMode<AMVE_GM_StageLevel>())
-        {
-            GameMode->SendStopCommandToAllClients();
-        }
-        else
-        {
-            PRINTNETLOG(this, TEXT("Failed to get AMVE_API_GMTest GameMode"));
-        }
-    }
-}
-
-void UMVE_STU_WidgetController_StudioConcert::SetupPlayerUI(const FMVE_STD_AudioSearchResultData& AudioData)
-{
-    if (!PlayerWidget)
-    {
-        PRINTNETLOG(this, TEXT("Cannot setup Player UI: PlayerWidget is null"));
-        return;
-    }
-    
-    // AudioPlayer에 데이터 설정
-    PlayerWidget->SetAudioData(AudioData);
-    
-    // 델리게이트 초기화 및 재등록
-    PlayerWidget->OnPlayClicked.Clear();
-    PlayerWidget->OnPlayClicked.AddDynamic(this, &UMVE_STU_WidgetController_StudioConcert::OnPlayRequested);
-    
-    PlayerWidget->OnStopClicked.Clear();
-    PlayerWidget->OnStopClicked.AddDynamic(this, &UMVE_STU_WidgetController_StudioConcert::OnStopRequested);
-    
-    // UI 초기화
-    PlayerWidget->ResetPlaybackUI();
-    PlayerWidget->UpdatePlayPauseButton(false); // Paused state
-}
-
-int32 UMVE_STU_WidgetController_StudioConcert::FindTrackIndex(const FMVE_STD_AudioSearchResultData& TrackData) const
-{
-    if (!AudioSearch || AudioSearch->SearchResultWidgets.Num() == 0)
-    {
-        return -1;
-    }
-
-    // Id로 비교해서 현재 트랙 찾기
-    for (int32 i = 0; i < AudioSearch->SearchResultWidgets.Num(); i++)
-    {
-        if (AudioSearch->SearchResultWidgets[i])
-        {
-            FMVE_STD_AudioSearchResultData Data = AudioSearch->SearchResultWidgets[i]->GetAudioData();
-            if (Data.Id == TrackData.Id)
-            {
-                return i;  // 찾았음!
-            }
-        }
-    }
-
-    return -1;  // 못 찾음
-}
-
-void UMVE_STU_WidgetController_StudioConcert::OnNextTrackRequested(bool bAutoPlay)
+void UMVE_STU_WidgetController_StudioConcert::OnNextTrackRequested(const bool bAutoPlay)
 {
     PRINTNETLOG(this, TEXT("⏭️ 다음 곡 요청"));
 
@@ -238,7 +120,7 @@ void UMVE_STU_WidgetController_StudioConcert::OnNextTrackRequested(bool bAutoPla
     OnTrackSelected(NextTrackData);
 }
 
-void UMVE_STU_WidgetController_StudioConcert::OnPreviousTrackRequested(bool bAutoPlay)
+void UMVE_STU_WidgetController_StudioConcert::OnPreviousTrackRequested(const bool bAutoPlay)
 {
     PRINTNETLOG(this, TEXT("⏮️ 이전 곡 요청"));
 
@@ -291,12 +173,124 @@ void UMVE_STU_WidgetController_StudioConcert::OnPreviousTrackRequested(bool bAut
     OnTrackSelected(PrevTrackData);
 }
 
-void UMVE_STU_WidgetController_StudioConcert::HandleVoiceCommand(ESTTCommandType CommandType,
-    const FString& OriginalText)
+void UMVE_STU_WidgetController_StudioConcert::SetCurrentTrackData(const FMVE_STD_AudioSearchResultData& Data)
+{
+    CurrentTrackData = Data;
+}
+
+void UMVE_STU_WidgetController_StudioConcert::LoadPresignedUrlAndBroadcast(const FMVE_STD_AudioSearchResultData& AudioData)
+{
+    PRINTNETLOG(this, TEXT("Requesting Presigned URL for Title: %s"), *AudioData.Title);
+
+    FOnStreamAudioComplete OnResult;
+    OnResult.BindLambda([this](const bool bSuccess, const FStreamAudioResponseData& ResponseData, const FString& ErrorCode)
+    {
+        if (bSuccess && ResponseData.Success)
+        {
+            const FString PresignedUrl = ResponseData.StreamUrl;
+            PRINTNETLOG(this, TEXT("Got PresignedUrl = {%s}, sending to all clients"), *PresignedUrl);
+
+            // GameMode를 통해 모든 클라이언트에 URL 전송
+            if (const UWorld* World = GetWorld())
+            {
+                if (AMVE_GM_StageLevel* GameMode = World->GetAuthGameMode<AMVE_GM_StageLevel>())
+                {
+                    GameMode->SendPresignedUrlToAllClients(PresignedUrl);
+                    
+                    // 자동 재생 플래그가 설정되어 있으면 재생 명령 전송
+                    if (bAutoPlayAfterSelection)
+                    {
+                        // 타이머 활성화
+                        FTimerHandle TimerHandle;
+                        FTimerDelegate TimerDelegate;
+                        TimerDelegate.BindLambda([this, &GameMode, &TimerDelegate]()
+                        {
+                           PRINTNETLOG(this, TEXT("🎵 자동 재생: URL 로드 완료, 재생 명령 전송"));
+                           bAutoPlayAfterSelection = false;
+                           SendPlayCommandToClients();
+                        });
+                        GetWorld()->GetTimerManager().SetTimer(TimerHandle, TimerDelegate, 2.0f, false);   
+                    }
+                }
+                else
+                {
+                    PRINTNETLOG(this, TEXT("Failed to get AMVE_API_GMTest GameMode"));
+                }
+            }
+        }
+        else
+        {
+            PRINTNETLOG(this, TEXT("Failed to get Presigned URL. Error: %s"), *ErrorCode);
+            bAutoPlayAfterSelection = false; // 실패 시 플래그 리셋
+        }
+    });
+
+    UMVE_API_Helper::StreamAudio(AudioData.Id, OnResult);
+}
+
+void UMVE_STU_WidgetController_StudioConcert::SendPlayCommandToClients()
+{
+    PRINTNETLOG(this, TEXT("Sending play command to all clients"));
+    
+    if (const UWorld* World = GetWorld())
+    {
+        if (AMVE_GM_StageLevel* GameMode = World->GetAuthGameMode<AMVE_GM_StageLevel>())
+        {
+            const bool bRequestSuccess = GameMode->SendPlayCommandToAllClients();
+            bIsPlaying = bRequestSuccess;
+            PlayerWidget->UpdatePlayPauseButton(bIsPlaying);
+        }
+        else
+        {
+            PRINTNETLOG(this, TEXT("Failed to get AMVE_API_GMTest GameMode"));
+        }
+    }
+}
+
+void UMVE_STU_WidgetController_StudioConcert::SendStopCommandToClients()
+{
+    PRINTNETLOG(this, TEXT("Sending stop command to all clients"));
+    
+    if (const UWorld* World = GetWorld())
+    {
+        if (AMVE_GM_StageLevel* GameMode = World->GetAuthGameMode<AMVE_GM_StageLevel>())
+        {
+            const bool bRequestSuccess = GameMode->SendStopCommandToAllClients();
+            bIsPlaying = !bRequestSuccess;
+            PlayerWidget->UpdatePlayPauseButton(bIsPlaying);
+        }
+        else
+        {
+            PRINTNETLOG(this, TEXT("Failed to get AMVE_API_GMTest GameMode"));
+        }
+    }
+}
+
+void UMVE_STU_WidgetController_StudioConcert::SetupPlayerUI(const FMVE_STD_AudioSearchResultData& AudioData)
+{
+    if (!PlayerWidget)
+    {
+        PRINTNETLOG(this, TEXT("Cannot setup Player UI: PlayerWidget is null"));
+        return;
+    }
+    
+    // AudioPlayer에 데이터 설정
+    PlayerWidget->SetAudioData(AudioData);
+    
+    // 델리게이트 초기화 및 재등록
+    PlayerWidget->OnPlayClicked.Clear();
+    PlayerWidget->OnPlayClicked.AddDynamic(this, &UMVE_STU_WidgetController_StudioConcert::OnPlayRequested);
+    
+    // UI 초기화
+    PlayerWidget->ResetPlaybackUI();
+    PlayerWidget->UpdatePlayPauseButton(false); // Paused state
+}
+
+void UMVE_STU_WidgetController_StudioConcert::HandleVoiceCommand(ESTTCommandType CommandType, const FString& OriginalText)
 {
     PRINTNETLOG(this, TEXT("🎤 음성 명령 수신: %s - \"%s\""),
-        *USTTSubsystem::GetCommandDisplayName(CommandType),
-        *OriginalText);
+                *USTTSubsystem::GetCommandDisplayName(CommandType),
+                *OriginalText);
 
     switch (CommandType)
     {
@@ -311,10 +305,9 @@ void UMVE_STU_WidgetController_StudioConcert::HandleVoiceCommand(ESTTCommandType
                 if (AudioSearch && AudioSearch->SearchResultWidgets.Num() > 0)
                 {
                     // 첫 번째 트랙 가져오기
-                    UMVE_STD_WC_AudioSearchResult* FirstTrack = AudioSearch->SearchResultWidgets[0];
-                    if (FirstTrack)
+                    if (const UMVE_STD_WC_AudioSearchResult* FirstTrack = AudioSearch->SearchResultWidgets[0])
                     {
-                        FMVE_STD_AudioSearchResultData FirstTrackData = FirstTrack->GetAudioData();
+                        const FMVE_STD_AudioSearchResultData FirstTrackData = FirstTrack->GetAudioData();
                         PRINTNETLOG(this, TEXT("✅ 첫 번째 트랙 선택: %s"), *FirstTrackData.Title);
 
                         // 자동 재생 플래그 설정
@@ -356,4 +349,27 @@ void UMVE_STU_WidgetController_StudioConcert::HandleVoiceCommand(ESTTCommandType
         PRINTNETLOG(this, TEXT("⚠️ 처리되지 않은 명령: %d"), (int32)CommandType);
         break;
     }
+}
+
+int32 UMVE_STU_WidgetController_StudioConcert::FindTrackIndex(const FMVE_STD_AudioSearchResultData& TrackData) const
+{
+    if (!AudioSearch || AudioSearch->SearchResultWidgets.Num() == 0)
+    {
+        return -1;
+    }
+
+    // Id로 비교해서 현재 트랙 찾기
+    for (int32 i = 0; i < AudioSearch->SearchResultWidgets.Num(); i++)
+    {
+        if (AudioSearch->SearchResultWidgets[i])
+        {
+            FMVE_STD_AudioSearchResultData Data = AudioSearch->SearchResultWidgets[i]->GetAudioData();
+            if (Data.Id == TrackData.Id)
+            {
+                return i;  // 찾았음!
+            }
+        }
+    }
+
+    return -1;  // 못 찾음
 }

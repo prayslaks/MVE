@@ -19,7 +19,7 @@
             StructType ParsedData; \
             if (FJsonObjectConverter::JsonObjectStringToUStruct(ResponseBody, &ParsedData, 0, 0)) \
             { \
-                OnResult.ExecuteIfBound(true, ParsedData, TEXT("")); \
+                OnResult.ExecuteIfBound(true, ParsedData, ParsedData.Code); \
             } \
             else \
             { \
@@ -327,7 +327,7 @@ void UMVE_API_Helper::SaveAccessoryPreset(const FString& PresetName, const TArra
     FMVE_HTTP_Client::SendPostRequest(URL, JsonBody, GlobalAuthToken, HANDLE_RESPONSE_STRUCT(FSavePresetResponseData, OnResult));
 }
 
-void UMVE_API_Helper::GetPresetList(const bool bIncludePublic, const FOnGetPresetListComplete& OnResult)
+void UMVE_API_Helper::GetPresetList(const bool bIncludePublic, const FOnGetPresetListComplete& OnResult)    
 {
     const FString URL = FString::Printf(TEXT("%s/api/accessory-presets/list?includePublic=%s"), *ResourceServerURL, bIncludePublic ? TEXT("true") : TEXT("false"));
     FMVE_HTTP_Client::SendGetRequest(URL, GlobalAuthToken, HANDLE_RESPONSE_STRUCT(FGetPresetListResponseData, OnResult));

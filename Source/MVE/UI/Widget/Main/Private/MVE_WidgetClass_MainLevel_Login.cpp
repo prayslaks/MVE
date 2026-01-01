@@ -1,5 +1,6 @@
 #include "UI/Widget/Main/Public/MVE_WidgetClass_MainLevel_Login.h"
 #include "MVE.h"
+#include "MVE_GI.h"
 #include "MVE_GIS_API.h"
 #include "API/Public/MVE_API_Helper.h"
 #include "UIManagerSubsystem.h"
@@ -23,22 +24,10 @@ void UMVE_WidgetClass_MainLevel_Login::NativeConstruct()
 		UserPasswordEditableBox->OnTextCommitted.AddDynamic(this, &UMVE_WidgetClass_MainLevel_Login::OnUserPasswordEditableBoxCommitted);
 	}
 
-	// 메인 메뉴 이동 바인딩
-	if (MoveMainButton)
-	{
-		MoveMainButton->OnClicked.AddDynamic(this, &UMVE_WidgetClass_MainLevel_Login::OnMoveMainMenuButtonClicked);
-	}
-
 	// 로그인 시도 바인딩
 	if (TryLoginButton)
 	{
 		TryLoginButton->OnClicked.AddDynamic(this, &UMVE_WidgetClass_MainLevel_Login::OnLoginButtonClicked);
-	}
-
-	// 회원가입 이동 바인딩
-	if (MoveRegisterButton)
-	{
-		MoveRegisterButton->OnClicked.AddDynamic(this, &UMVE_WidgetClass_MainLevel_Login::OnRegisterButtonClicked);
 	}
 
 	// 로그인 검증 텍스트 블록
@@ -47,6 +36,12 @@ void UMVE_WidgetClass_MainLevel_Login::NativeConstruct()
 		LoginValidationTextBlock->SetText(FText::GetEmpty());
 		LoginValidationTextBlock->SetVisibility(ESlateVisibility::Hidden);
 	}
+}
+
+void UMVE_WidgetClass_MainLevel_Login::ClearUserEmailAndPassword()
+{
+	UserEmailEditableBox->SetText(FText::GetEmpty());
+	UserPasswordEditableBox->SetText(FText::GetEmpty());
 }
 
 void UMVE_WidgetClass_MainLevel_Login::OnUserEmailEditableBoxCommitted(const FText& Text, ETextCommit::Type CommitMethod)
@@ -80,57 +75,43 @@ void UMVE_WidgetClass_MainLevel_Login::OnLoginButtonClicked()
 }
 
 // ReSharper disable once CppMemberFunctionMayBeConst
-void UMVE_WidgetClass_MainLevel_Login::OnLoginResultReceived(const bool bSuccess, const FLoginResponseData& ResponseData, const FString& ErrorCode)
+void UMVE_WidgetClass_MainLevel_Login::OnLoginResultReceived(const bool bSuccess, const FLoginResponseData& ResponseData, const FString& Code)
 {
-	if (bSuccess)
+	PRINTLOG(TEXT("%s %s %s %s"), ResponseData.Success ? TEXT("True") : TEXT("False"), *ResponseData.Code, *ResponseData.Message, *ResponseData.Token);
+	PRINTLOG(TEXT("%s"), *ResponseData.User.Email);
+	
+	if (bSuccess && ResponseData.Success)
 	{
 		PRINTLOG(TEXT("OnLoginResultReceived Success"));
+		
 		// JWT 토큰 설정
 		UMVE_API_Helper::SetAuthToken(ResponseData.Token);
 		
-		if (LoginValidationTextBlock)
+		// 유저 데이터 설정
+		if (UMVE_GI* GI = Cast<UMVE_GI>(GetGameInstance()))
 		{
-			LoginValidationTextBlock->SetVisibility(ESlateVisibility::Hidden);
+			GI->SetUserData(ResponseData.User);
 		}
-
-		// 요청이 성공했으므로 이동
-		if (UUIManagerSubsystem* UIManager = UUIManagerSubsystem::Get(this))
-		{
-			UIManager->ShowScreen(EUIScreen::ModeSelect);
-		}
+		
+		// 블루프린트에 나머지 작업을 넘긴다
+		OnLoginSuccessBIE();
 	}
 	else
 	{
-		PRINTLOG(TEXT("OnLoginResultReceived Fail"));
-		FText TranslatedErrorMessage;
-		if (const UMVE_GIS_API* Subsystem = UMVE_GIS_API::Get(this))
-		{
-			TranslatedErrorMessage = Subsystem->GetTranslatedTextFromResponseCode(ErrorCode);
-		}
-		
-		if (LoginValidationTextBlock)
-		{
-			LoginValidationTextBlock->SetText(TranslatedErrorMessage);
-			LoginValidationTextBlock->SetColorAndOpacity(FLinearColor::Red);
-			LoginValidationTextBlock->SetVisibility(ESlateVisibility::Visible);
-		}
+		// 블루프린트에 나머지 작업을 넘긴다
+		OnLoginFailBIE();
 	}
-}
-
-// ReSharper disable once CppMemberFunctionMayBeConst
-void UMVE_WidgetClass_MainLevel_Login::OnRegisterButtonClicked()
-{
-	if (UUIManagerSubsystem* UIManager = UUIManagerSubsystem::Get(this))
+	
+	// 리스폰스 코드를 이용하여 로그인 결과 피드백
+	FText TranslatedErrorMessage;
+	if (const UMVE_GIS_API* Subsystem = UMVE_GIS_API::Get(this))
 	{
-		UIManager->ShowScreen(EUIScreen::Register);
+		TranslatedErrorMessage = Subsystem->GetTranslatedTextFromResponseCode(Code);
 	}
-}
-
-// ReSharper disable once CppMemberFunctionMayBeConst
-void UMVE_WidgetClass_MainLevel_Login::OnMoveMainMenuButtonClicked()
-{
-	if (UUIManagerSubsystem* UIManager = UUIManagerSubsystem::Get(this))
+	if (LoginValidationTextBlock)
 	{
-		UIManager->ShowScreen(EUIScreen::Main);
+		LoginValidationTextBlock->SetText(TranslatedErrorMessage);
+		LoginValidationTextBlock->SetColorAndOpacity(bSuccess && ResponseData.Success ? FLinearColor::Green : FLinearColor::Red);
+		LoginValidationTextBlock->SetVisibility(ESlateVisibility::Visible);
 	}
 }

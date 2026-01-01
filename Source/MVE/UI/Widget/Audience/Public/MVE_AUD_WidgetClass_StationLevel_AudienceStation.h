@@ -21,6 +21,9 @@ protected:
 	UPROPERTY(meta=(BindWidget))
 	TObjectPtr<UButton> CustomButton;
 
+	UPROPERTY(meta=(BindWidget))
+	TObjectPtr<UButton> ThrowCustomButton;
+
 	UPROPERTY(meta=(BindWidget), BlueprintReadOnly)
 	TObjectPtr<UMVE_AUD_WidgetClass_SearchConcert> SearchConcertWidget;
 
@@ -31,4 +34,7 @@ private:
 
 	UFUNCTION()
 	void OnCustomButtonClicked();
+
+	UFUNCTION()
+	void OnThrowCustomButtonClicked();
 };

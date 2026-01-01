@@ -48,6 +48,15 @@ protected:
 	UPROPERTY(VisibleAnywhere)
 	FString CommittedUserPassword;
 	
+	// 로그인 성공-실패 블루프린트 구현 이벤트
+	UFUNCTION(BlueprintImplementableEvent)
+	void OnLoginSuccessBIE();
+	UFUNCTION(BlueprintImplementableEvent)
+	void OnLoginFailBIE();
+	
+	UFUNCTION(BlueprintCallable)
+	void ClearUserEmailAndPassword();
+	
 private:
 	// 유저 네임 작성 콜백
 	UFUNCTION()
@@ -61,15 +70,7 @@ private:
 	UFUNCTION()
 	void OnLoginButtonClicked();
 
-	// 회원가입 버튼 콜백
-	UFUNCTION()
-	void OnRegisterButtonClicked();
-
-	// 메인 메뉴 이동 버튼 콜백
-	UFUNCTION()
-	void OnMoveMainMenuButtonClicked();
-
 	// 로그인 API 응답 콜백
 	UFUNCTION()
-	void OnLoginResultReceived(const bool bSuccess, const FLoginResponseData& ResponseData, const FString& ErrorCode);
+	void OnLoginResultReceived(const bool bSuccess, const FLoginResponseData& ResponseData, const FString& Code);
 };

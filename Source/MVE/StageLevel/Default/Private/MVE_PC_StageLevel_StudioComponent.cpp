@@ -1,5 +1,6 @@
 ﻿#include "StageLevel/Default/Public/MVE_PC_StageLevel_StudioComponent.h"
 
+#include "AudioDevice.h"
 #include "glTFRuntimeFunctionLibrary.h"
 #include "glTFRuntimeAudioFunctionLibrary.h"
 #include "MVE.h"
@@ -76,26 +77,27 @@ void UMVE_PC_StageLevel_StudioComponent::OnAudioLoadedFromUrl(UglTFRuntimeAsset*
 	// 다운로드된 바이너리 데이터를 사운드 웨이브 에셋으로 변환합니다.
 	const EglTFRuntimeAudioDecoder Decoder{};
 	const FglTFRuntimeAudioConfig Config{};
-	USoundWave* LoadedSoundWave = UglTFRuntimeAudioFunctionLibrary::LoadSoundFromBlob(Asset, Decoder, Config);
 
-	if (LoadedSoundWave)
+	if (USoundWave* LoadedSoundWave = UglTFRuntimeAudioFunctionLibrary::LoadSoundFromBlob(Asset, Decoder, Config))
 	{
 		PRINTNETLOG(this, TEXT("[오디오 동기화] 사운드 로드 성공. %d개의 스피커에 사운드를 설정합니다."), FoundSpeakers.Num());
 
-		// 총 재생 시간 저장
+		// 총 재생 시간 업데이트
 		TotalPlaybackDuration = LoadedSoundWave->Duration;
 		PRINTNETLOG(this, TEXT("[오디오 동기화] 총 재생 시간: %.2f초"), TotalPlaybackDuration);
+		AudioPlayer->UpdateTotalTime(TotalPlaybackDuration);
 
-		// UI 슬라이더 초기화 (새 곡 로드 시)
+		// UI 슬라이더 및 재생 시간 초기화 (새 곡 로드 시)
 		if (AudioPlayer)
 		{
 			AudioPlayer->ResetPlaybackUI();
+			LastPlaybackTime = 0.f;
 			PRINTNETLOG(this, TEXT("[오디오 동기화] AudioPlayer UI 초기화 완료"));
 		}
 
 		// 이 클라이언트가 찾은 모든 스피커에 로드된 사운드를 설정합니다.
 		int32 SpeakerCount = 0;
-		for (AMVE_StageLevel_Speaker* Speaker : FoundSpeakers)
+		for (const AMVE_StageLevel_Speaker* Speaker : FoundSpeakers)
 		{
 			if (Speaker && Speaker->GetAudioComponent())
 			{
@@ -128,12 +130,13 @@ void UMVE_PC_StageLevel_StudioComponent::Client_PlayPreparedAudio_Implementation
 	PRINTNETLOG(this, TEXT("[오디오 동기화] 재생 명령 수신 확인. %d개의 스피커에서 오디오를 재생합니다."), FoundSpeakers.Num());
 
 	int32 SpeakerCount = 0;
-	for (AMVE_StageLevel_Speaker* Speaker : FoundSpeakers)
+	for (const AMVE_StageLevel_Speaker* Speaker : FoundSpeakers)
 	{
 		if (Speaker && Speaker->GetAudioComponent())
 		{
-			// 이전에 Client_PrepareAudio를 통해 사운드가 설정되었다고 가정하고 재생합니다.
-			Speaker->GetAudioComponent()->Play();
+            // 이전에 Client_PrepareAudio를 통해 사운드가 설정되었다고 가정하고 재생합니다.
+            // LastPlaybackTime에서 재생을 시작합니다.
+            Speaker->GetAudioComponent()->Play(LastPlaybackTime);
 			SpeakerCount++;
 		}
 	}
@@ -145,14 +148,8 @@ void UMVE_PC_StageLevel_StudioComponent::Client_StopPreparedAudio_Implementation
 {
 	PRINTNETLOG(this, TEXT("[오디오 동기화] 중지 명령 수신 확인. %d개의 스피커에서 오디오를 중지합니다."), FoundSpeakers.Num());
 
-	// UI 슬라이더 초기화
-	if (AudioPlayer)
-	{
-		AudioPlayer->ResetPlaybackUI();
-	}
-
 	int32 SpeakerCount = 0;
-	for (AMVE_StageLevel_Speaker* Speaker : FoundSpeakers)
+	for (const AMVE_StageLevel_Speaker* Speaker : FoundSpeakers)
 	{
 		if (Speaker && Speaker->GetAudioComponent())
 		{
@@ -167,10 +164,10 @@ void UMVE_PC_StageLevel_StudioComponent::OnAudioPlaybackPercentUpdate(const USou
 {
 	if (AudioPlayer && PlayingSoundWave)
 	{
-		// Percent (0.0 ~ 1.0)를 실제 시간으로 변환
-		const float CurrentTime = TotalPlaybackDuration * PlaybackPercent;
+		// Percent (0.0 ~ 1.0)를 실제 시간으로 변환하여 LastPlaybackTime에 저장
+		LastPlaybackTime = TotalPlaybackDuration * PlaybackPercent;
 
 		// UI 업데이트
-		AudioPlayer->UpdatePlaybackProgress(CurrentTime, TotalPlaybackDuration);
+		AudioPlayer->UpdatePlaybackProgress(LastPlaybackTime, TotalPlaybackDuration);
 	}
 }
