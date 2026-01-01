@@ -113,7 +113,7 @@ public:
 	// 버튼 활성화/비활성화
 	void SetButtonsEnabled(bool bEnabled);
 
-	UPROPERTY(meta=(BindWidget))
+	UPROPERTY(meta=(BindWidgetOptional))
 	TObjectPtr<UTextBlock> StatusTextBlock; 
 
 	// 마지막으로 수신한 메타데이터 (부착 시 사용)
