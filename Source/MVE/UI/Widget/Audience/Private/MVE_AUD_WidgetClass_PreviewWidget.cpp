@@ -47,11 +47,11 @@ void UMVE_AUD_WidgetClass_PreviewWidget::SetInitialDistance(float Distance)
 void UMVE_AUD_WidgetClass_PreviewWidget::SetCaptureActor(AMVE_AUD_PreviewCaptureActor* InCaptureActor)
 {
 	CaptureActor = InCaptureActor;
-    
+
 	if (CaptureActor)
 	{
-		// 초기 카메라 위치 설정
-		CurrentYaw = 180.0f;
+		// 초기 카메라 위치 설정 (터렛테이블 방식: Yaw 고정, Pitch만 가변)
+		CurrentYaw = 180.0f;  // 고정값 (정면)
 		CurrentPitch = 0.0f;
 		UpdateCameraPosition();
 	}
@@ -63,15 +63,16 @@ void UMVE_AUD_WidgetClass_PreviewWidget::UpdateCameraPosition()
 	{
 		return;
 	}
-    
-	// 타겟 위치 (캐릭터 중심)
+
+	// 타겟 위치 (메시 중심)
 	FVector TargetLocation = CaptureActor->TargetActor->GetActorLocation();
-    
-	// 구면 좌표계로 카메라 위치 계산
-	FRotator Rotation = FRotator(CurrentPitch, CurrentYaw, 0.0f);
-	FVector Direction = Rotation.Vector();
+
+	// 터렛테이블 방식: Yaw는 고정(180도, 정면), Pitch만 가변
+	// PreviewCharacter와 동일한 방식
+	FRotator CameraRotation = FRotator(CurrentPitch, 180.0f, 0.0f);
+	FVector Direction = CameraRotation.Vector();
 	FVector CameraLocation = TargetLocation - Direction * CurrentDistance;
-    
+
 	// Scene Capture 위치/회전 업데이트
 	CaptureActor->SetActorLocation(CameraLocation);
 	CaptureActor->SetActorRotation((TargetLocation - CameraLocation).Rotation());
@@ -109,23 +110,27 @@ FReply UMVE_AUD_WidgetClass_PreviewWidget::NativeOnMouseButtonUp(const FGeometry
 FReply UMVE_AUD_WidgetClass_PreviewWidget::NativeOnMouseMove(const FGeometry& InGeometry,
 	const FPointerEvent& InMouseEvent)
 {
-	if (bIsDragging && CaptureActor)
+	if (bIsDragging && CaptureActor && CaptureActor->TargetActor)
 	{
 		FVector2D CurrentMousePosition = InMouseEvent.GetScreenSpacePosition();
 		FVector2D MouseDelta = CurrentMousePosition - LastMousePosition;
 		LastMousePosition = CurrentMousePosition;
-        
-		// Yaw (좌우 회전)
-		CurrentYaw += MouseDelta.X * RotationSpeed;
-        
-		// Pitch (상하 회전) - 범위 제한
+
+		// 터렛테이블 방식 (PreviewCharacter와 동일)
+		// X 델타 → 메시를 Yaw 회전 (제자리 회전)
+		AActor* TargetMesh = CaptureActor->TargetActor;
+		FRotator MeshRotation = TargetMesh->GetActorRotation();
+		MeshRotation.Yaw += MouseDelta.X * RotationSpeed;
+		TargetMesh->SetActorRotation(MeshRotation);
+
+		// Y 델타 → 카메라 Pitch만 조정 (위/아래 시점)
 		CurrentPitch = FMath::Clamp(CurrentPitch - MouseDelta.Y * RotationSpeed, -80.0f, 80.0f);
-        
+
 		UpdateCameraPosition();
-        
+
 		return FReply::Handled();
 	}
-    
+
 	return FReply::Unhandled();
 }
 
