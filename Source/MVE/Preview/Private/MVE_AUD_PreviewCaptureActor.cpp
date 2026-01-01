@@ -14,8 +14,8 @@ AMVE_AUD_PreviewCaptureActor::AMVE_AUD_PreviewCaptureActor()
 	SceneCaptureComponent = CreateDefaultSubobject<USceneCaptureComponent2D>(TEXT("SceneCaptureComponent"));
     RootComponent = SceneCaptureComponent;
 
-	// 캡처 설정 - ShowOnlyList 모드 유지 (배경 제거용)
-	SceneCaptureComponent->PrimitiveRenderMode = ESceneCapturePrimitiveRenderMode::PRM_UseShowOnlyList;
+	// 캡처 설정 - 모든 액터 렌더링
+	SceneCaptureComponent->PrimitiveRenderMode = ESceneCapturePrimitiveRenderMode::PRM_RenderScenePrimitives;
 	SceneCaptureComponent->bCaptureEveryFrame = true;
 	SceneCaptureComponent->bCaptureOnMovement = false;
 
