@@ -41,6 +41,9 @@ private:
 	void OnAudioFileSelected(const FAudioFile& SelectedAudio);
 
 	UFUNCTION()
+	void OnBatchAnalyzeRequested();
+
+	UFUNCTION()
 	void OnMusicAnalysisReceived(bool bSuccess, const TArray<struct FEffectSequenceData>& SequenceData, const FString& ErrorMessage);
 
 	// 현재 선택된 오디오 파일 (AI 분석 결과 저장 시 AudioId로 사용)

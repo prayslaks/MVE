@@ -8,6 +8,8 @@
 #include "Components/EditableTextBox.h"
 #include "Components/ScrollBox.h"
 #include "Components/VerticalBox.h"
+#include "Components/Button.h"
+#include "commu/Public/SenderReceiver.h"
 #include "MVE.h"
 
 void UMVE_STD_WC_PlaylistBuilder::NativeConstruct()
@@ -18,6 +20,12 @@ void UMVE_STD_WC_PlaylistBuilder::NativeConstruct()
 	if (SearchBox)
 	{
 		SearchBox->OnTextChanged.AddDynamic(this, &UMVE_STD_WC_PlaylistBuilder::OnSearchTextChanged);
+	}
+
+	// AI 분석 버튼 이벤트 바인딩
+	if (AnalyzePlaylistButton)
+	{
+		AnalyzePlaylistButton->OnClicked.AddDynamic(this, &UMVE_STD_WC_PlaylistBuilder::OnAnalyzePlaylistClicked);
 	}
 
 	// 드롭다운 숨기기
@@ -79,6 +87,23 @@ void UMVE_STD_WC_PlaylistBuilder::OnSearchTextChanged(const FText& Text)
 
 	// 드롭다운 업데이트
 	UpdateDropdown(SearchResults);
+}
+
+void UMVE_STD_WC_PlaylistBuilder::OnAnalyzePlaylistClicked()
+{
+	PRINTLOG(TEXT("AI 분석 시작 버튼 클릭됨!"));
+
+	// 재생목록이 비어있는지 확인
+	if (Playlist.Num() == 0)
+	{
+		PRINTLOG(TEXT("❌ 재생목록이 비어있습니다. 먼저 곡을 추가하세요."));
+		return;
+	}
+
+	PRINTLOG(TEXT("📤 재생목록 전체 분석 요청 - %d곡"), Playlist.Num());
+
+	// 델리게이트 발동 (FinalCheckSettings에서 bTestMode 체크하고 처리)
+	OnBatchAnalyzeRequested.Broadcast();
 }
 
 void UMVE_STD_WC_PlaylistBuilder::UpdateDropdown(const TArray<FAudioFile>& Results)

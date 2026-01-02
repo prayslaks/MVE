@@ -10,7 +10,8 @@
       "Bash(git commit:*)",
       "Bash(if not exist \"ClaudeLog\" mkdir ClaudeLog)",
       "Bash(cmd /c \"if not exist ClaudeLog mkdir ClaudeLog\")",
-      "Bash(cmd /c \"dir /s /b C:\\Users\\user\\Documents\\UnrealProjects\\MVE\\Source\\MVE\\API | findstr /i HTTP\")"
+      "Bash(cmd /c \"dir /s /b C:\\Users\\user\\Documents\\UnrealProjects\\MVE\\Source\\MVE\\API | findstr /i HTTP\")",
+      "Bash(git add:*)"
     ],
     "deny": [],
     "ask": []

@@ -24,7 +24,10 @@ void UMVE_STD_WidgetClass_FinalCheckSettings::NativeConstruct()
 		StartConcertButton.Get()->OnClicked.AddDynamic(this, &UMVE_STD_WidgetClass_FinalCheckSettings::OnStartConcertButtonClicked);
 
 	if (PlaylistBuilderWidget)
+	{
 		PlaylistBuilderWidget.Get()->OnAudioFileSelected.AddDynamic(this, &UMVE_STD_WidgetClass_FinalCheckSettings::OnAudioFileSelected);
+		PlaylistBuilderWidget.Get()->OnBatchAnalyzeRequested.AddDynamic(this, &UMVE_STD_WidgetClass_FinalCheckSettings::OnBatchAnalyzeRequested);
+	}
 
 	// EffectSequenceManager 찾기 (PlaylistBuilder와 EffectSequencePreview에 공통 설정)
 	AMVE_StageLevel_EffectSequenceManager* Manager = nullptr;
@@ -103,19 +106,96 @@ void UMVE_STD_WidgetClass_FinalCheckSettings::OnStartConcertButtonClicked()
 
 void UMVE_STD_WidgetClass_FinalCheckSettings::OnAudioFileSelected(const FAudioFile& SelectedAudio)
 {
-	// 현재 선택된 오디오 저장 (AI 분석 결과 저장 시 사용)
+	// 현재 선택된 오디오 저장
 	CurrentSelectedAudio = SelectedAudio;
 
-	// SetAudioFile()에서 음악 로드 완료 후 TestMode일 때 자동으로 LoadTestData() 호출됨
+	// 음악 파일 설정
 	EffectSequencePreviewWidget->SetAudioFile(SelectedAudio);
 
-	// TestMode가 아닐 때만 AI 서버에 요청
-	if (!EffectSequencePreviewWidget->bTestMode)
+	// SessionManager에서 캐시된 데이터 가져오기 (TestMode 상관없이)
+	if (UGameInstance* GI = GetGameInstance())
 	{
-		// 🎯 실제 모드: AI 서버에 음악 분석 요청
-		PRINTLOG(TEXT("🎯 TestMode 비활성화 - AI 서버에 음악 분석 요청"));
+		if (UMVE_GIS_SessionManager* SessionManager = GI->GetSubsystem<UMVE_GIS_SessionManager>())
+		{
+			PRINTLOG(TEXT("🔍 SessionManager에서 AudioId %d 데이터 확인 중..."), SelectedAudio.Id);
 
-		// SenderReceiver 가져오기
+			if (SessionManager->HasEffectSequenceForAudio(SelectedAudio.Id))
+			{
+				// ✅ 캐시된 데이터 사용
+				TArray<FEffectSequenceData> SequenceData = SessionManager->GetEffectSequenceForAudio(SelectedAudio.Id);
+				PRINTLOG(TEXT("✅ SessionManager에서 이펙트 시퀀스 가져옴 - %d개 이펙트"), SequenceData.Num());
+
+				// EffectSequencePreview에 데이터 전달
+				if (EffectSequencePreviewWidget)
+				{
+					int32 TotalDuration = EffectSequencePreviewWidget->GetTotalDurationTimeStamp();
+					PRINTLOG(TEXT("📏 TotalDuration: %d (1/10초 단위)"), TotalDuration);
+
+					EffectSequencePreviewWidget->SetSequenceData(SequenceData, TotalDuration);
+					PRINTLOG(TEXT("📊 SetSequenceData 호출 완료 → CreateEffectIcons 실행되어야 함"));
+				}
+				else
+				{
+					PRINTLOG(TEXT("❌ EffectSequencePreviewWidget이 null입니다!"));
+				}
+			}
+			else if (EffectSequencePreviewWidget && EffectSequencePreviewWidget->bTestMode)
+			{
+				// 🧪 데이터 없음 + TestMode: SetAudioFile 이후 실제 Duration으로 TestData 생성
+				int32 TotalDuration = EffectSequencePreviewWidget->GetTotalDurationTimeStamp();
+				PRINTLOG(TEXT("🧪 TestMode - AudioId %d에 대한 캐시 없음, TotalDuration: %d로 TestData 생성"), SelectedAudio.Id, TotalDuration);
+
+				if (TotalDuration > 0)
+				{
+					// TestData 생성 (내부적으로 SetSequenceData, SessionManager 저장 모두 수행됨)
+					EffectSequencePreviewWidget->GenerateTestDataFromDuration(TotalDuration, SelectedAudio.Title);
+					PRINTLOG(TEXT("📊 GenerateTestDataFromDuration 호출 완료 → SetSequenceData & SessionManager 저장 완료"));
+				}
+				else
+				{
+					PRINTLOG(TEXT("⚠️ TotalDuration이 0입니다. 음악 파일 로딩을 기다리는 중..."));
+				}
+			}
+			else
+			{
+				PRINTLOG(TEXT("⚠️ AudioId %d에 대한 이펙트 시퀀스가 SessionManager에 없습니다"), SelectedAudio.Id);
+				PRINTLOG(TEXT("💡 먼저 'Analyze Playlist' 버튼을 눌러주세요"));
+			}
+		}
+		else
+		{
+			PRINTLOG(TEXT("❌ SessionManager를 찾을 수 없습니다!"));
+		}
+	}
+}
+
+void UMVE_STD_WidgetClass_FinalCheckSettings::OnBatchAnalyzeRequested()
+{
+	if (!PlaylistBuilderWidget || !EffectSequencePreviewWidget)
+	{
+		PRINTLOG(TEXT("❌ 필수 위젯을 찾을 수 없습니다"));
+		return;
+	}
+
+	TArray<FAudioFile> Playlist = PlaylistBuilderWidget->GetPlaylist();
+
+	if (Playlist.Num() == 0)
+	{
+		PRINTLOG(TEXT("❌ 재생목록이 비어있습니다"));
+		return;
+	}
+
+	if (EffectSequencePreviewWidget->bTestMode)
+	{
+		// 🧪 테스트 모드: 곡 클릭 시 TestData 생성하도록 준비만 함
+		PRINTLOG(TEXT("🧪 TestMode 활성화 - 곡 클릭 시 TestData 생성됩니다"));
+		PRINTLOG(TEXT("💡 이제 재생목록에서 곡을 클릭하세요"));
+	}
+	else
+	{
+		// 🎯 실제 모드: AI 서버에 배치 음악 분석 요청
+		PRINTLOG(TEXT("🎯 실제 모드 - AI 서버에 배치 음악 분석 요청"));
+
 		USenderReceiver* SenderReceiver = GetGameInstance()->GetSubsystem<USenderReceiver>();
 		if (!SenderReceiver)
 		{
@@ -123,56 +203,43 @@ void UMVE_STD_WidgetClass_FinalCheckSettings::OnAudioFileSelected(const FAudioFi
 			return;
 		}
 
-		// 델리게이트 바인딩 (기존 바인딩 제거 후 새로 바인딩)
-		SenderReceiver->OnMusicAnalysisComplete.Clear();
-		SenderReceiver->OnMusicAnalysisComplete.AddDynamic(this, &UMVE_STD_WidgetClass_FinalCheckSettings::OnMusicAnalysisReceived);
-
-		// 음악 분석 요청
-		FString Title = SelectedAudio.Title;
-		FString Artist = SelectedAudio.Artist;
-
-		PRINTLOG(TEXT("📤 AI 서버로 음악 분석 요청 전송 - Title: %s, Artist: %s"), *Title, *Artist);
-		SenderReceiver->SendMusicAnalysisRequest(Title, Artist);
+		// 배치 음악 분석 요청
+		SenderReceiver->SendBatchMusicAnalysisRequest(Playlist);
+		PRINTLOG(TEXT("✅ 배치 분석 요청 전송 완료"));
 	}
 }
 
 void UMVE_STD_WidgetClass_FinalCheckSettings::OnMusicAnalysisReceived(bool bSuccess, const TArray<FEffectSequenceData>& SequenceData, const FString& ErrorMessage)
 {
+	// 배치 분석에서는 SessionManager에 이미 저장됨
+	// 현재 선택된 곡의 분석이 완료되었는지 확인해서 UI만 업데이트
+
 	if (bSuccess)
 	{
-		PRINTLOG(TEXT("✅ 음악 분석 성공 - %d개 이펙트 시퀀스 수신"), SequenceData.Num());
+		PRINTLOG(TEXT("✅ 음악 분석 델리게이트 수신 - %d개 이펙트"), SequenceData.Num());
 
-		// EffectSequencePreview에 데이터 전달
-		// TotalDuration은 EffectSequencePreview가 이미 SetAudioFile에서 설정했으므로
-		// getter 함수로 가져오기
-		if (EffectSequencePreviewWidget)
-		{
-			int32 TotalDuration = EffectSequencePreviewWidget->GetTotalDurationTimeStamp();
-			EffectSequencePreviewWidget->SetSequenceData(SequenceData, TotalDuration);
-			PRINTLOG(TEXT("📊 EffectSequencePreview에 분석 데이터 설정 완료"));
-		}
-
-		// 🎯 SessionManager에 이펙트 시퀀스 저장 (StageLevel에서 사용하기 위해)
+		// SessionManager에서 현재 선택된 곡의 데이터 가져오기
 		if (UGameInstance* GI = GetGameInstance())
 		{
 			if (UMVE_GIS_SessionManager* SessionManager = GI->GetSubsystem<UMVE_GIS_SessionManager>())
 			{
-				SessionManager->SetEffectSequenceForAudio(CurrentSelectedAudio.Id, SequenceData);
-				PRINTLOG(TEXT("💾 SessionManager에 이펙트 시퀀스 저장 완료 - AudioId: %d, Title: %s, %d개 이펙트"),
-					CurrentSelectedAudio.Id, *CurrentSelectedAudio.Title, SequenceData.Num());
+				if (SessionManager->HasEffectSequenceForAudio(CurrentSelectedAudio.Id))
+				{
+					TArray<FEffectSequenceData> CachedData = SessionManager->GetEffectSequenceForAudio(CurrentSelectedAudio.Id);
+
+					// EffectSequencePreview 업데이트
+					if (EffectSequencePreviewWidget)
+					{
+						int32 TotalDuration = EffectSequencePreviewWidget->GetTotalDurationTimeStamp();
+						EffectSequencePreviewWidget->SetSequenceData(CachedData, TotalDuration);
+						PRINTLOG(TEXT("📊 현재 선택된 곡('%s') EffectSequencePreview 업데이트 완료"), *CurrentSelectedAudio.Title);
+					}
+				}
 			}
 		}
 	}
 	else
 	{
 		PRINTLOG(TEXT("❌ 음악 분석 실패: %s"), *ErrorMessage);
-
-		// 실패 시 빈 데이터로 설정 (UI 정리)
-		if (EffectSequencePreviewWidget)
-		{
-			TArray<FEffectSequenceData> EmptyData;
-			int32 TotalDuration = EffectSequencePreviewWidget->GetTotalDurationTimeStamp();
-			EffectSequencePreviewWidget->SetSequenceData(EmptyData, TotalDuration);
-		}
 	}
 }

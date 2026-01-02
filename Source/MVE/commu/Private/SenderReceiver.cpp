@@ -18,6 +18,7 @@
 #include "Serialization/JsonReader.h"
 #include "Serialization/JsonSerializer.h"
 #include "GameplayTagsManager.h"
+#include "Framework/Public/MVE_GIS_SessionManager.h"
 
 // ============================================================================
 //                          정적 멤버 초기화
@@ -394,6 +395,104 @@ void USenderReceiver::SendMusicAnalysisRequest(
     LogNetworkDiagnostics(FullURL);
 }
 
+// ============================================================================
+//                          송신부: 배치 음악 분석 요청 (JSON)
+// ============================================================================
+
+void USenderReceiver::SendBatchMusicAnalysisRequest(const TArray<FAudioFile>& AudioFiles)
+{
+    UE_LOG(LogMVE, Log, TEXT(""));
+    UE_LOG(LogMVE, Log, TEXT("╔════════════════════════════════════════════════════════════╗"));
+    UE_LOG(LogMVE, Log, TEXT("║         송신: AI 서버 배치 음악 분석 요청 (JSON)            ║"));
+    UE_LOG(LogMVE, Log, TEXT("╚════════════════════════════════════════════════════════════╝"));
+    UE_LOG(LogMVE, Log, TEXT(""));
+
+    // 설정 확인
+    UE_LOG(LogMVE, Warning, TEXT("🔍 설정 확인:"));
+    UE_LOG(LogMVE, Warning, TEXT("  ServerURL = %s"), *ServerURL);
+    UE_LOG(LogMVE, Warning, TEXT("  MusicAnalysisEndpoint = %s"), *MusicAnalysisEndpoint);
+    UE_LOG(LogMVE, Warning, TEXT("  요청 곡 수 = %d"), AudioFiles.Num());
+
+    if (AudioFiles.Num() == 0)
+    {
+        UE_LOG(LogMVE, Error, TEXT("  [상태] ✗ 분석할 음악이 없습니다"));
+        return;
+    }
+
+    // AudioFiles 저장 (응답 매칭용)
+    LastBatchRequestAudioFiles = AudioFiles;
+
+    // ------------------------------------------------------------------------
+    // HTTP 요청 생성
+    // ------------------------------------------------------------------------
+    TSharedRef<IHttpRequest, ESPMode::ThreadSafe> HttpRequest =
+        FHttpModule::Get().CreateRequest();
+
+    // 배치 엔드포인트 사용
+    FString FullURL = ServerURL + MusicAnalysisEndpoint;
+    UE_LOG(LogMVE, Warning, TEXT("  FullURL = %s"), *FullURL);
+
+    HttpRequest->SetURL(FullURL);
+    HttpRequest->SetVerb(TEXT("POST"));
+    HttpRequest->SetTimeout(RequestTimeout);
+    HttpRequest->SetHeader(TEXT("Content-Type"), TEXT("application/json"));
+
+    UE_LOG(LogMVE, Log, TEXT("  [요청 URL] %s"), *FullURL);
+
+    // ------------------------------------------------------------------------
+    // JSON 요청 본문 생성
+    // ------------------------------------------------------------------------
+    TSharedPtr<FJsonObject> JsonObject = MakeShareable(new FJsonObject());
+    TArray<TSharedPtr<FJsonValue>> SongsArray;
+
+    for (const FAudioFile& AudioFile : AudioFiles)
+    {
+        TSharedPtr<FJsonObject> SongObject = MakeShareable(new FJsonObject());
+        SongObject->SetStringField(TEXT("title"), AudioFile.Title);
+        SongObject->SetStringField(TEXT("artist"), AudioFile.Artist);
+        SongsArray.Add(MakeShareable(new FJsonValueObject(SongObject)));
+
+        UE_LOG(LogMVE, Log, TEXT("  📀 추가: %s - %s"), *AudioFile.Title, *AudioFile.Artist);
+    }
+
+    JsonObject->SetArrayField(TEXT("songs"), SongsArray);
+
+    FString JsonString;
+    TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&JsonString);
+    if (FJsonSerializer::Serialize(JsonObject.ToSharedRef(), Writer))
+    {
+        UE_LOG(LogMVE, Log, TEXT("  [JSON 요청]"));
+        UE_LOG(LogMVE, Log, TEXT("  %s"), *JsonString);
+    }
+    else
+    {
+        UE_LOG(LogMVE, Error, TEXT("  [상태] ✗ JSON 직렬화 실패"));
+        return;
+    }
+
+    // ------------------------------------------------------------------------
+    // 전송
+    // ------------------------------------------------------------------------
+    HttpRequest->SetContentAsString(JsonString);
+
+    HttpRequest->OnProcessRequestComplete().BindUObject(
+        this, &USenderReceiver::HandleBatchMusicAnalysisResponse
+    );
+
+    if (HttpRequest->ProcessRequest())
+    {
+        UE_LOG(LogMVE, Log, TEXT("  [상태] ✓ 배치 요청 전송 성공"));
+    }
+    else
+    {
+        UE_LOG(LogMVE, Error, TEXT("  [상태] ✗ 배치 요청 전송 실패"));
+    }
+
+    UE_LOG(LogMVE, Log, TEXT(""));
+
+    LogNetworkDiagnostics(FullURL);
+}
+
 
 // ============================================================================
 //                          수신부: GLB 바이너리 직접 수신
@@ -677,7 +776,7 @@ void USenderReceiver::HandleMusicAnalysisResponse(
 
         // timestamp, category, asset_id 추출
         int32 TimeStamp = ItemObject->GetIntegerField(TEXT("timestamp"));
-        FString Category = ItemObject->GetStringField(TEXT("category"));
+        FString CategoryString = ItemObject->GetStringField(TEXT("category"));
         FString AssetIDString = ItemObject->GetStringField(TEXT("asset_id"));
 
         // asset_id 문자열을 FGameplayTag로 변환
@@ -689,12 +788,27 @@ void USenderReceiver::HandleMusicAnalysisResponse(
             continue;
         }
 
+        // category 문자열을 EEffectCategory enum으로 변환
+        EEffectCategory Category = EEffectCategory::Spotlight; // 기본값
+        if (CategoryString.Equals(TEXT("Performance"), ESearchCase::IgnoreCase))
+        {
+            Category = EEffectCategory::Performance;
+        }
+        else if (CategoryString.Equals(TEXT("Spotlight"), ESearchCase::IgnoreCase))
+        {
+            Category = EEffectCategory::Spotlight;
+        }
+        else
+        {
+            UE_LOG(LogMVE, Warning, TEXT("  [경고] 알 수 없는 카테고리: %s - Spotlight로 설정"), *CategoryString);
+        }
+
         // FEffectSequenceData 생성 및 추가
-        FEffectSequenceData SequenceData(TimeStamp, AssetTag);
+        FEffectSequenceData SequenceData(TimeStamp, AssetTag, Category);
         SequenceDataArray.Add(SequenceData);
 
         UE_LOG(LogMVE, Log, TEXT("  ✓ TimeStamp: %d, Category: %s, AssetID: %s"),
-            TimeStamp, *Category, *AssetIDString);
+            TimeStamp, *CategoryString, *AssetIDString);
     }
 
     UE_LOG(LogMVE, Log, TEXT(""));
@@ -707,6 +821,214 @@ void USenderReceiver::HandleMusicAnalysisResponse(
 
     OnMusicAnalysisComplete.Broadcast(true, SequenceDataArray, TEXT(""));
 
+    UE_LOG(LogMVE, Log, TEXT(""));
+}
+
+// ============================================================================
+//                          수신부: 배치 음악 분석 응답
+// ============================================================================
+
+void USenderReceiver::HandleBatchMusicAnalysisResponse(
+    TSharedPtr<IHttpRequest, ESPMode::ThreadSafe> Request,
+    TSharedPtr<IHttpResponse, ESPMode::ThreadSafe> Response,
+    bool bWasSuccessful)
+{
+    UE_LOG(LogMVE, Log, TEXT(""));
+    UE_LOG(LogMVE, Log, TEXT("╔════════════════════════════════════════════════════════════╗"));
+    UE_LOG(LogMVE, Log, TEXT("║         수신: AI 서버 배치 음악 분석 응답 (JSON)            ║"));
+    UE_LOG(LogMVE, Log, TEXT("╚════════════════════════════════════════════════════════════╝"));
+    UE_LOG(LogMVE, Log, TEXT(""));
+
+    // ------------------------------------------------------------------------
+    // 응답 유효성 검사
+    // ------------------------------------------------------------------------
+
+    if (!bWasSuccessful || !Response.IsValid())
+    {
+        AnalyzeConnectionError(Response, bWasSuccessful);
+
+        UE_LOG(LogMVE, Error, TEXT("  [상태] ✗ HTTP 요청 실패 - 연결 오류"));
+        return;
+    }
+
+    int32 ResponseCode = Response->GetResponseCode();
+
+    UE_LOG(LogMVE, Log, TEXT("  [응답 코드] %d"), ResponseCode);
+
+    // ------------------------------------------------------------------------
+    // 응답 코드 확인
+    // ------------------------------------------------------------------------
+
+    if (ResponseCode != 200)
+    {
+        FString ResponseContent = Response->GetContentAsString();
+        UE_LOG(LogMVE, Error, TEXT("  [서버 응답] %s"), *ResponseContent);
+
+        if (ResponseCode >= 400 && ResponseCode < 500)
+        {
+            UE_LOG(LogMVE, Error, TEXT("  [상태] ✗ 클라이언트 에러 (%d)"), ResponseCode);
+        }
+        else if (ResponseCode >= 500)
+        {
+            UE_LOG(LogMVE, Error, TEXT("  [상태] ✗ 서버 에러 (%d)"), ResponseCode);
+        }
+        return;
+    }
+
+    // ------------------------------------------------------------------------
+    // JSON 응답 파싱
+    // ------------------------------------------------------------------------
+
+    FString ResponseContent = Response->GetContentAsString();
+    UE_LOG(LogMVE, Log, TEXT("  [응답 내용] %s"), *ResponseContent);
+
+    TSharedPtr<FJsonObject> JsonObject;
+    TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(ResponseContent);
+
+    if (!FJsonSerializer::Deserialize(Reader, JsonObject) || !JsonObject.IsValid())
+    {
+        UE_LOG(LogMVE, Error, TEXT("  [상태] ✗ JSON 파싱 실패"));
+        return;
+    }
+
+    // results 배열 추출
+    const TArray<TSharedPtr<FJsonValue>>* ResultsArray;
+    if (!JsonObject->TryGetArrayField(TEXT("results"), ResultsArray))
+    {
+        UE_LOG(LogMVE, Error, TEXT("  [상태] ✗ 'results' 필드 없음"));
+        return;
+    }
+
+    UE_LOG(LogMVE, Log, TEXT("  [배치 분석 결과] %d곡 수신"), ResultsArray->Num());
+
+    // ------------------------------------------------------------------------
+    // 각 곡별로 처리
+    // ------------------------------------------------------------------------
+
+    for (const TSharedPtr<FJsonValue>& ResultValue : *ResultsArray)
+    {
+        TSharedPtr<FJsonObject> ResultObject = ResultValue->AsObject();
+        if (!ResultObject.IsValid())
+        {
+            UE_LOG(LogMVE, Warning, TEXT("  [경고] 유효하지 않은 결과 항목 건너뜀"));
+            continue;
+        }
+
+        // title, artist 추출 (로깅용)
+        FString Title = ResultObject->GetStringField(TEXT("title"));
+        FString Artist = ResultObject->GetStringField(TEXT("artist"));
+
+        UE_LOG(LogMVE, Log, TEXT(""));
+        UE_LOG(LogMVE, Log, TEXT("  🎵 처리 중: %s - %s"), *Title, *Artist);
+
+        // effects 배열 추출
+        const TArray<TSharedPtr<FJsonValue>>* EffectsArray;
+        if (!ResultObject->TryGetArrayField(TEXT("effects"), EffectsArray))
+        {
+            UE_LOG(LogMVE, Warning, TEXT("  [경고] '%s - %s'의 'effects' 필드 없음"), *Title, *Artist);
+
+            TArray<FEffectSequenceData> EmptyArray;
+            OnMusicAnalysisComplete.Broadcast(false, EmptyArray, TEXT("effects 필드 없음"));
+            continue;
+        }
+
+        UE_LOG(LogMVE, Log, TEXT("  [분석 결과] %d개 이펙트"), EffectsArray->Num());
+
+        // FEffectSequenceData 배열 생성
+        TArray<FEffectSequenceData> SequenceDataArray;
+
+        for (const TSharedPtr<FJsonValue>& EffectValue : *EffectsArray)
+        {
+            TSharedPtr<FJsonObject> EffectObject = EffectValue->AsObject();
+            if (!EffectObject.IsValid())
+            {
+                UE_LOG(LogMVE, Warning, TEXT("    [경고] 유효하지 않은 이펙트 항목 건너뜀"));
+                continue;
+            }
+
+            // timestamp, category, asset_id, reason 추출
+            int32 TimeStamp = EffectObject->GetIntegerField(TEXT("timestamp"));
+            FString CategoryString = EffectObject->GetStringField(TEXT("category"));
+            FString AssetIDString = EffectObject->GetStringField(TEXT("asset_id"));
+            FString Reason = EffectObject->HasField(TEXT("reason")) ? EffectObject->GetStringField(TEXT("reason")) : TEXT("");
+
+            // 개발용 로그 (reason 출력)
+            if (!Reason.IsEmpty())
+            {
+                UE_LOG(LogMVE, Verbose, TEXT("    [%d초] %s - %s: %s"),
+                    TimeStamp / 10, *CategoryString, *AssetIDString, *Reason);
+            }
+
+            // asset_id 문자열을 FGameplayTag로 변환
+            FGameplayTag AssetTag = FGameplayTag::RequestGameplayTag(FName(*AssetIDString));
+
+            if (!AssetTag.IsValid())
+            {
+                UE_LOG(LogMVE, Warning, TEXT("    [경고] 유효하지 않은 GameplayTag: %s - 건너뜀"), *AssetIDString);
+                continue;
+            }
+
+            // category 문자열을 EEffectCategory enum으로 변환
+            EEffectCategory Category = EEffectCategory::Spotlight; // 기본값
+            if (CategoryString.Equals(TEXT("Performance"), ESearchCase::IgnoreCase))
+            {
+                Category = EEffectCategory::Performance;
+            }
+            else if (CategoryString.Equals(TEXT("Spotlight"), ESearchCase::IgnoreCase))
+            {
+                Category = EEffectCategory::Spotlight;
+            }
+            else
+            {
+                UE_LOG(LogMVE, Warning, TEXT("    [경고] 알 수 없는 카테고리: %s - Spotlight로 설정"), *CategoryString);
+            }
+
+            // FEffectSequenceData 생성 및 추가
+            FEffectSequenceData SequenceData(TimeStamp, AssetTag, Category);
+            SequenceDataArray.Add(SequenceData);
+        }
+
+        UE_LOG(LogMVE, Log, TEXT("  [상태] ✓ '%s - %s' 분석 완료"), *Title, *Artist);
+        UE_LOG(LogMVE, Log, TEXT("  [결과] %d개 이펙트 시퀀스 데이터 생성"), SequenceDataArray.Num());
+
+        // title/artist로 원본 AudioFile 찾기
+        int32 AudioId = -1;
+        for (const FAudioFile& AudioFile : LastBatchRequestAudioFiles)
+        {
+            if (AudioFile.Title == Title && AudioFile.Artist == Artist)
+            {
+                AudioId = AudioFile.Id;
+                break;
+            }
+        }
+
+        if (AudioId == -1)
+        {
+            UE_LOG(LogMVE, Warning, TEXT("  [경고] '%s - %s'에 해당하는 AudioFile을 찾을 수 없습니다"), *Title, *Artist);
+            OnMusicAnalysisComplete.Broadcast(false, SequenceDataArray, TEXT("AudioFile 매칭 실패"));
+            continue;
+        }
+
+        // SessionManager에 저장
+        if (UGameInstance* GI = GetWorld()->GetGameInstance())
+        {
+            if (UMVE_GIS_SessionManager* SessionManager = GI->GetSubsystem<UMVE_GIS_SessionManager>())
+            {
+                SessionManager->SetEffectSequenceForAudio(AudioId, SequenceDataArray);
+                UE_LOG(LogMVE, Log, TEXT("  💾 SessionManager에 저장 완료 - AudioId: %d"), AudioId);
+            }
+            else
+            {
+                UE_LOG(LogMVE, Warning, TEXT("  [경고] SessionManager를 찾을 수 없습니다"));
+            }
+        }
+
+        // 각 곡마다 델리게이트 발동 (UI 업데이트용)
+        OnMusicAnalysisComplete.Broadcast(true, SequenceDataArray, TEXT(""));
+    }
+
+    UE_LOG(LogMVE, Log, TEXT(""));
+    UE_LOG(LogMVE, Log, TEXT("  [상태] ✓ 배치 음악 분석 완료"));
     UE_LOG(LogMVE, Log, TEXT(""));
 }
 

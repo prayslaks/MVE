@@ -282,20 +282,24 @@ void UMVE_STU_WC_EffectSequencePreview::GenerateTestDataFromDuration(int32 Total
 		int32 IntensityLevel = (EffectIndex / 3) % 4; // 0~3 순환 (강도)
 
 		FName SelectedTag;
+		EEffectCategory Category;
 		switch (EffectType)
 		{
 		case 0: // Spotlight
 			SelectedTag = SpotlightTags[IntensityLevel];
+			Category = EEffectCategory::Spotlight;
 			break;
 		case 1: // Flame
 			SelectedTag = FlameTags[IntensityLevel];
+			Category = EEffectCategory::Performance;
 			break;
 		case 2: // Fanfare
 			SelectedTag = FanfareTags[IntensityLevel];
+			Category = EEffectCategory::Performance;
 			break;
 		}
 
-		TestData.Add(FEffectSequenceData(CurrentTimeStamp, FGameplayTag::RequestGameplayTag(SelectedTag)));
+		TestData.Add(FEffectSequenceData(CurrentTimeStamp, FGameplayTag::RequestGameplayTag(SelectedTag), Category));
 
 		CurrentTimeStamp += IntervalTimeStamp;
 		EffectIndex++;
@@ -436,13 +440,6 @@ void UMVE_STU_WC_EffectSequencePreview::SetAudioFile(const FAudioFile& AudioFile
 				{
 					AudioComponent->OnAudioPlaybackPercent.Clear();
 					AudioComponent->OnAudioPlaybackPercent.AddDynamic(this, &UMVE_STU_WC_EffectSequencePreview::OnAudioPlaybackPercentChanged);
-				}
-
-				// 🧪 TestMode일 때 자동으로 더미 데이터 생성 (캐시된 음악)
-				if (bTestMode)
-				{
-					PRINTLOG(TEXT("🧪 TestMode 활성화 - 캐시된 음악 로드 완료 후 더미 데이터 생성"));
-					GenerateTestDataFromDuration(TotalDurationTimeStamp, CurrentAudioFile.Title);
 				}
 
 				return; // 서버 요청 불필요!
@@ -824,13 +821,6 @@ void UMVE_STU_WC_EffectSequencePreview::OnAudioLoadedFromUrl(UglTFRuntimeAsset* 
 			AudioComponent->OnAudioPlaybackPercent.Clear();
 			AudioComponent->OnAudioPlaybackPercent.AddDynamic(this, &UMVE_STU_WC_EffectSequencePreview::OnAudioPlaybackPercentChanged);
 			PRINTLOG(TEXT("AudioComponent 델리게이트 바인딩 완료"));
-		}
-
-		// 🧪 TestMode일 때 자동으로 더미 데이터 생성
-		if (bTestMode)
-		{
-			PRINTLOG(TEXT("🧪 TestMode 활성화 - 음악 로드 완료 후 더미 데이터 생성"));
-			GenerateTestDataFromDuration(TotalDurationTimeStamp, CurrentAudioFile.Title);
 		}
 	}
 	else

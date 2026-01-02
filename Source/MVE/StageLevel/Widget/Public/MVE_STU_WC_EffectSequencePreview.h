@@ -103,6 +103,13 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Effect Preview")
 	void SetAudioFile(const FAudioFile& AudioFile);
 
+	/**
+	 * 곡 길이 기반으로 테스트 데이터 생성 (내부 헬퍼 함수)
+	 * @param TotalDuration 곡 총 길이 (1/10초 단위)
+	 * @param SongTitle 곡 제목 (로그용)
+	 */
+	void GenerateTestDataFromDuration(int32 TotalDuration, const FString& SongTitle);
+
 	/** 테스트 모드 - true이면 더미 데이터 사용, false이면 AI 서버 응답 대기 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effect Preview|Test")
 	bool bTestMode = true;
@@ -213,12 +220,7 @@ private:
 	UFUNCTION()
 	void OnAudioLoadedFromUrl(UglTFRuntimeAsset* Asset);
 
-	/**
-	 * 곡 길이 기반으로 테스트 데이터 생성 (내부 헬퍼 함수)
-	 * @param TotalDuration 곡 총 길이 (1/10초 단위)
-	 * @param SongTitle 곡 제목 (로그용)
-	 */
-	void GenerateTestDataFromDuration(int32 TotalDuration, const FString& SongTitle);
+	
 
 private:
 	/** AI 분석 결과 */

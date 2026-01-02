@@ -148,15 +148,15 @@ void AMVE_StageLevel_EffectSequenceManager::ExecuteEffectAtTimeStamp(const FEffe
 	}
 
 	FString TagString = Data.AssetID.ToString();
+	FString CategoryName = Data.Category == EEffectCategory::Spotlight ? TEXT("Spotlight") : TEXT("Performance");
 
-	PRINTLOG(TEXT("🎬 Effect 실행 - TimeStamp: %d, AssetID: %s"), Data.TimeStamp, *TagString);
+	PRINTLOG(TEXT("🎬 Effect 실행 - TimeStamp: %d, Category: %s, AssetID: %s"),
+		Data.TimeStamp, *CategoryName, *TagString);
 
-	// GameplayTag를 파싱해서 카테고리 확인
-	// 예: "VFX.Spotlight.FastSpeed" → "VFX.Spotlight"
-	// 예: "VFX.Flame.VeryFastSizeAndVeryFastSpeed" → "VFX.Flame"
-	// 예: "VFX.Fanfare.HighSpawnRate" → "VFX.Fanfare"
-
-	if (TagString.StartsWith(TEXT("VFX.Spotlight")))
+	// Category enum을 사용하여 분기 (문자열 파싱 대신 enum 비교로 성능 향상)
+	switch (Data.Category)
+	{
+	case EEffectCategory::Spotlight:
 	{
 		// Spotlight 이펙트
 		if (SpotlightManager)
@@ -177,54 +177,67 @@ void AMVE_StageLevel_EffectSequenceManager::ExecuteEffectAtTimeStamp(const FEffe
 		{
 			PRINTLOG(TEXT("❌ SpotlightManager를 찾을 수 없습니다"));
 		}
+		break;
 	}
-	else if (TagString.StartsWith(TEXT("VFX.Flame")))
+
+	case EEffectCategory::Performance:
 	{
-		// Flame 이펙트
-		if (FlameManager)
+		// Performance 카테고리: Flame 또는 Fanfare
+		// AssetID를 파싱해서 세부 이펙트 결정
+		if (TagString.StartsWith(TEXT("VFX.Flame")))
 		{
-			int32 SequenceNumber = GetFlameSequenceNumber(Data.AssetID);
-			if (SequenceNumber >= 0)
+			// Flame 이펙트
+			if (FlameManager)
 			{
-				float DelayBetweenOrder = 0.0f; // 동시 실행
-				FlameManager->ExecuteSequenceNumber(SequenceNumber, DelayBetweenOrder);
-				PRINTLOG(TEXT("✅ FlameManager 실행 - SequenceNumber: %d, AssetID: %s"), SequenceNumber, *TagString);
+				int32 SequenceNumber = GetFlameSequenceNumber(Data.AssetID);
+				if (SequenceNumber >= 0)
+				{
+					float DelayBetweenOrder = 0.0f; // 동시 실행
+					FlameManager->ExecuteSequenceNumber(SequenceNumber, DelayBetweenOrder);
+					PRINTLOG(TEXT("✅ FlameManager 실행 - SequenceNumber: %d, AssetID: %s"), SequenceNumber, *TagString);
+				}
+				else
+				{
+					PRINTLOG(TEXT("⚠️ 유효하지 않은 Flame AssetID: %s"), *TagString);
+				}
 			}
 			else
 			{
-				PRINTLOG(TEXT("⚠️ 유효하지 않은 Flame AssetID: %s"), *TagString);
+				PRINTLOG(TEXT("❌ FlameManager를 찾을 수 없습니다"));
+			}
+		}
+		else if (TagString.StartsWith(TEXT("VFX.Fanfare")))
+		{
+			// Fanfare 이펙트
+			if (FanfareManager)
+			{
+				int32 SequenceNumber = GetFanfareSequenceNumber(Data.AssetID);
+				if (SequenceNumber >= 0)
+				{
+					float DelayBetweenOrder = 0.0f; // 동시 실행
+					FanfareManager->ExecuteSequenceNumber(SequenceNumber, DelayBetweenOrder);
+					PRINTLOG(TEXT("✅ FanfareManager 실행 - SequenceNumber: %d, AssetID: %s"), SequenceNumber, *TagString);
+				}
+				else
+				{
+					PRINTLOG(TEXT("⚠️ 유효하지 않은 Fanfare AssetID: %s"), *TagString);
+				}
+			}
+			else
+			{
+				PRINTLOG(TEXT("❌ FanfareManager를 찾을 수 없습니다"));
 			}
 		}
 		else
 		{
-			PRINTLOG(TEXT("❌ FlameManager를 찾을 수 없습니다"));
+			PRINTLOG(TEXT("❓ Performance 카테고리지만 알 수 없는 AssetID: %s"), *TagString);
 		}
+		break;
 	}
-	else if (TagString.StartsWith(TEXT("VFX.Fanfare")))
-	{
-		// Fanfare 이펙트
-		if (FanfareManager)
-		{
-			int32 SequenceNumber = GetFanfareSequenceNumber(Data.AssetID);
-			if (SequenceNumber >= 0)
-			{
-				float DelayBetweenOrder = 0.0f; // 동시 실행
-				FanfareManager->ExecuteSequenceNumber(SequenceNumber, DelayBetweenOrder);
-				PRINTLOG(TEXT("✅ FanfareManager 실행 - SequenceNumber: %d, AssetID: %s"), SequenceNumber, *TagString);
-			}
-			else
-			{
-				PRINTLOG(TEXT("⚠️ 유효하지 않은 Fanfare AssetID: %s"), *TagString);
-			}
-		}
-		else
-		{
-			PRINTLOG(TEXT("❌ FanfareManager를 찾을 수 없습니다"));
-		}
-	}
-	else
-	{
-		PRINTLOG(TEXT("❓ 알 수 없는 카테고리의 AssetID: %s"), *TagString);
+
+	default:
+		PRINTLOG(TEXT("❓ 알 수 없는 카테고리"));
+		break;
 	}
 }
 

@@ -12,8 +12,10 @@ class UScrollBox;
 class UVerticalBox;
 class UMVE_STD_WC_AudioSearchResult;
 class AMVE_StageLevel_EffectSequenceManager;
+class UButton;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnAudioFileSelected, const FAudioFile&, SelectedAudio);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnBatchAnalyzeRequested);
 
 UCLASS()
 class MVE_API UMVE_STD_WC_PlaylistBuilder : public UUserWidget
@@ -24,6 +26,10 @@ public:
 	/** 음악 선택 시 브로드캐스트되는 델리게이트 */
 	UPROPERTY(BlueprintAssignable, Category = "Playlist|Event")
 	FOnAudioFileSelected OnAudioFileSelected;
+
+	/** 배치 분석 요청 시 브로드캐스트되는 델리게이트 */
+	UPROPERTY(BlueprintAssignable, Category = "Playlist|Event")
+	FOnBatchAnalyzeRequested OnBatchAnalyzeRequested;
 
 	// 재생목록 가져오기
 	UFUNCTION(BlueprintCallable, Category = "Playlist")
@@ -64,6 +70,9 @@ protected:
 	UPROPERTY(meta=(BindWidget))
 	TObjectPtr<UScrollBox> PlaylistScrollBox;
 
+	UPROPERTY(meta=(BindWidget))
+	TObjectPtr<UButton> AnalyzePlaylistButton;
+
 	// 검색 결과 항목 위젯 클래스
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Playlist")
 	TSubclassOf<UMVE_STD_WC_AudioSearchResult> SearchResultWidgetClass;
@@ -82,6 +91,10 @@ private:
 	// 검색 텍스트 변경 이벤트
 	UFUNCTION()
 	void OnSearchTextChanged(const FText& Text);
+
+	// AI 분석 시작 버튼 클릭 이벤트
+	UFUNCTION()
+	void OnAnalyzePlaylistClicked();
 
 	// 검색 결과 항목 클릭 이벤트 (싱글클릭)
 	void OnSearchResultClicked(UMVE_STD_WC_AudioSearchResult* ClickedWidget);

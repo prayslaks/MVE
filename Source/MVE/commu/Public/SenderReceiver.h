@@ -67,9 +67,9 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GenAI|Config")
     FString GenerateEndpoint = TEXT("/generate_3D_obj");
 
-    // 음악 분석 API 엔드포인트
+    // 음악 분석 API 엔드포인트 (배치 분석)
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GenAI|Config")
-    FString MusicAnalysisEndpoint = TEXT("/analyze_music");
+    FString MusicAnalysisEndpoint = TEXT("/songs/auto-process");
 
     // 다운로드 파일 저장 폴더명
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GenAI|Config")
@@ -142,6 +142,43 @@ public:
         const FString& Artist
     );
 
+    // SendBatchMusicAnalysisRequest
+     //
+     // AI 서버에 여러 곡의 음악 분석 요청을 배치로 전송
+     // 재생목록 전체를 JSON 배열로 전송하여
+     // 각 곡별 TimeStamp별 이펙트 AssetID 배열 수신
+     //
+     // [요청 예시]
+     // POST /api/music-analysis/batch
+     // {
+     //   "songs": [
+     //     { "title": "Super Shy", "artist": "NewJeans" },
+     //     { "title": "Its Jennie", "artist": "Jennie" }
+     //   ]
+     // }
+     //
+     // [응답 예시]
+     // {
+     //   "results": [
+     //     {
+     //       "title": "Super Shy",
+     //       "artist": "NewJeans",
+     //       "effects": [
+     //         { "timeStamp": 10, "assetID": "VFX.Spotlight.FastSpeed" },
+     //         ...
+     //       ]
+     //     },
+     //     ...
+     //   ]
+     // }
+     //
+     // [결과]
+     // - 성공 시: 각 곡마다 OnMusicAnalysisComplete 발동
+     // - 실패 시: OnMusicAnalysisComplete에서 에러 메시지 전달
+
+    UFUNCTION(BlueprintCallable, Category = "GenAI|Send")
+    void SendBatchMusicAnalysisRequest(const TArray<FAudioFile>& AudioFiles);
+
     // ========================================================================
     //                          수신 API (AI → Unreal)
     // ========================================================================
@@ -212,6 +249,13 @@ private:
         bool bWasSuccessful
     );
 
+    // 배치 음악 분석 요청 응답 처리 → 여러 곡의 분석 결과 처리
+    void HandleBatchMusicAnalysisResponse(
+        TSharedPtr<class IHttpRequest, ESPMode::ThreadSafe> Request,
+        TSharedPtr<class IHttpResponse, ESPMode::ThreadSafe> Response,
+        bool bWasSuccessful
+    );
+
     // 다운로드 완료 처리 → 파일 저장 → UE 에셋 변환 → 델리게이트 발동
     void HandleDownloadComplete(
         TSharedPtr<class IHttpRequest, ESPMode::ThreadSafe> Request,
@@ -246,4 +290,9 @@ public:
         TSharedPtr<IHttpResponse, ESPMode::ThreadSafe> Response,
         bool bWasSuccessful
     );
+
+private:
+    // 배치 음악 분석 요청 시 전송한 AudioFiles (응답 매칭용)
+    UPROPERTY()
+    TArray<FAudioFile> LastBatchRequestAudioFiles;
 };
