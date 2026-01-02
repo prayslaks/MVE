@@ -68,17 +68,30 @@ void UMVE_AUD_WidgetClass_RoomInfoWidget::UpdateUI(UConcertInfoData* RoomData)
 	}
 
 	PRINTLOG(TEXT("Updating room UI: %s"), *RoomData->ConcertInfo.ConcertName);
+	PRINTLOG(TEXT("  RoomId: %s"), *RoomData->ConcertInfo.RoomId);
+	PRINTLOG(TEXT("  StudioUserId: %d"), RoomData->ConcertInfo.StudioUserId);
+	PRINTLOG(TEXT("  StudioName: %s"), *RoomData->ConcertInfo.StudioName);
+	PRINTLOG(TEXT("  ConcertName: %s"), *RoomData->ConcertInfo.ConcertName);
 
-	// 방송자 ID
+	// 콘서트 제목
 	if (ConcertNameText)
 	{
 		ConcertNameText->SetText(FText::FromString(FString::Printf(TEXT("%s"), *RoomData->ConcertInfo.ConcertName)));
 	}
 
-	// 방 제목
-	if (StudioNameText)
+	// 방송인 이름 (이메일에서 @ 앞부분만 추출)
+	if (SessionOwnerNameText)
 	{
-		StudioNameText->SetText(FText::FromString(RoomData->ConcertInfo.RoomId));
+		FString StudioName = RoomData->ConcertInfo.StudioName;
+
+		// 이메일 형식이면 @ 앞부분만 추출 (예: abcd1234@gmail.com → abcd1234)
+		int32 AtIndex;
+		if (StudioName.FindChar(TEXT('@'), AtIndex))
+		{
+			StudioName = StudioName.Left(AtIndex);
+		}
+
+		SessionOwnerNameText->SetText(FText::FromString(StudioName));
 	}
 
 	// 방송 시간

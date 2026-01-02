@@ -24,7 +24,7 @@ protected:
 	TObjectPtr<UTextBlock> ConcertNameText;
 
 	UPROPERTY(meta = (BindWidget))
-	TObjectPtr<UTextBlock> StudioNameText;
+	TObjectPtr<UTextBlock> SessionOwnerNameText;
 
 	UPROPERTY(meta = (BindWidgetOptional))
 	TObjectPtr<UTextBlock> BroadcastTimeText;
