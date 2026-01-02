@@ -159,15 +159,6 @@ UAudioComponent* AMVE_PC_StageLevel::GetAudioComponent() const
 	return nullptr;
 }
 
-UMVE_StageLevel_AudCharacterShooterComponent* AMVE_PC_StageLevel::GetShooterComponent() const
-{
-	if (const AMVE_StageLevel_AudCharacter* AudCharacter = GetPawn<AMVE_StageLevel_AudCharacter>())
-	{
-		return AudCharacter->GetShooterComponent();
-	}
-	return nullptr;
-}
-
 void AMVE_PC_StageLevel::SetupChatUI(UMVE_WC_Chat* InWidget)
 {
 	// 1. 컨트롤러 생성

@@ -32,6 +32,9 @@ protected:
 	TObjectPtr<USpotLightComponent> SpotLightComp;
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="MVE|Components")
+	TObjectPtr<UStaticMeshComponent> FlashBeamMeshComp;
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="MVE|Components")
 	TObjectPtr<UAudioComponent> AudioComp;
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="MVE|Components")
@@ -39,6 +42,9 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="MVE|Components")
 	TObjectPtr<UTimelineComponent> FlashTimelineComp;
+	
+	UPROPERTY(VisibleAnywhere)
+	TObjectPtr<UMaterialInstanceDynamic> FlashBeamMaterialMID;
 
 	UPROPERTY(EditAnywhere, Category = "MVE|TakePhoto")
 	TObjectPtr<UCurveFloat> FlashCurve;

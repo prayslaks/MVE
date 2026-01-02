@@ -23,7 +23,7 @@ public:
 	
 	virtual void BeginPlay() override;
 
-	// ⭐ 모든 머신에서 발사 (멀티캐스트 RPC)
+	// 모든 머신에서 발사 (멀티캐스트 RPC)
 	UFUNCTION(NetMulticast, Reliable)
 	void Multicast_FireInDirection(const FVector& ShootDirection, float Speed);
 
