@@ -534,3 +534,37 @@ void UMVE_GIS_SessionManager::ClearPendingPlaylist()
 	PendingConcertPlaylist.Empty();
 	SESSIONPRINTLOG(TEXT("재생목록 초기화됨"));
 }
+
+// ========================================
+// 곡별 이펙트 시퀀스 관리
+// ========================================
+
+void UMVE_GIS_SessionManager::SetEffectSequenceForAudio(int32 AudioId, const TArray<FEffectSequenceData>& SequenceData)
+{
+	AudioEffectSequenceMap.Add(AudioId, FEffectSequenceDataArray(SequenceData));
+	SESSIONPRINTLOG(TEXT("이펙트 시퀀스 저장 - AudioId: %d, %d개 이펙트"), AudioId, SequenceData.Num());
+}
+
+TArray<FEffectSequenceData> UMVE_GIS_SessionManager::GetEffectSequenceForAudio(int32 AudioId) const
+{
+	if (const FEffectSequenceDataArray* FoundSequence = AudioEffectSequenceMap.Find(AudioId))
+	{
+		SESSIONPRINTLOG(TEXT("이펙트 시퀀스 조회 성공 - AudioId: %d, %d개 이펙트"), AudioId, FoundSequence->SequenceData.Num());
+		return FoundSequence->SequenceData;
+	}
+
+	SESSIONPRINTLOG(TEXT("이펙트 시퀀스 없음 - AudioId: %d"), AudioId);
+	return TArray<FEffectSequenceData>();
+}
+
+bool UMVE_GIS_SessionManager::HasEffectSequenceForAudio(int32 AudioId) const
+{
+	return AudioEffectSequenceMap.Contains(AudioId);
+}
+
+void UMVE_GIS_SessionManager::ClearAllEffectSequences()
+{
+	int32 Count = AudioEffectSequenceMap.Num();
+	AudioEffectSequenceMap.Empty();
+	SESSIONPRINTLOG(TEXT("모든 이펙트 시퀀스 초기화 (%d곡)"), Count);
+}

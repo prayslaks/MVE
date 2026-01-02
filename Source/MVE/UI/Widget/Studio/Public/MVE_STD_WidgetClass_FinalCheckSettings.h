@@ -2,6 +2,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "MVE_API_ResponseData.h"
 #include "Blueprint/UserWidget.h"
 #include "MVE_STD_WidgetClass_FinalCheckSettings.generated.h"
 
@@ -41,4 +42,8 @@ private:
 
 	UFUNCTION()
 	void OnMusicAnalysisReceived(bool bSuccess, const TArray<struct FEffectSequenceData>& SequenceData, const FString& ErrorMessage);
+
+	// 현재 선택된 오디오 파일 (AI 분석 결과 저장 시 AudioId로 사용)
+	UPROPERTY()
+	FAudioFile CurrentSelectedAudio;
 };

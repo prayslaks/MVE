@@ -3,6 +3,7 @@
 #include "MVE_StageLevel_EffectSequenceManager.h"
 #include "MVE.h"
 #include "MVE_API_Helper.h"
+#include "MVE_GIS_SessionManager.h"
 #include "Components/Button.h"
 #include "Components/Slider.h"
 #include "Components/TextBlock.h"
@@ -305,6 +306,17 @@ void UMVE_STU_WC_EffectSequencePreview::GenerateTestDataFromDuration(int32 Total
 
 	PRINTLOG(TEXT("테스트 데이터 로드 완료 - 곡: %s, %d개 이펙트, 총 길이: %s"),
 		*SongTitle, TestData.Num(), *FormatTime(TotalDuration));
+
+	// 🎯 TestMode일 때도 SessionManager에 저장 (StageLevel에서 사용하기 위해)
+	if (UGameInstance* GI = GetGameInstance())
+	{
+		if (UMVE_GIS_SessionManager* SessionManager = GI->GetSubsystem<UMVE_GIS_SessionManager>())
+		{
+			SessionManager->SetEffectSequenceForAudio(CurrentAudioFile.Id, TestData);
+			PRINTLOG(TEXT("💾 TestMode - SessionManager에 이펙트 시퀀스 저장 완료 - AudioId: %d, Title: %s, %d개 이펙트"),
+				CurrentAudioFile.Id, *CurrentAudioFile.Title, TestData.Num());
+		}
+	}
 }
 
 void UMVE_STU_WC_EffectSequencePreview::SetAudioFile(const FAudioFile& AudioFile)

@@ -41,3 +41,25 @@ struct MVE_API FEffectSequenceData
 	{
 	}
 };
+
+/**
+ * Effect Sequence Data Array Wrapper
+ * TMap에 TArray를 값으로 사용하기 위한 래퍼 구조체
+ */
+USTRUCT(BlueprintType)
+struct MVE_API FEffectSequenceDataArray
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effect Sequence")
+	TArray<FEffectSequenceData> SequenceData;
+
+	FEffectSequenceDataArray()
+	{
+	}
+
+	FEffectSequenceDataArray(const TArray<FEffectSequenceData>& InSequenceData)
+		: SequenceData(InSequenceData)
+	{
+	}
+};

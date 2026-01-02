@@ -4,6 +4,7 @@
 #include "glTFRuntimeFunctionLibrary.h"
 #include "glTFRuntimeAudioFunctionLibrary.h"
 #include "MVE.h"
+#include "MVE_StageLevel_EffectSequenceManager.h"
 #include "Kismet/GameplayStatics.h"
 #include "StageLevel/Actor/Public/MVE_StageLevel_Speaker.h"
 #include "StageLevel/Widget/Public/MVE_STD_WC_AudioPlayer.h"
@@ -141,6 +142,23 @@ void UMVE_PC_StageLevel_StudioComponent::Client_PlayPreparedAudio_Implementation
 		}
 	}
 	PRINTNETLOG(this, TEXT("[오디오 동기화] %d개의 스피커에 재생 명령 전달 완료."), SpeakerCount);
+
+	// 🎆 EffectSequenceManager 시작 (음악과 동기화하여 이펙트 재생)
+	TArray<AActor*> FoundActors;
+	UGameplayStatics::GetAllActorsOfClass(this, AMVE_StageLevel_EffectSequenceManager::StaticClass(), FoundActors);
+
+	if (FoundActors.Num() > 0)
+	{
+		if (AMVE_StageLevel_EffectSequenceManager* Manager = Cast<AMVE_StageLevel_EffectSequenceManager>(FoundActors[0]))
+		{
+			Manager->StartSequence(true);
+			PRINTNETLOG(this, TEXT("[이펙트 시퀀스] EffectSequenceManager 재생 시작"));
+		}
+	}
+	else
+	{
+		PRINTNETLOG(this, TEXT("[이펙트 시퀀스] ⚠️ EffectSequenceManager를 찾을 수 없습니다"));
+	}
 }
 
 // 서버가 호출 -> 특정 클라이언트에서 실행
@@ -158,6 +176,19 @@ void UMVE_PC_StageLevel_StudioComponent::Client_StopPreparedAudio_Implementation
 		}
 	}
 	PRINTNETLOG(this, TEXT("[오디오 동기화] %d개의 스피커에 중지 명령 전달 완료."), SpeakerCount);
+
+	// 🎆 EffectSequenceManager 중지 (음악과 동기화)
+	TArray<AActor*> FoundActors;
+	UGameplayStatics::GetAllActorsOfClass(this, AMVE_StageLevel_EffectSequenceManager::StaticClass(), FoundActors);
+
+	if (FoundActors.Num() > 0)
+	{
+		if (AMVE_StageLevel_EffectSequenceManager* Manager = Cast<AMVE_StageLevel_EffectSequenceManager>(FoundActors[0]))
+		{
+			Manager->StopSequence();
+			PRINTNETLOG(this, TEXT("[이펙트 시퀀스] EffectSequenceManager 중지"));
+		}
+	}
 }
 
 void UMVE_PC_StageLevel_StudioComponent::OnAudioPlaybackPercentUpdate(const USoundWave* PlayingSoundWave, const float PlaybackPercent)

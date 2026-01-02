@@ -4,6 +4,7 @@
 #include "CoreMinimal.h"
 #include "MVE_API_ResponseData.h"
 #include "Data/RoomInfo.h"
+#include "StageLevel/Data/MVE_EffectSequenceData.h"
 #include "Subsystems/GameInstanceSubsystem.h"
 #include "OnlineSubsystem.h"
 #include "Interfaces/OnlineSessionInterface.h"
@@ -57,6 +58,38 @@ public:
 
     UFUNCTION(BlueprintCallable, Category = "MVE|Session")
     void ClearPendingPlaylist();
+
+    // ===== 곡별 이펙트 시퀀스 관리 =====
+
+    /**
+     * 특정 곡의 이펙트 시퀀스 저장
+     * @param AudioId 오디오 파일 ID
+     * @param SequenceData 이펙트 시퀀스 데이터
+     */
+    UFUNCTION(BlueprintCallable, Category = "MVE|Session|EffectSequence")
+    void SetEffectSequenceForAudio(int32 AudioId, const TArray<FEffectSequenceData>& SequenceData);
+
+    /**
+     * 특정 곡의 이펙트 시퀀스 가져오기
+     * @param AudioId 오디오 파일 ID
+     * @return 이펙트 시퀀스 데이터 (없으면 빈 배열)
+     */
+    UFUNCTION(BlueprintCallable, BlueprintPure, Category = "MVE|Session|EffectSequence")
+    TArray<FEffectSequenceData> GetEffectSequenceForAudio(int32 AudioId) const;
+
+    /**
+     * 특정 곡의 이펙트 시퀀스가 있는지 확인
+     * @param AudioId 오디오 파일 ID
+     * @return 이펙트 시퀀스 존재 여부
+     */
+    UFUNCTION(BlueprintCallable, BlueprintPure, Category = "MVE|Session|EffectSequence")
+    bool HasEffectSequenceForAudio(int32 AudioId) const;
+
+    /**
+     * 모든 이펙트 시퀀스 데이터 초기화
+     */
+    UFUNCTION(BlueprintCallable, Category = "MVE|Session|EffectSequence")
+    void ClearAllEffectSequences();
 
     UPROPERTY(BlueprintAssignable, Category = "MVE|Session")
     FOnSessionCreated OnSessionCreated;
@@ -122,7 +155,11 @@ private:
     UPROPERTY()
     TArray<FAudioFile> PendingConcertPlaylist;
 
-    
+    // 곡별 이펙트 시퀀스 저장소 (AudioFileId → EffectSequenceData)
+    UPROPERTY()
+    TMap<int32, FEffectSequenceDataArray> AudioEffectSequenceMap;
+
+
     UPROPERTY()
     bool bIsHost;
     

@@ -103,6 +103,9 @@ void UMVE_STD_WidgetClass_FinalCheckSettings::OnStartConcertButtonClicked()
 
 void UMVE_STD_WidgetClass_FinalCheckSettings::OnAudioFileSelected(const FAudioFile& SelectedAudio)
 {
+	// 현재 선택된 오디오 저장 (AI 분석 결과 저장 시 사용)
+	CurrentSelectedAudio = SelectedAudio;
+
 	// SetAudioFile()에서 음악 로드 완료 후 TestMode일 때 자동으로 LoadTestData() 호출됨
 	EffectSequencePreviewWidget->SetAudioFile(SelectedAudio);
 
@@ -147,6 +150,17 @@ void UMVE_STD_WidgetClass_FinalCheckSettings::OnMusicAnalysisReceived(bool bSucc
 			int32 TotalDuration = EffectSequencePreviewWidget->GetTotalDurationTimeStamp();
 			EffectSequencePreviewWidget->SetSequenceData(SequenceData, TotalDuration);
 			PRINTLOG(TEXT("📊 EffectSequencePreview에 분석 데이터 설정 완료"));
+		}
+
+		// 🎯 SessionManager에 이펙트 시퀀스 저장 (StageLevel에서 사용하기 위해)
+		if (UGameInstance* GI = GetGameInstance())
+		{
+			if (UMVE_GIS_SessionManager* SessionManager = GI->GetSubsystem<UMVE_GIS_SessionManager>())
+			{
+				SessionManager->SetEffectSequenceForAudio(CurrentSelectedAudio.Id, SequenceData);
+				PRINTLOG(TEXT("💾 SessionManager에 이펙트 시퀀스 저장 완료 - AudioId: %d, Title: %s, %d개 이펙트"),
+					CurrentSelectedAudio.Id, *CurrentSelectedAudio.Title, SequenceData.Num());
+			}
 		}
 	}
 	else
