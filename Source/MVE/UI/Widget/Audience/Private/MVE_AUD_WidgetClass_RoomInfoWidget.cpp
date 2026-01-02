@@ -90,6 +90,7 @@ void UMVE_AUD_WidgetClass_RoomInfoWidget::UpdateUI(UConcertInfoData* RoomData)
 		{
 			StudioName = StudioName.Left(AtIndex);
 		}
+		StudioName.Append(" 님의 콘서트");
 
 		SessionOwnerNameText->SetText(FText::FromString(StudioName));
 	}
@@ -107,19 +108,16 @@ void UMVE_AUD_WidgetClass_RoomInfoWidget::UpdateUI(UConcertInfoData* RoomData)
 	{
 		ViewerCountText->SetText(FText::FromString(FString::Printf(TEXT("%d"), RoomData->ConcertInfo.CurrentAudience)));
 	}
-
-	// 썸네일
-	/*
+	
 	if (ThumbnailImage)
 	{
-		
-		if (RoomData->RoomInfo.Thumbnail)
-			ThumbnailImage->SetBrushFromTexture(RoomData->RoomInfo.Thumbnail);
-		else
-			ThumbnailImage->SetBrushTintColor(FColor::Black);
+		if (Thumbnails.Num() > 0)
+		{
+			int idx = FMath::RandRange(0, Thumbnails.Num()-1);
+			ThumbnailImage->SetBrushFromTexture(Thumbnails[idx]);	
+		}
 	}
-	*/
-
+	
 	// 라이브 인디케이터
 	if (LiveIndicator)
 	{

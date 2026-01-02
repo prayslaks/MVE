@@ -56,6 +56,9 @@ protected:
 	UPROPERTY(EditAnywhere)
 	FLinearColor UnhoveredColor = FLinearColor(0.2f, 0.2f, 0.2f, 0.0f);;
 
+	UPROPERTY(EditDefaultsOnly)
+	TArray<UTexture2D*> Thumbnails;
+
 private:
 	// 현재 표시 중인 데이터
 	UPROPERTY()
