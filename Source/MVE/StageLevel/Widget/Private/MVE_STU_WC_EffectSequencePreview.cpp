@@ -206,52 +206,105 @@ void UMVE_STU_WC_EffectSequencePreview::SetRenderTarget(UTextureRenderTarget2D* 
 	}
 }
 
-void UMVE_STU_WC_EffectSequencePreview::LoadTestData()
+void UMVE_STU_WC_EffectSequencePreview::LoadTestData(const FAudioFile& AudioFile)
 {
-	// 테스트용 더미 데이터 생성 (2분 38초 = 158초 = 1580 TimeStamp)
-	// AI가 분석한 결과를 시뮬레이션
+	PRINTLOG(TEXT("🧪 LoadTestData 호출됨 - 곡: %s, Duration: %d초"), *AudioFile.Title, AudioFile.Duration);
+
+	// Duration 검증
+	if (AudioFile.Duration <= 0)
+	{
+		PRINTLOG(TEXT("⚠️ AudioFile.Duration이 0 이하입니다! CurrentSound에서 Duration 가져오기 시도..."));
+
+		// CurrentSound가 있으면 거기서 Duration 가져오기
+		if (CurrentSound && CurrentSound->Duration > 0.0f)
+		{
+			int32 TotalDuration = FMath::RoundToInt(CurrentSound->Duration * 10.0f);
+			PRINTLOG(TEXT("✅ CurrentSound에서 Duration 가져옴: %.2f초 → %d TimeStamp"),
+				CurrentSound->Duration, TotalDuration);
+
+			GenerateTestDataFromDuration(TotalDuration, AudioFile.Title);
+			return;
+		}
+		else
+		{
+			PRINTLOG(TEXT("❌ CurrentSound도 없거나 Duration이 0입니다. 테스트 데이터 생성 불가!"));
+			PRINTLOG(TEXT("   CurrentSound: %s, Duration: %.2f"),
+				CurrentSound ? TEXT("존재") : TEXT("null"),
+				CurrentSound ? CurrentSound->Duration : 0.0f);
+			return;
+		}
+	}
+
+	// 곡 길이 기반 동적 테스트 데이터 생성
+	int32 TotalDuration = AudioFile.Duration * 10; // 초 → 1/10초 단위 변환
+	GenerateTestDataFromDuration(TotalDuration, AudioFile.Title);
+}
+
+void UMVE_STU_WC_EffectSequencePreview::GenerateTestDataFromDuration(int32 TotalDuration, const FString& SongTitle)
+{
 	TArray<FEffectSequenceData> TestData;
 
-	// 0:05초 - Spotlight VerySlowSpeed (고요한 인트로)
-	TestData.Add(FEffectSequenceData(50, FGameplayTag::RequestGameplayTag(FName("VFX.Spotlight.VerySlowSpeed"))));
+	// 이펙트 태그 풀 (3가지 종류 × 각각 4단계 강도)
+	TArray<FName> SpotlightTags = {
+		FName("VFX.Spotlight.VerySlowSpeed"),
+		FName("VFX.Spotlight.SlowSpeed"),
+		FName("VFX.Spotlight.NormalSpeed"),
+		FName("VFX.Spotlight.FastSpeed")
+	};
 
-	// 0:15초 - Flame VerySmallSizeAndVerySlowSpeed (약한 촛불)
-	TestData.Add(FEffectSequenceData(150, FGameplayTag::RequestGameplayTag(FName("VFX.Flame.VerySmallSizeAndVerySlowSpeed"))));
+	TArray<FName> FlameTags = {
+		FName("VFX.Flame.VerySmallSizeAndVerySlowSpeed"),
+		FName("VFX.Flame.SmallSizeAndSlowSpeed"),
+		FName("VFX.Flame.NormalSmallSizeAndNormalSpeed"),
+		FName("VFX.Flame.FastSizeAndFastSpeed")
+	};
 
-	// 0:25초 - Spotlight SlowSpeed (서정적인 시작)
-	TestData.Add(FEffectSequenceData(250, FGameplayTag::RequestGameplayTag(FName("VFX.Spotlight.SlowSpeed"))));
+	TArray<FName> FanfareTags = {
+		FName("VFX.Fanfare.VeryLowSpawnRate"),
+		FName("VFX.Fanfare.LowSpawnRate"),
+		FName("VFX.Fanfare.NormalSpawnRate"),
+		FName("VFX.Fanfare.HighSpawnRate") // 4번째 강도
+	};
 
-	// 0:40초 - Fanfare VeryLowSpawnRate (신비로운 분위기)
-	TestData.Add(FEffectSequenceData(400, FGameplayTag::RequestGameplayTag(FName("VFX.Fanfare.VeryLowSpawnRate"))));
+	// 이펙트 배치 간격 (15초마다)
+	const int32 IntervalTimeStamp = 150; // 15초 = 150 (1/10초 단위)
 
-	// 0:55초 - Flame SmallSizeAndSlowSpeed (모닥불 크기)
-	TestData.Add(FEffectSequenceData(550, FGameplayTag::RequestGameplayTag(FName("VFX.Flame.SmallSizeAndSlowSpeed"))));
+	// 첫 이펙트는 5초 후부터 시작
+	int32 CurrentTimeStamp = 50;
+	int32 EffectIndex = 0;
 
-	// 1:10초 - Spotlight NormalSpeed (경쾌한 팝)
-	TestData.Add(FEffectSequenceData(700, FGameplayTag::RequestGameplayTag(FName("VFX.Spotlight.NormalSpeed"))));
+	// 곡 길이 동안 반복 배치
+	while (CurrentTimeStamp < TotalDuration)
+	{
+		// 이펙트 종류 순환 (Spotlight → Flame → Fanfare)
+		int32 EffectType = EffectIndex % 3;
+		int32 IntensityLevel = (EffectIndex / 3) % 4; // 0~3 순환 (강도)
 
-	// 1:25초 - Fanfare LowSpawnRate (설레는 소절)
-	TestData.Add(FEffectSequenceData(850, FGameplayTag::RequestGameplayTag(FName("VFX.Fanfare.LowSpawnRate"))));
+		FName SelectedTag;
+		switch (EffectType)
+		{
+		case 0: // Spotlight
+			SelectedTag = SpotlightTags[IntensityLevel];
+			break;
+		case 1: // Flame
+			SelectedTag = FlameTags[IntensityLevel];
+			break;
+		case 2: // Fanfare
+			SelectedTag = FanfareTags[IntensityLevel];
+			break;
+		}
 
-	// 1:40초 - Flame NormalSmallSizeAndNormalSpeed (힙합 비트)
-	TestData.Add(FEffectSequenceData(1000, FGameplayTag::RequestGameplayTag(FName("VFX.Flame.NormalSmallSizeAndNormalSpeed"))));
+		TestData.Add(FEffectSequenceData(CurrentTimeStamp, FGameplayTag::RequestGameplayTag(SelectedTag)));
 
-	// 1:55초 - Spotlight FastSpeed (고조되는 댄스)
-	TestData.Add(FEffectSequenceData(1150, FGameplayTag::RequestGameplayTag(FName("VFX.Spotlight.FastSpeed"))));
-
-	// 2:10초 - Fanfare NormalSpawnRate (즐거운 축제)
-	TestData.Add(FEffectSequenceData(1300, FGameplayTag::RequestGameplayTag(FName("VFX.Fanfare.NormalSpawnRate"))));
-
-	// 2:25초 - Flame FastSizeAndFastSpeed (파워풀한 하이라이트)
-	TestData.Add(FEffectSequenceData(1450, FGameplayTag::RequestGameplayTag(FName("VFX.Flame.FastSizeAndFastSpeed"))));
-
-	// 총 길이 2분 38초 (1580 = 158초 * 10)
-	int32 TotalDuration = 1580;
+		CurrentTimeStamp += IntervalTimeStamp;
+		EffectIndex++;
+	}
 
 	// 데이터 설정
 	SetSequenceData(TestData, TotalDuration);
 
-	PRINTLOG(TEXT("테스트 데이터 로드 완료 - %d개 이펙트, 총 길이: 2:38"), TestData.Num());
+	PRINTLOG(TEXT("테스트 데이터 로드 완료 - 곡: %s, %d개 이펙트, 총 길이: %s"),
+		*SongTitle, TestData.Num(), *FormatTime(TotalDuration));
 }
 
 void UMVE_STU_WC_EffectSequencePreview::SetAudioFile(const FAudioFile& AudioFile)
@@ -371,6 +424,13 @@ void UMVE_STU_WC_EffectSequencePreview::SetAudioFile(const FAudioFile& AudioFile
 				{
 					AudioComponent->OnAudioPlaybackPercent.Clear();
 					AudioComponent->OnAudioPlaybackPercent.AddDynamic(this, &UMVE_STU_WC_EffectSequencePreview::OnAudioPlaybackPercentChanged);
+				}
+
+				// 🧪 TestMode일 때 자동으로 더미 데이터 생성 (캐시된 음악)
+				if (bTestMode)
+				{
+					PRINTLOG(TEXT("🧪 TestMode 활성화 - 캐시된 음악 로드 완료 후 더미 데이터 생성"));
+					GenerateTestDataFromDuration(TotalDurationTimeStamp, CurrentAudioFile.Title);
 				}
 
 				return; // 서버 요청 불필요!
@@ -752,6 +812,13 @@ void UMVE_STU_WC_EffectSequencePreview::OnAudioLoadedFromUrl(UglTFRuntimeAsset* 
 			AudioComponent->OnAudioPlaybackPercent.Clear();
 			AudioComponent->OnAudioPlaybackPercent.AddDynamic(this, &UMVE_STU_WC_EffectSequencePreview::OnAudioPlaybackPercentChanged);
 			PRINTLOG(TEXT("AudioComponent 델리게이트 바인딩 완료"));
+		}
+
+		// 🧪 TestMode일 때 자동으로 더미 데이터 생성
+		if (bTestMode)
+		{
+			PRINTLOG(TEXT("🧪 TestMode 활성화 - 음악 로드 완료 후 더미 데이터 생성"));
+			GenerateTestDataFromDuration(TotalDurationTimeStamp, CurrentAudioFile.Title);
 		}
 	}
 	else

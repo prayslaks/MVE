@@ -91,9 +91,10 @@ public:
 	/**
 	 * 테스트용 더미 데이터 로드
 	 * AI 연동 전 테스트를 위한 임시 함수
+	 * @param AudioFile 더미 데이터를 생성할 음악 정보 (곡 길이 기반으로 동적 생성)
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Effect Preview|Test")
-	void LoadTestData();
+	void LoadTestData(const FAudioFile& AudioFile);
 
 	/**
 	 * 재생할 음악 설정
@@ -211,6 +212,13 @@ private:
 	 */
 	UFUNCTION()
 	void OnAudioLoadedFromUrl(UglTFRuntimeAsset* Asset);
+
+	/**
+	 * 곡 길이 기반으로 테스트 데이터 생성 (내부 헬퍼 함수)
+	 * @param TotalDuration 곡 총 길이 (1/10초 단위)
+	 * @param SongTitle 곡 제목 (로그용)
+	 */
+	void GenerateTestDataFromDuration(int32 TotalDuration, const FString& SongTitle);
 
 private:
 	/** AI 분석 결과 */

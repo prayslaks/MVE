@@ -103,16 +103,11 @@ void UMVE_STD_WidgetClass_FinalCheckSettings::OnStartConcertButtonClicked()
 
 void UMVE_STD_WidgetClass_FinalCheckSettings::OnAudioFileSelected(const FAudioFile& SelectedAudio)
 {
+	// SetAudioFile()에서 음악 로드 완료 후 TestMode일 때 자동으로 LoadTestData() 호출됨
 	EffectSequencePreviewWidget->SetAudioFile(SelectedAudio);
 
-	// TestMode 체크
-	if (EffectSequencePreviewWidget->bTestMode)
-	{
-		// 🧪 테스트 모드: 더미 데이터로 EffectSequenceManager 동작 확인
-		EffectSequencePreviewWidget->LoadTestData();
-		PRINTLOG(TEXT("✅ TestMode 활성화 - 더미 데이터 로드"));
-	}
-	else
+	// TestMode가 아닐 때만 AI 서버에 요청
+	if (!EffectSequencePreviewWidget->bTestMode)
 	{
 		// 🎯 실제 모드: AI 서버에 음악 분석 요청
 		PRINTLOG(TEXT("🎯 TestMode 비활성화 - AI 서버에 음악 분석 요청"));
