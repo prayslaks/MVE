@@ -6,6 +6,7 @@
 #include "Components/SpotLightComponent.h"
 #include "Components/TimelineComponent.h"
 #include "Curves/CurveFloat.h"
+#include "Kismet/GameplayStatics.h"
 #include "StageLevel/Default/Public/MVE_GM_StageLevel.h"
 
 AMVE_StageLevel_AudCamera::AMVE_StageLevel_AudCamera()
@@ -31,6 +32,25 @@ AMVE_StageLevel_AudCamera::AMVE_StageLevel_AudCamera()
 	SpotLightComp->SetIntensity(0.0f);
 	SpotLightComp->SetVisibility(true);
 	
+	// 라이트 빔 메시 컴포넌트 추가
+	FlashBeamMeshComp = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("LightBeamMeshComp"));
+	FlashBeamMeshComp->SetupAttachment(StaticMeshComp);
+	FlashBeamMeshComp->SetRelativeLocation(FVector(0.0f, 7.65f, 4.46));
+	FlashBeamMeshComp->SetRelativeRotation(FRotator(0.0f, 0.0f, -90.0f));
+	FlashBeamMeshComp->SetRelativeScale3D(FVector(20.0f, 20.0f, 1.0f));
+	if (static ConstructorHelpers::FObjectFinder<UStaticMesh> 
+		Finder(TEXT("/Script/Engine.StaticMesh'/Game/Maps/_GENERATED/user/Cone_E973DB38.Cone_E973DB38'"));
+		Finder.Succeeded())
+	{
+		FlashBeamMeshComp->SetStaticMesh(Finder.Object);
+	}
+	if (static ConstructorHelpers::FObjectFinder<UMaterial>
+		Finder(TEXT("/Game/Workspace/LJW/FloodLight/M_FloodlightBeam.M_FloodlightBeam"));
+		Finder.Succeeded())
+	{
+		FlashBeamMeshComp->SetMaterial(0, Finder.Object);
+	}
+	
 	// 오디오 컴포넌트 추가
 	AudioComp = CreateDefaultSubobject<UAudioComponent>(TEXT("AudioComp"));
 	AudioComp->SetupAttachment(RootComponent);
@@ -55,6 +75,15 @@ void AMVE_StageLevel_AudCamera::BeginPlay()
 	if (TakePhotoSound)
 	{
 		AudioComp->SetSound(TakePhotoSound);
+	}
+	
+	// 플래시 빔 머터리얼 할당
+	if (UMaterialInterface* FlashBeamMaterialBase = FlashBeamMeshComp->GetMaterial(0))
+	{
+		FlashBeamMaterialMID = UMaterialInstanceDynamic::Create(FlashBeamMaterialBase, this);
+		FlashBeamMaterialMID->SetScalarParameterValue(FName("Intensity"), 0);
+		FlashBeamMeshComp->SetMaterial(0, FlashBeamMaterialMID);
+		PRINTNETLOG(this, TEXT("FlashBeamMaterialMID 할당!"));
 	}
 }
 
@@ -95,4 +124,5 @@ void AMVE_StageLevel_AudCamera::OnFlashUpdate(const float Value) const
 {
 	// 커브 값에 따라 스포트라이트 밝기 조절
 	SpotLightComp->SetIntensity(Value * FlashIntensityMultiplier);
+	FlashBeamMaterialMID->SetScalarParameterValue(FName("Intensity"), Value / 8);
 }
