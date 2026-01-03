@@ -133,10 +133,6 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "MVE|Component")
 	UAudioComponent* GetAudioComponent() const;
 
-	// 캐릭터에 부착된 슈터 컴포넌트를 가져온다
-	UFUNCTION(BlueprintCallable, Category = "MVE|Component")
-	class UMVE_StageLevel_AudCharacterShooterComponent* GetShooterComponent() const;
-
 public:
 	/** 채팅 메시지 전송 (Server RPC) */
 	UFUNCTION(Server, Reliable, WithValidation)

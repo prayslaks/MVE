@@ -42,19 +42,19 @@ AMVE_StageLevel_AudCharacter::AMVE_StageLevel_AudCharacter()
 	AudioComponent = CreateDefaultSubobject<UAudioComponent>(TEXT("AudioComponent"));
 	AudioComponent->SetupAttachment(RootComponent);
 	
-	// 사격 컴포넌트
-	ShooterComponent = CreateDefaultSubobject<UMVE_StageLevel_AudCharacterShooterComponent>(TEXT("ShooterComponent"));
+	VisualSkeletalMeshComp = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("VisualSkeletalMeshComp"));
+	VisualSkeletalMeshComp->SetupAttachment(GetMesh());
 	
 	// 던지기 애로우 컴포넌트
 	RightThrowArrowComp = CreateDefaultSubobject<UArrowComponent>(TEXT("RightThrowArrowComp"));
-	RightThrowArrowComp->SetupAttachment(GetMesh(), FName("HandGrip_R"));
+	RightThrowArrowComp->SetupAttachment(VisualSkeletalMeshComp, FName("HandGrip_R"));
 	
 	// 카메라 전환 타임라인
 	CameraTimeline = CreateDefaultSubobject<UTimelineComponent>(TEXT("CameraTimeline"));
 	
 	// 오디언스 카메라 차일드 액터 컴포넌트
 	AudCameraChildActorComp = CreateDefaultSubobject<UChildActorComponent>(TEXT("AudCameraChildActorComp"));
-	AudCameraChildActorComp->SetupAttachment(GetMesh(), TEXT("HandGrip_R"));
+	AudCameraChildActorComp->SetupAttachment(VisualSkeletalMeshComp, TEXT("HandGrip_R"));
 	
 	// 기본적으로 컨트롤러의 회전값이 캐릭터에 영향을 주지 않고 카메라만 독립적으로 회전하도록 설정
 	bUseControllerRotationYaw = false;
@@ -71,7 +71,7 @@ AMVE_StageLevel_AudCharacter::AMVE_StageLevel_AudCharacter()
 	ThrowActionCameraPosition = FMVE_StageLevel_AudCharacterCameraPosition(150.0f, { 0.0f, 70.0f, 70.0f });
 	CheerActionCameraPosition = FMVE_StageLevel_AudCharacterCameraPosition(180.0f, { 0.0f, 40.0f, 40.0f });
 	WaveLightStickActionCameraPosition = FMVE_StageLevel_AudCharacterCameraPosition(200.0f, { 0.0f, 60.0f, 60.0f });
-	ClapActionCameraPosition = FMVE_StageLevel_AudCharacterCameraPosition(190.0f, { 0.0f, 80.0f, 80.0f });
+	ClapActionCameraPosition = FMVE_StageLevel_AudCharacterCameraPosition( -30.0f, { 0.0f, 0.0f, 50.0f });
 	
 	// 상태 별 카메라 위치
 	PhotoAimCameraPosition = FMVE_StageLevel_AudCharacterCameraPosition(110.0f, {0.0f, 50.0f, 50.0f}); 
@@ -135,6 +135,7 @@ void AMVE_StageLevel_AudCharacter::SetupPlayerInputComponent(UInputComponent* Pl
 		EnhancedInputComponent->BindAction(IA_Move, ETriggerEvent::Triggered, this, &AMVE_StageLevel_AudCharacter::HandleMove);
 		EnhancedInputComponent->BindAction(IA_ToggleViewpoint, ETriggerEvent::Started, this, &AMVE_StageLevel_AudCharacter::HandleToggleViewpoint);
 		EnhancedInputComponent->BindAction(IA_Zoom, ETriggerEvent::Triggered, this, &AMVE_StageLevel_AudCharacter::HandleZoom);
+		
 		// 카메라 관련이랑 이동 추가함
 		EnhancedInputComponent->BindAction(IA_Look, ETriggerEvent::Triggered, this, &AMVE_StageLevel_AudCharacter::OnInputActionLookTriggered);	
 		EnhancedInputComponent->BindAction(IA_Aim, ETriggerEvent::Started, this, &AMVE_StageLevel_AudCharacter::OnInputActionAimStarted);
@@ -367,6 +368,7 @@ void AMVE_StageLevel_AudCharacter::OnRep_ControlMode()
 		{
 			CameraMode1();
 			GetBindingPC()->SwitchInputHelpWidget(EAudienceInputHelpState::Unvisible);
+			GetCharacterMovement()->MaxWalkSpeed = 0;
 			break;
 		}
 	case EAudienceControlMode::Throw:
@@ -377,6 +379,7 @@ void AMVE_StageLevel_AudCharacter::OnRep_ControlMode()
 			SetAudObject(nullptr, TEXT("오디언스 오브젝트 해제!"));
 			CameraMode2();
 			GetBindingPC()->SwitchInputHelpWidget(EAudienceInputHelpState::Aimable);
+			GetCharacterMovement()->MaxWalkSpeed = 0;
 			break;
 		}
 	case EAudienceControlMode::Photo:
@@ -387,6 +390,7 @@ void AMVE_StageLevel_AudCharacter::OnRep_ControlMode()
 			SetAudObject(AudCameraChildActorComp->GetChildActor(), TEXT("오디언스 카메라 준비 완료!"));
 			CameraMode2();
 			GetBindingPC()->SwitchInputHelpWidget(EAudienceInputHelpState::Aimable);
+			GetCharacterMovement()->MaxWalkSpeed = 0;
 			break;
 		}
 	case EAudienceControlMode::Cheer:
@@ -397,6 +401,7 @@ void AMVE_StageLevel_AudCharacter::OnRep_ControlMode()
 			SetAudObject(nullptr, TEXT("오디언스 오브젝트 해제!"));
 			CameraMode2();
 			GetBindingPC()->SwitchInputHelpWidget(EAudienceInputHelpState::Executable);
+			GetCharacterMovement()->MaxWalkSpeed = 0;
 			break;
 		}
 	case EAudienceControlMode::WaveLightStick:
@@ -407,6 +412,7 @@ void AMVE_StageLevel_AudCharacter::OnRep_ControlMode()
 			SetAudObject(nullptr, TEXT("오디언스 오브젝트 해제!"));
 			CameraMode2();
 			GetBindingPC()->SwitchInputHelpWidget(EAudienceInputHelpState::Executable);
+			GetCharacterMovement()->MaxWalkSpeed = 0;
 			break;
 		}
 	case EAudienceControlMode::Clap:
@@ -417,6 +423,7 @@ void AMVE_StageLevel_AudCharacter::OnRep_ControlMode()
 			SetAudObject(nullptr, TEXT("오디언스 오브젝트 해제!"));
 			CameraMode2();
 			GetBindingPC()->SwitchInputHelpWidget(EAudienceInputHelpState::Executable);
+			GetCharacterMovement()->MaxWalkSpeed = 0;
 			break;
 		}
 	case EAudienceControlMode::Default:
@@ -427,6 +434,7 @@ void AMVE_StageLevel_AudCharacter::OnRep_ControlMode()
 			SetAudObject(nullptr, TEXT("오디언스 오브젝트 해제!"));
 			CameraMode3();
 			GetBindingPC()->SwitchInputHelpWidget(EAudienceInputHelpState::Selectable);
+			GetCharacterMovement()->MaxWalkSpeed = 300;
 			break;
 		}
 	default:
@@ -539,17 +547,11 @@ void AMVE_StageLevel_AudCharacter::Multicast_ExecuteThrow_Implementation()
 
 void AMVE_StageLevel_AudCharacter::ThrowObject()
 {
-	PRINTLOG(TEXT("=== ThrowObject called ==="));
-	PRINTLOG(TEXT("HasAuthority: %d"), HasAuthority());
-
 	if (HasAuthority() == false)
 	{
-		PRINTLOG(TEXT("⚠️ Not authority, skipping throw"));
 		return;
 	}
-
-	PRINTLOG(TEXT("ThrowObjectClass valid: %d"), ThrowObjectClass != nullptr);
-
+	
 	if (ThrowObjectClass)
 	{
 		// 소켓을 통해 던지는 위치 획득
@@ -570,20 +572,20 @@ void AMVE_StageLevel_AudCharacter::ThrowObject()
 		
 		if (AMVE_ThrowObject* SpawnedObject = GetWorld()->SpawnActor<AMVE_ThrowObject>(ThrowObjectClass, ThrowLocation, ThrowRotation, SpawnParams))
 		{
-			// ⭐ Owner의 UserID 설정 후 메시 적용
-			if (APlayerController* PC = Cast<APlayerController>(GetController()))
+			// Owner의 UserID 설정 후 메시 적용
+			if (const APlayerController* PC = Cast<APlayerController>(GetController()))
 			{
-				if (APlayerState* PS = PC->GetPlayerState<APlayerState>())
+				if (const APlayerState* PS = PC->GetPlayerState<APlayerState>())
 				{
 					SpawnedObject->OwnerUserID = PS->GetPlayerName();
-					PRINTLOG(TEXT("✅ ThrowObject OwnerUserID set: %s"), *SpawnedObject->OwnerUserID);
+					PRINTLOG(TEXT(" ThrowObject OwnerUserID set: %s"), *SpawnedObject->OwnerUserID);
 
-					// ⭐ 서버에서는 OnRep이 호출되지 않으므로 수동으로 메시 설정
+					// 서버에서는 OnRep이 호출되지 않으므로 수동으로 메시 설정
 					SpawnedObject->OnRep_OwnerUserID();
 				}
 			}
 
-			// ⭐ 모든 머신에서 동일한 속도로 발사 (Multicast)
+			// 모든 머신에서 동일한 속도로 발사 (Multicast)
 			SpawnedObject->Multicast_FireInDirection(ThrowDirection, ThrowSpeed);
 		}
 	}
@@ -766,11 +768,15 @@ void AMVE_StageLevel_AudCharacter::Server_SetUseControllerRotationYaw_Implementa
 	bUseControllerRotationYaw = Value;
 }
 
-
 // 움직임
 void AMVE_StageLevel_AudCharacter::HandleMove(const FInputActionValue& Value)
 {
 	const FVector2D MovementVector = Value.Get<FVector2D>();
+	
+	if (CurrentControlMode != EAudienceControlMode::Default)
+	{
+		return;
+	}
 
 	if (Controller != nullptr)
 	{
@@ -785,17 +791,7 @@ void AMVE_StageLevel_AudCharacter::HandleMove(const FInputActionValue& Value)
 	}
 }
 
-void AMVE_StageLevel_AudCharacter::HandleLook(const FInputActionValue& Value)
-{
-	if (Controller == nullptr || bLockCamera)
-	{
-		return;
-	}
-	
-	const FVector2D LookAxisVector = Value.Get<FVector2D>();
-	AddControllerYawInput(LookAxisVector.X * LookSensitivity);
-	AddControllerPitchInput(LookAxisVector.Y * LookSensitivity);
-}
+// 안 쓰는 함수
 
 void AMVE_StageLevel_AudCharacter::HandleToggleViewpoint(const FInputActionValue& Value)
 {
@@ -839,15 +835,15 @@ void AMVE_StageLevel_AudCharacter::HandleToggleViewpoint(const FInputActionValue
 	}
 
 	// 보간 타이머 시작 (람다 사용)
-	GetWorldTimerManager().SetTimer(
-		ViewpointInterpTimerHandle,
-		FTimerDelegate::CreateLambda([this]()
-		{
-			UpdateCameraInterpolation(0.016f);
-		}),
-		0.016f,
-		true
-	);
+	// GetWorldTimerManager().SetTimer(
+	// 	ViewpointInterpTimerHandle,
+	// 	FTimerDelegate::CreateLambda([this]()
+	// 	{
+	// 		UpdateCameraInterpolation(0.016f);
+	// 	}),
+	// 	0.016f,
+	// 	true
+	// );
 }
 
 void AMVE_StageLevel_AudCharacter::HandleZoom(const FInputActionValue& Value)
@@ -906,7 +902,7 @@ void AMVE_StageLevel_AudCharacter::UpdateCameraInterpolation(float DeltaTime)
 		bStillInterpolating = true;
 	}
 
-	// fove 보간
+	// fov 보간
 	if (Camera && FMath::Abs(Camera->FieldOfView - TargetFOV) > 0.1f)
 	{
 		Camera->FieldOfView = FMath::FInterpTo(

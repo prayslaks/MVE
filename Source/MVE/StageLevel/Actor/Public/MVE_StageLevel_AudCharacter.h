@@ -19,7 +19,6 @@ class UMVE_StageLevel_AudCharacterShooterComponent;
 class AMVE_PC_StageLevel;
 class UCurveFloat;
 
-
 UENUM(BlueprintType)
 enum class EAudienceControlMode : uint8
 {
@@ -81,13 +80,13 @@ public:
 	
 	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
 	
+	UPROPERTY(EditDefaultsOnly)
+	TObjectPtr<USkeletalMeshComponent> VisualSkeletalMeshComp;
+	
 	UFUNCTION()
 	UAudioComponent* GetAudioComponent() const { return AudioComponent; }
 	
 	UFUNCTION()
-	UMVE_StageLevel_AudCharacterShooterComponent* GetShooterComponent() const { return ShooterComponent; }
-	
-	UFUNCTION() 
 	EAudienceControlMode GetControlMode() const { return CurrentControlMode; }
 	
 	UFUNCTION()
@@ -166,8 +165,6 @@ private:
 	// 오디언스 상호작용 관련 필드
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "MVE|Components", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UAudioComponent> AudioComponent;
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "MVE|Components", meta = (AllowPrivateAccess = "true"))
-	TObjectPtr<UMVE_StageLevel_AudCharacterShooterComponent> ShooterComponent;
 	
 #pragma region 사용자 입력 액션 콜백
 	
@@ -381,7 +378,6 @@ public:
 
 	// input 핸들러
 	void HandleMove(const FInputActionValue& Value);
-	void HandleLook(const FInputActionValue& Value);
 	void HandleToggleViewpoint(const FInputActionValue& Value);
 	void HandleZoom(const FInputActionValue& Value);
 	void UpdateCameraInterpolation(float DeltaTime);
