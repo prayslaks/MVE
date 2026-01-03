@@ -29,11 +29,11 @@ void ATestGenAIActor::BeginPlay()
     SR->OnDownloadProgress.AddDynamic(this, &ATestGenAIActor::HandleDownloadProgress);
     SR->OnGenerationResponse.AddDynamic(this, &ATestGenAIActor::HandleGenerationResponse);
 
-    // 서버 URL 설정
+    // ComfyUI 서버 URL 설정
     if (!TestServerURL.IsEmpty())
     {
-        SR->ServerURL = TestServerURL;
-        UE_LOG(LogMVE, Log, TEXT("[Test] 서버 URL: %s"), *TestServerURL);
+        SR->ComfyUIServerURL = TestServerURL;
+        UE_LOG(LogMVE, Log, TEXT("[Test] ComfyUI 서버 URL: %s"), *TestServerURL);
     }
 
     UE_LOG(LogMVE, Log, TEXT("[Test] ✓ GenAI 시스템 준비 완료"));

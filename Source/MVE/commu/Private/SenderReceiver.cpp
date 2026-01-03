@@ -117,7 +117,7 @@ void USenderReceiver::SendGenerationRequest(
 
     // 설정 확인
     UE_LOG(LogMVE, Warning, TEXT("🔍 설정 확인:"));
-    UE_LOG(LogMVE, Warning, TEXT("  ServerURL = %s"), *ServerURL);
+    UE_LOG(LogMVE, Warning, TEXT("  ComfyUIServerURL = %s"), *ComfyUIServerURL);
     UE_LOG(LogMVE, Warning, TEXT("  GenerateEndpoint = %s"), *GenerateEndpoint);
 
     // ------------------------------------------------------------------------
@@ -126,7 +126,7 @@ void USenderReceiver::SendGenerationRequest(
     TSharedRef<IHttpRequest, ESPMode::ThreadSafe> HttpRequest =
         FHttpModule::Get().CreateRequest();
 
-    FString FullURL = ServerURL + GenerateEndpoint;
+    FString FullURL = ComfyUIServerURL + GenerateEndpoint;
     UE_LOG(LogMVE, Warning, TEXT("  FullURL = %s"), *FullURL);
 
     HttpRequest->SetURL(FullURL);
@@ -325,7 +325,7 @@ void USenderReceiver::SendMusicAnalysisRequest(
 
     // 설정 확인
     UE_LOG(LogMVE, Warning, TEXT("🔍 설정 확인:"));
-    UE_LOG(LogMVE, Warning, TEXT("  ServerURL = %s"), *ServerURL);
+    UE_LOG(LogMVE, Warning, TEXT("  MusicAnalysisServerURL = %s"), *MusicAnalysisServerURL);
     UE_LOG(LogMVE, Warning, TEXT("  MusicAnalysisEndpoint = %s"), *MusicAnalysisEndpoint);
     UE_LOG(LogMVE, Warning, TEXT("  Title = %s"), *Title);
     UE_LOG(LogMVE, Warning, TEXT("  Artist = %s"), *Artist);
@@ -336,7 +336,7 @@ void USenderReceiver::SendMusicAnalysisRequest(
     TSharedRef<IHttpRequest, ESPMode::ThreadSafe> HttpRequest =
         FHttpModule::Get().CreateRequest();
 
-    FString FullURL = ServerURL + MusicAnalysisEndpoint;
+    FString FullURL = MusicAnalysisServerURL + MusicAnalysisEndpoint;
     UE_LOG(LogMVE, Warning, TEXT("  FullURL = %s"), *FullURL);
 
     HttpRequest->SetURL(FullURL);
@@ -409,7 +409,7 @@ void USenderReceiver::SendBatchMusicAnalysisRequest(const TArray<FAudioFile>& Au
 
     // 설정 확인
     UE_LOG(LogMVE, Warning, TEXT("🔍 설정 확인:"));
-    UE_LOG(LogMVE, Warning, TEXT("  ServerURL = %s"), *ServerURL);
+    UE_LOG(LogMVE, Warning, TEXT("  MusicAnalysisServerURL = %s"), *MusicAnalysisServerURL);
     UE_LOG(LogMVE, Warning, TEXT("  MusicAnalysisEndpoint = %s"), *MusicAnalysisEndpoint);
     UE_LOG(LogMVE, Warning, TEXT("  요청 곡 수 = %d"), AudioFiles.Num());
 
@@ -429,7 +429,7 @@ void USenderReceiver::SendBatchMusicAnalysisRequest(const TArray<FAudioFile>& Au
         FHttpModule::Get().CreateRequest();
 
     // 배치 엔드포인트 사용
-    FString FullURL = ServerURL + MusicAnalysisEndpoint;
+    FString FullURL = MusicAnalysisServerURL + MusicAnalysisEndpoint;
     UE_LOG(LogMVE, Warning, TEXT("  FullURL = %s"), *FullURL);
 
     HttpRequest->SetURL(FullURL);
@@ -440,9 +440,8 @@ void USenderReceiver::SendBatchMusicAnalysisRequest(const TArray<FAudioFile>& Au
     UE_LOG(LogMVE, Log, TEXT("  [요청 URL] %s"), *FullURL);
 
     // ------------------------------------------------------------------------
-    // JSON 요청 본문 생성
+    // JSON 배열 생성 (객체로 감싸지 않음)
     // ------------------------------------------------------------------------
-    TSharedPtr<FJsonObject> JsonObject = MakeShareable(new FJsonObject());
     TArray<TSharedPtr<FJsonValue>> SongsArray;
 
     for (const FAudioFile& AudioFile : AudioFiles)
@@ -455,13 +454,12 @@ void USenderReceiver::SendBatchMusicAnalysisRequest(const TArray<FAudioFile>& Au
         UE_LOG(LogMVE, Log, TEXT("  📀 추가: %s - %s"), *AudioFile.Title, *AudioFile.Artist);
     }
 
-    JsonObject->SetArrayField(TEXT("songs"), SongsArray);
-
+    // 배열을 직접 직렬화
     FString JsonString;
     TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&JsonString);
-    if (FJsonSerializer::Serialize(JsonObject.ToSharedRef(), Writer))
+    if (FJsonSerializer::Serialize(SongsArray, Writer))
     {
-        UE_LOG(LogMVE, Log, TEXT("  [JSON 요청]"));
+        UE_LOG(LogMVE, Log, TEXT("  [JSON 요청 - 배열 형식]"));
         UE_LOG(LogMVE, Log, TEXT("  %s"), *JsonString);
     }
     else
@@ -882,30 +880,23 @@ void USenderReceiver::HandleBatchMusicAnalysisResponse(
     FString ResponseContent = Response->GetContentAsString();
     UE_LOG(LogMVE, Log, TEXT("  [응답 내용] %s"), *ResponseContent);
 
-    TSharedPtr<FJsonObject> JsonObject;
+    // 응답이 배열 형태이므로 배열로 파싱
+    TArray<TSharedPtr<FJsonValue>> ResultsArray;
     TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(ResponseContent);
 
-    if (!FJsonSerializer::Deserialize(Reader, JsonObject) || !JsonObject.IsValid())
+    if (!FJsonSerializer::Deserialize(Reader, ResultsArray))
     {
-        UE_LOG(LogMVE, Error, TEXT("  [상태] ✗ JSON 파싱 실패"));
+        UE_LOG(LogMVE, Error, TEXT("  [상태] ✗ JSON 배열 파싱 실패"));
         return;
     }
 
-    // results 배열 추출
-    const TArray<TSharedPtr<FJsonValue>>* ResultsArray;
-    if (!JsonObject->TryGetArrayField(TEXT("results"), ResultsArray))
-    {
-        UE_LOG(LogMVE, Error, TEXT("  [상태] ✗ 'results' 필드 없음"));
-        return;
-    }
-
-    UE_LOG(LogMVE, Log, TEXT("  [배치 분석 결과] %d곡 수신"), ResultsArray->Num());
+    UE_LOG(LogMVE, Log, TEXT("  [배치 분석 결과] %d곡 수신"), ResultsArray.Num());
 
     // ------------------------------------------------------------------------
     // 각 곡별로 처리
     // ------------------------------------------------------------------------
 
-    for (const TSharedPtr<FJsonValue>& ResultValue : *ResultsArray)
+    for (const TSharedPtr<FJsonValue>& ResultValue : ResultsArray)
     {
         TSharedPtr<FJsonObject> ResultObject = ResultValue->AsObject();
         if (!ResultObject.IsValid())
@@ -914,30 +905,32 @@ void USenderReceiver::HandleBatchMusicAnalysisResponse(
             continue;
         }
 
-        // title, artist 추출 (로깅용)
-        FString Title = ResultObject->GetStringField(TEXT("title"));
-        FString Artist = ResultObject->GetStringField(TEXT("artist"));
+        // request_info에서 title, artist 추출
+        TSharedPtr<FJsonObject> RequestInfo = ResultObject->GetObjectField(TEXT("request_info"));
+        FString Title = RequestInfo->GetStringField(TEXT("title"));
+        FString Artist = RequestInfo->GetStringField(TEXT("artist"));
 
         UE_LOG(LogMVE, Log, TEXT(""));
         UE_LOG(LogMVE, Log, TEXT("  🎵 처리 중: %s - %s"), *Title, *Artist);
 
-        // effects 배열 추출
-        const TArray<TSharedPtr<FJsonValue>>* EffectsArray;
-        if (!ResultObject->TryGetArrayField(TEXT("effects"), EffectsArray))
+        // data.timeline 배열 추출
+        TSharedPtr<FJsonObject> DataObject = ResultObject->GetObjectField(TEXT("data"));
+        const TArray<TSharedPtr<FJsonValue>>* TimelineArray;
+        if (!DataObject->TryGetArrayField(TEXT("timeline"), TimelineArray))
         {
-            UE_LOG(LogMVE, Warning, TEXT("  [경고] '%s - %s'의 'effects' 필드 없음"), *Title, *Artist);
+            UE_LOG(LogMVE, Warning, TEXT("  [경고] '%s - %s'의 'timeline' 필드 없음"), *Title, *Artist);
 
             TArray<FEffectSequenceData> EmptyArray;
-            OnMusicAnalysisComplete.Broadcast(false, EmptyArray, TEXT("effects 필드 없음"));
+            OnMusicAnalysisComplete.Broadcast(false, EmptyArray, TEXT("timeline 필드 없음"));
             continue;
         }
 
-        UE_LOG(LogMVE, Log, TEXT("  [분석 결과] %d개 이펙트"), EffectsArray->Num());
+        UE_LOG(LogMVE, Log, TEXT("  [분석 결과] %d개 이펙트"), TimelineArray->Num());
 
         // FEffectSequenceData 배열 생성
         TArray<FEffectSequenceData> SequenceDataArray;
 
-        for (const TSharedPtr<FJsonValue>& EffectValue : *EffectsArray)
+        for (const TSharedPtr<FJsonValue>& EffectValue : *TimelineArray)
         {
             TSharedPtr<FJsonObject> EffectObject = EffectValue->AsObject();
             if (!EffectObject.IsValid())
@@ -1462,10 +1455,10 @@ void USenderReceiver::AnalyzeConnectionError(TSharedPtr<IHttpResponse> Response,
 void USenderReceiver::CheckGenerationStatus()
 {
     UE_LOG(LogMVE, Log, TEXT("[MVE] 📡 상태 확인 중... (ID: %s)"), *CurrentRequestID);
-    
+
     TSharedPtr<IHttpRequest, ESPMode::ThreadSafe> HttpRequest = FHttpModule::Get().CreateRequest();
-    
-    FString StatusURL = ServerURL + "/status/" + CurrentRequestID;
+
+    FString StatusURL = ComfyUIServerURL + "/status/" + CurrentRequestID;
     
     HttpRequest->SetURL(StatusURL);
     HttpRequest->SetVerb(TEXT("GET"));
