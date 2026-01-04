@@ -1,5 +1,6 @@
 
 #include "../Public/MVE_GIS_SessionManager.h"
+#include "MVE_LoadingScreenSubsystem.h"
 #include "MVE.h"
 #include "MVE_API_Helper.h"
 
@@ -44,24 +45,35 @@ void UMVE_GIS_SessionManager::OnCreateConcertComplete(bool bSuccess, const FConc
     
 	CurrentRoomId = Data.RoomId;
 	SESSIONPRINTLOG(TEXT("Concert created. RoomId: %s"), *CurrentRoomId);
-    
-	// Step 2: Listen Server 시작
-	UWorld* World = GetWorld();
-	if (!World)
+
+	// Step 2: 로딩 화면과 함께 Listen Server 시작
+	UMVE_LoadingScreenSubsystem* LoadingScreen = GetGameInstance()->GetSubsystem<UMVE_LoadingScreenSubsystem>();
+	if (LoadingScreen)
 	{
-		SESSIONPRINTLOG(TEXT("World is null!"));
-		OnSessionCreated.Broadcast(false);
-		return;
+		// ServerTravel + 로딩 화면
+		LoadingScreen->LoadLevelWithLoadingScreen(TEXT("/Game/Maps/StageLevel"), true, TEXT("?listen"));
 	}
-    
-	// ServerTravel로 Listen Server 시작
-	FString TravelURL = TEXT("/Game/Maps/StageLevel?listen");
-	World->ServerTravel(TravelURL);
+	else
+	{
+		SESSIONPRINTLOG(TEXT("❌ LoadingScreenSubsystem을 찾을 수 없습니다!"));
+
+		// 로딩 화면 없이 진행
+		UWorld* World = GetWorld();
+		if (!World)
+		{
+			SESSIONPRINTLOG(TEXT("World is null!"));
+			OnSessionCreated.Broadcast(false);
+			return;
+		}
+
+		FString TravelURL = TEXT("/Game/Maps/StageLevel?listen");
+		World->ServerTravel(TravelURL);
+	}
     
 	// ServerTravel 완료 후 RegisterListenServer 호출
 	// (약간의 지연 필요 - Listen Server가 완전히 시작될 때까지 대기)
 	FTimerHandle TimerHandle;
-	World->GetTimerManager().SetTimer(
+	GetWorld()->GetTimerManager().SetTimer(
 		TimerHandle,
 		this,
 		&UMVE_GIS_SessionManager::RegisterListenServer,

@@ -20,6 +20,7 @@ class MVE_API UMVE_STD_WidgetClass_FinalCheckSettings : public UUserWidget
 
 protected:
 	virtual void NativeConstruct() override;
+	virtual void NativeDestruct() override;
 
 	UPROPERTY(meta=(BindWidget))
 	TObjectPtr<UButton> StartConcertButton;

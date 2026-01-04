@@ -828,3 +828,120 @@ void UMVE_STU_WC_EffectSequencePreview::OnAudioLoadedFromUrl(UglTFRuntimeAsset* 
 		PRINTLOG(TEXT("SoundWave 생성 실패"));
 	}
 }
+
+void UMVE_STU_WC_EffectSequencePreview::StartLoadingAnimation()
+{
+	if (LoadingFrames.Num() == 0)
+	{
+		PRINTLOG(TEXT("⚠️ LoadingFrames가 비어있습니다. 블루프린트에서 로딩 프레임을 설정하세요."));
+		return;
+	}
+
+	if (!LoadingOverlayImage)
+	{
+		PRINTLOG(TEXT("⚠️ LoadingOverlayImage가 없습니다. 위젯 블루프린트에서 추가하세요."));
+		return;
+	}
+
+	if (bIsLoadingAnimationActive)
+	{
+		PRINTLOG(TEXT("⚠️ 로딩 애니메이션이 이미 실행 중입니다."));
+		return;
+	}
+
+	PRINTLOG(TEXT("🔄 로딩 애니메이션 시작 (%d 프레임, %.2f초 간격)"), LoadingFrames.Num(), LoadingFrameRate);
+
+	bIsLoadingAnimationActive = true;
+	CurrentLoadingFrameIndex = 0;
+
+	// 오버레이 이미지에 첫 프레임 표시
+	if (LoadingFrames.IsValidIndex(0))
+	{
+		LoadingOverlayImage->SetBrushFromTexture(LoadingFrames[0]);
+		LoadingOverlayImage->SetVisibility(ESlateVisibility::Visible);
+		PRINTLOG(TEXT("✅ LoadingOverlayImage Visibility → Visible, Brush 설정 완료"));
+	}
+	else
+	{
+		PRINTLOG(TEXT("❌ LoadingFrames[0]이 유효하지 않음"));
+	}
+
+	// 타이머로 프레임 전환 시작
+	if (UWorld* World = GetWorld())
+	{
+		World->GetTimerManager().SetTimer(
+			LoadingAnimationTimerHandle,
+			this,
+			&UMVE_STU_WC_EffectSequencePreview::UpdateLoadingFrame,
+			LoadingFrameRate,
+			true // 반복
+		);
+		PRINTLOG(TEXT("✅ 프레임 전환 타이머 시작 (%.2f초 간격)"), LoadingFrameRate);
+	}
+	else
+	{
+		PRINTLOG(TEXT("❌ GetWorld() 실패 - 타이머 설정 불가"));
+	}
+}
+
+void UMVE_STU_WC_EffectSequencePreview::StopLoadingAnimation()
+{
+	if (!bIsLoadingAnimationActive)
+	{
+		return;
+	}
+
+	PRINTLOG(TEXT("⏹️ 로딩 애니메이션 중지"));
+
+	bIsLoadingAnimationActive = false;
+
+	// 타이머 중지
+	if (GetWorld())
+	{
+		GetWorld()->GetTimerManager().ClearTimer(LoadingAnimationTimerHandle);
+		GetWorld()->GetTimerManager().ClearTimer(LoadingAnimationAutoStopTimerHandle);
+	}
+
+	// 오버레이 이미지 숨김 (StagePreviewImage는 그대로 유지)
+	if (LoadingOverlayImage)
+	{
+		LoadingOverlayImage->SetVisibility(ESlateVisibility::Collapsed);
+	}
+}
+
+void UMVE_STU_WC_EffectSequencePreview::StartLoadingAnimationWithDuration(float Duration)
+{
+	// 로딩 애니메이션 시작
+	StartLoadingAnimation();
+
+	// 지정된 시간 후 자동 중지
+	if (GetWorld() && bIsLoadingAnimationActive)
+	{
+		GetWorld()->GetTimerManager().SetTimer(
+			LoadingAnimationAutoStopTimerHandle,
+			this,
+			&UMVE_STU_WC_EffectSequencePreview::StopLoadingAnimation,
+			Duration,
+			false // 한 번만 실행
+		);
+
+		PRINTLOG(TEXT("⏱️ %.1f초 후 로딩 애니메이션 자동 중지 예약"), Duration);
+	}
+}
+
+void UMVE_STU_WC_EffectSequencePreview::UpdateLoadingFrame()
+{
+	if (!bIsLoadingAnimationActive || LoadingFrames.Num() == 0)
+	{
+		return;
+	}
+
+	// 다음 프레임으로 전환
+	CurrentLoadingFrameIndex = (CurrentLoadingFrameIndex + 1) % LoadingFrames.Num();
+
+	// 오버레이 이미지에 프레임 표시
+	if (LoadingOverlayImage && LoadingFrames.IsValidIndex(CurrentLoadingFrameIndex))
+	{
+		LoadingOverlayImage->SetBrushFromTexture(LoadingFrames[CurrentLoadingFrameIndex]);
+	}
+}
