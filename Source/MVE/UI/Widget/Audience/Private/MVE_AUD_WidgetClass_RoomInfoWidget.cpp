@@ -90,7 +90,7 @@ void UMVE_AUD_WidgetClass_RoomInfoWidget::UpdateUI(UConcertInfoData* RoomData)
 		{
 			StudioName = StudioName.Left(AtIndex);
 		}
-		StudioName.Append(" 님의 콘서트");
+		StudioName.Append(TEXT(" 님의 콘서트"));
 
 		SessionOwnerNameText->SetText(FText::FromString(StudioName));
 	}
