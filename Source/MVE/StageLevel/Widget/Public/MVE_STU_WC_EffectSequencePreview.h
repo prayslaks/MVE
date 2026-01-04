@@ -110,6 +110,25 @@ public:
 	 */
 	void GenerateTestDataFromDuration(int32 TotalDuration, const FString& SongTitle);
 
+	/**
+	 * 로딩 애니메이션 시작 (AI 서버 응답 대기 중 표시)
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Effect Preview")
+	void StartLoadingAnimation();
+
+	/**
+	 * 로딩 애니메이션 중지 (StagePreviewImage 복원)
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Effect Preview")
+	void StopLoadingAnimation();
+
+	/**
+	 * 지정된 시간 동안 로딩 애니메이션 재생 후 자동 중지 (TestMode용)
+	 * @param Duration 로딩 애니메이션 재생 시간 (초)
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Effect Preview")
+	void StartLoadingAnimationWithDuration(float Duration);
+
 	/** 테스트 모드 - true이면 더미 데이터 사용, false이면 AI 서버 응답 대기 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effect Preview|Test")
 	bool bTestMode = true;
@@ -121,6 +140,10 @@ protected:
 	
 	UPROPERTY(meta=(BindWidget))
 	TObjectPtr<UImage> StagePreviewImage;
+
+	/** 로딩 애니메이션 오버레이 이미지 (StagePreviewImage 위에 표시) */
+	UPROPERTY(meta=(BindWidgetOptional))
+	TObjectPtr<UImage> LoadingOverlayImage;
 
 	/** 재생/일시정지 버튼 */
 	UPROPERTY(meta = (BindWidget))
@@ -166,7 +189,15 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Effect Preview|Icon")
 	TObjectPtr<UTexture2D> FanfareIconTexture;
 
-	
+	/** 로딩 애니메이션 프레임 (GIF를 여러 PNG로 나눠서 배열로 저장) */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Effect Preview|Loading")
+	TArray<TObjectPtr<UTexture2D>> LoadingFrames;
+
+	/** 로딩 애니메이션 프레임 전환 속도 (초 단위) */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Effect Preview|Loading")
+	float LoadingFrameRate = 0.1f;
+
+
 
 private:
 	
@@ -258,4 +289,19 @@ private:
 	/** Asset 캐시 (AudioFileId → glTFRuntimeAsset) */
 	UPROPERTY()
 	TMap<int32, UglTFRuntimeAsset*> CachedAssets;
+
+	/** 로딩 애니메이션 타이머 핸들 (프레임 전환용) */
+	FTimerHandle LoadingAnimationTimerHandle;
+
+	/** 로딩 애니메이션 자동 중지 타이머 핸들 */
+	FTimerHandle LoadingAnimationAutoStopTimerHandle;
+
+	/** 현재 로딩 프레임 인덱스 */
+	int32 CurrentLoadingFrameIndex = 0;
+
+	/** 로딩 애니메이션 활성 여부 */
+	bool bIsLoadingAnimationActive = false;
+
+	/** 로딩 애니메이션 프레임 업데이트 */
+	void UpdateLoadingFrame();
 };

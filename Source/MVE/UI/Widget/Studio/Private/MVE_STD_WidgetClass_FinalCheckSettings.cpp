@@ -184,8 +184,14 @@ void UMVE_STD_WidgetClass_FinalCheckSettings::OnBatchAnalyzeRequested()
 
 	if (EffectSequencePreviewWidget->bTestMode)
 	{
-		// 🧪 테스트 모드: 곡 클릭 시 TestData 생성하도록 준비만 함
-		PRINTLOG(TEXT("🧪 TestMode 활성화 - 곡 클릭 시 TestData 생성됩니다"));
+		// 🧪 테스트 모드: 2초 로딩 애니메이션 재생 (UX 시뮬레이션)
+		PRINTLOG(TEXT("🧪 TestMode 활성화 - 2초 로딩 애니메이션 재생"));
+
+		if (EffectSequencePreviewWidget)
+		{
+			EffectSequencePreviewWidget->StartLoadingAnimationWithDuration(2.0f);
+		}
+
 		PRINTLOG(TEXT("💡 이제 재생목록에서 곡을 클릭하세요"));
 	}
 	else
@@ -193,10 +199,22 @@ void UMVE_STD_WidgetClass_FinalCheckSettings::OnBatchAnalyzeRequested()
 		// 🎯 실제 모드: AI 서버에 배치 음악 분석 요청
 		PRINTLOG(TEXT("🎯 실제 모드 - AI 서버에 배치 음악 분석 요청"));
 
+		// 🔄 로딩 애니메이션 시작
+		if (EffectSequencePreviewWidget)
+		{
+			EffectSequencePreviewWidget->StartLoadingAnimation();
+		}
+
 		USenderReceiver* SenderReceiver = GetGameInstance()->GetSubsystem<USenderReceiver>();
 		if (!SenderReceiver)
 		{
 			PRINTLOG(TEXT("❌ SenderReceiver 서브시스템을 찾을 수 없습니다"));
+
+			// 에러 발생 시 로딩 애니메이션 중지
+			if (EffectSequencePreviewWidget)
+			{
+				EffectSequencePreviewWidget->StopLoadingAnimation();
+			}
 			return;
 		}
 
@@ -210,6 +228,12 @@ void UMVE_STD_WidgetClass_FinalCheckSettings::OnMusicAnalysisReceived(bool bSucc
 {
 	// 배치 분석에서는 SessionManager에 이미 저장됨
 	// 현재 선택된 곡의 분석이 완료되었는지 확인해서 UI만 업데이트
+
+	// ⏹️ 로딩 애니메이션 중지
+	if (EffectSequencePreviewWidget)
+	{
+		EffectSequencePreviewWidget->StopLoadingAnimation();
+	}
 
 	if (bSuccess)
 	{

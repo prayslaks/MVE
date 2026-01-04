@@ -126,7 +126,8 @@ void UMVE_AUD_WidgetClass_RoomInfoWidget::UpdateUI(UConcertInfoData* RoomData)
 		if (AdvertisementText)
 		{
 			AdvertisementText->SetText(FText::FromString(RoomData->ConcertInfo.AdvertisementText));
-			AdvertisementText->SetVisibility(ESlateVisibility::Visible);
+			if (!RoomData->ConcertInfo.AdvertisementText.Equals(""))
+				AdvertisementText->SetVisibility(ESlateVisibility::Visible);
 		}
 	}
 	
