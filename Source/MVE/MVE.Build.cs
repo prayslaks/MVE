@@ -40,11 +40,12 @@ public class MVE : ModuleRules
 			"GameplayTags",
 			"OSC",
 			"ControlRig",
+			"MoviePlayer"
 		});
 
 		PrivateDependencyModuleNames.AddRange(new string[]
 		{
-			"DesktopPlatform", "MediaAssets", "MoviePlayer"
+			"DesktopPlatform", "MediaAssets"
 		});
 
 		PublicIncludePaths.AddRange(new string[] {
