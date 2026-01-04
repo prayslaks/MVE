@@ -60,6 +60,9 @@ protected:
 
 	UPROPERTY(meta=(BindWidget))
 	TObjectPtr<UButton> SaveButton;
+
+	UPROPERTY(meta=(BindWidgetOptional))
+	TObjectPtr<UButton> TestButton;
 	
 private:
 	UFUNCTION()
@@ -82,6 +85,9 @@ private:
 
 	UFUNCTION()
 	void OnSaveButtonClicked();
+
+	UFUNCTION()
+	void OnTestButtonClicked();
 	
 	// 현재 표시 중인 방 정보
 	FRoomInfo CurrentRoomInfo;
