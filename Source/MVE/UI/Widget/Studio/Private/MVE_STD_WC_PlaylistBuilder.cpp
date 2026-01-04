@@ -11,6 +11,7 @@
 #include "Components/Button.h"
 #include "commu/Public/SenderReceiver.h"
 #include "MVE.h"
+#include "Components/ScrollBoxSlot.h"
 
 void UMVE_STD_WC_PlaylistBuilder::NativeConstruct()
 {
@@ -239,7 +240,11 @@ void UMVE_STD_WC_PlaylistBuilder::AddToPlaylist(const FAudioFile& AudioFile)
 			PlaylistItemWidget->OnAudioSearchResultClicked.AddUObject(this, &UMVE_STD_WC_PlaylistBuilder::OnPlaylistItemClicked);
 
 			// ScrollBox에 추가
-			PlaylistScrollBox->AddChild(PlaylistItemWidget);
+			UScrollBoxSlot* ScrollSlot = Cast<UScrollBoxSlot>(PlaylistScrollBox->AddChild(PlaylistItemWidget));
+			if (ScrollSlot)
+			{
+				ScrollSlot->SetPadding(FMargin(0, 0, 0, 10));
+			}
 			PRINTLOG(TEXT("ScrollBox에 위젯 추가 성공!"));
 		}
 		else
@@ -342,7 +347,12 @@ void UMVE_STD_WC_PlaylistBuilder::ReorderPlaylistItem(int32 FromIndex, int32 ToI
 	PlaylistScrollBox->ClearChildren();
 	for (UWidget* Widget : WidgetArray)
 	{
-		PlaylistScrollBox->AddChild(Widget);
+		// ScrollBox에 추가
+		UScrollBoxSlot* ScrollSlot = Cast<UScrollBoxSlot>(PlaylistScrollBox->AddChild(Widget));
+		if (ScrollSlot)
+		{
+			ScrollSlot->SetPadding(FMargin(0, 0, 0, 10));
+		}
 	}
 
 	// 5. 모든 항목의 인덱스 재설정

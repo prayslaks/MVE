@@ -641,6 +641,7 @@ void UUIManagerSubsystem::ShowDropdown(EDropdownType DropdownType, const FDropdo
 
 	// 5. 드롭다운 위치 설정
 	CurrentDropdown->SetDropdownPosition(Context.ButtonPosition, Context.ButtonSize.Y, Context.AnchorPosition);
+	CurrentDropdown->SetFocus();
 }
 
 void UUIManagerSubsystem::CloseDropdown()

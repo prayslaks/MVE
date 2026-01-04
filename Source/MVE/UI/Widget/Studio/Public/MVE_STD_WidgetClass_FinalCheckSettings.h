@@ -34,7 +34,7 @@ protected:
 	TObjectPtr<UMVE_STU_WC_EffectSequencePreview> EffectSequencePreviewWidget;
 	
 private:
-	UFUNCTION()
+	UFUNCTION(BlueprintCallable)
 	void OnStartConcertButtonClicked();
 
 	UFUNCTION()

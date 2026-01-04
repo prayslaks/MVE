@@ -17,3 +17,7 @@ void UMVE_WidgetClass_DropdownOverlay::OnOverlayClicked()
 {
 	OnOverlayClickedEvent.Broadcast();
 }
+
+void UMVE_WidgetClass_DropdownOverlay::Transition_Implementation(EUIScreen TargetUIScreen)
+{
+}

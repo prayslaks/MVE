@@ -172,7 +172,9 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void CloseDropdown();
 
-	
+	// 드롭다운 오버레이
+	UPROPERTY(BlueprintReadOnly)
+	TObjectPtr<UMVE_WidgetClass_DropdownOverlay> DropdownOverlay;
 
 protected:
 	UPROPERTY()
@@ -192,9 +194,7 @@ private:
 	UPROPERTY()
 	TObjectPtr<UMVE_WidgetClass_Dropdown> CurrentDropdown;
 
-	// 드롭다운 오버레이
-	UPROPERTY()
-	TObjectPtr<UMVE_WidgetClass_DropdownOverlay> DropdownOverlay;
+	
 
 	UFUNCTION()
 	void OnOverlayClicked();

@@ -206,7 +206,7 @@ private:
 	 * @param TimeStamp 시간 (1/10초 단위)
 	 * @return 포맷된 문자열 (예: "2:31")
 	 */
-	static FString FormatTime(int32 TimeStamp);
+	static FString FormatTime(const int32 TimeStamp);
 
 	/**
 	 * AudioComponent의 재생 퍼센트 업데이트 콜백

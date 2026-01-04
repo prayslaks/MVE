@@ -2,6 +2,7 @@
 #include "../Public/MVE_STU_BroadcastSettingTabBar.h"
 
 #include "MVE.h"
+#include "MVE_GI.h"
 #include "MVE_STU_Button_TabButton.h"
 #include "Blueprint/SlateBlueprintLibrary.h"
 #include "Components/Button.h"
@@ -198,6 +199,14 @@ void UMVE_STU_BroadcastSettingTabBar::OnUserSettingButtonClicked()
 		DropdownContext.ButtonSize = ButtonSize;
 		DropdownContext.StringData = TEXT("UserEmail");
 		DropdownContext.ButtonPosition = ButtonTopRight;
+
+		if (const auto GI = Cast<UMVE_GI>(GetGameInstance()))
+		{
+			FString Left;
+			FString Right;
+			GI->GetUserData().Email.Split(TEXT("@"), &Left, &Right);
+			DropdownContext.StringData = Left.IsEmpty() ? TEXT("UserEmail") : Left;
+		}
 		
 		// 우상단 앵커로 드롭다운 표시
 		UIManager->ShowDropdown(EDropdownType::UserSetting, DropdownContext);

@@ -20,9 +20,6 @@ void UMVE_STD_WidgetClass_FinalCheckSettings::NativeConstruct()
 {
 	Super::NativeConstruct();
 
-	if (StartConcertButton)
-		StartConcertButton.Get()->OnClicked.AddDynamic(this, &UMVE_STD_WidgetClass_FinalCheckSettings::OnStartConcertButtonClicked);
-
 	if (PlaylistBuilderWidget)
 	{
 		PlaylistBuilderWidget.Get()->OnAudioFileSelected.AddDynamic(this, &UMVE_STD_WidgetClass_FinalCheckSettings::OnAudioFileSelected);

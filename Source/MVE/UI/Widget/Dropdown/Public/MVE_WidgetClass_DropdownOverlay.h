@@ -5,6 +5,7 @@
 #include "Blueprint/UserWidget.h"
 #include "MVE_WidgetClass_DropdownOverlay.generated.h"
 
+enum class EUIScreen : uint8;
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnOverlayClicked);
 
 UCLASS()
@@ -25,4 +26,7 @@ public:
 	// 외부에서 구독할 수 있는 델리게이트
 	UPROPERTY(BlueprintAssignable)
 	FOnOverlayClicked OnOverlayClickedEvent;
+
+	UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
+	void Transition(EUIScreen TargetUIScreen);
 };

@@ -759,14 +759,14 @@ UTexture2D* UMVE_STU_WC_EffectSequencePreview::GetIconTextureForTag(const FGamep
 	return nullptr;
 }
 
-FString UMVE_STU_WC_EffectSequencePreview::FormatTime(int32 TimeStamp)
+FString UMVE_STU_WC_EffectSequencePreview::FormatTime(const int32 TimeStamp)
 {
 	// TimeStamp는 1/10초 단위
-	int32 TotalSeconds = TimeStamp / 10;
-	int32 Minutes = TotalSeconds / 60;
-	int32 Seconds = TotalSeconds % 60;
+	const int32 TotalSeconds = TimeStamp / 10;
+	const int32 Minutes = TotalSeconds / 60;
+	const int32 Seconds = TotalSeconds % 60;
 
-	return FString::Printf(TEXT("%d:%02d"), Minutes, Seconds);
+	return FString::Printf(TEXT("%02d:%02d"), Minutes, Seconds);
 }
 
 void UMVE_STU_WC_EffectSequencePreview::OnAudioLoadedFromUrl(UglTFRuntimeAsset* Asset)

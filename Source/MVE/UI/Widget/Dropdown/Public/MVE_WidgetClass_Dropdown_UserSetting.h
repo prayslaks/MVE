@@ -23,23 +23,11 @@ protected:
 
 	// 드롭다운 항목들
 	UPROPERTY(meta = (BindWidget))
-	class UTextBlock* Text_UserName;
+	UTextBlock* Text_UserName;
 
 	UPROPERTY(meta = (BindWidget))
-	class UButton* Btn_Logout;
+	UButton* Btn_Logout;
 
 	UPROPERTY(meta = (BindWidget))
-	class UButton* Btn_MainMenu;
-
-
-private:
-	UFUNCTION()
-	void OnLogoutClicked();
-
-	UFUNCTION()
-	void OnMainMenuClicked();
-
-
-
-	
+	UButton* Btn_MainMenu;
 };
