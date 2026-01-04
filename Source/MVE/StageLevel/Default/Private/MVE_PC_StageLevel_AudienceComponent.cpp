@@ -9,18 +9,8 @@ class AMVE_PC_StageLevel;
 
 UMVE_PC_StageLevel_AudienceComponent::UMVE_PC_StageLevel_AudienceComponent()
 {
-	PrimaryComponentTick.bCanEverTick = true;
+	PrimaryComponentTick.bCanEverTick = false;
 	SetIsReplicatedByDefault(true);
-}
-
-void UMVE_PC_StageLevel_AudienceComponent::BeginPlay()
-{
-	Super::BeginPlay();
-}
-
-void UMVE_PC_StageLevel_AudienceComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
-{
-	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 }
 
 AMVE_PC_StageLevel* UMVE_PC_StageLevel_AudienceComponent::GetBindingPC() const

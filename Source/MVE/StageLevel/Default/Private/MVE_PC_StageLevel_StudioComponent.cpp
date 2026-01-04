@@ -4,6 +4,7 @@
 #include "glTFRuntimeFunctionLibrary.h"
 #include "glTFRuntimeAudioFunctionLibrary.h"
 #include "MVE.h"
+#include "MVE_StageLevel_DummyAudienceManager.h"
 #include "MVE_StageLevel_EffectSequenceManager.h"
 #include "Kismet/GameplayStatics.h"
 #include "StageLevel/Actor/Public/MVE_StageLevel_Speaker.h"
@@ -14,10 +15,9 @@
 UMVE_PC_StageLevel_StudioComponent::UMVE_PC_StageLevel_StudioComponent()
 {
 	// 이 컴포넌트가 매 프레임 Tick을 호출하도록 설정합니다.
-	PrimaryComponentTick.bCanEverTick = true;
+	PrimaryComponentTick.bCanEverTick = false;
 	// 네트워크 리플리케이션을 활성화합니다.
 	SetIsReplicatedByDefault(true);
-	PRINTNETLOG(this, TEXT("StdComponent 생성 완료"));
 }
 
 void UMVE_PC_StageLevel_StudioComponent::BeginPlay()
@@ -37,11 +37,15 @@ void UMVE_PC_StageLevel_StudioComponent::BeginPlay()
 		}
 	}
 	PRINTNETLOG(this, TEXT("[오디오 동기화] 레벨에서 %d개의 스피커를 찾았습니다. (실행 위치: %s)"), FoundSpeakers.Num(), *UEnum::GetValueAsString(GetOwner()->GetLocalRole()));
-}
 
-void UMVE_PC_StageLevel_StudioComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
-{
-	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+	// 더미 오디언스 매니저 획득
+	if (AActor* Temp = UGameplayStatics::GetActorOfClass(GetWorld(), AMVE_StageLevel_DummyAudienceManager::StaticClass()))
+	{
+		if (const auto Casted = Cast<AMVE_StageLevel_DummyAudienceManager>(Temp))
+		{
+			this->DummyAudienceManager = Casted;
+		}
+	}
 }
 
 // 서버가 호출 -> 특정 클라이언트에서 실행
@@ -146,7 +150,10 @@ void UMVE_PC_StageLevel_StudioComponent::Client_PlayPreparedAudio_Implementation
 	// 🎆 EffectSequenceManager 시작 (음악과 동기화하여 이펙트 재생)
 	TArray<AActor*> FoundActors;
 	UGameplayStatics::GetAllActorsOfClass(this, AMVE_StageLevel_EffectSequenceManager::StaticClass(), FoundActors);
-
+	
+	// 이벤트 호출
+	DummyAudienceManager->OnPlayMusic();
+	
 	if (FoundActors.Num() > 0)
 	{
 		if (AMVE_StageLevel_EffectSequenceManager* Manager = Cast<AMVE_StageLevel_EffectSequenceManager>(FoundActors[0]))
@@ -181,6 +188,9 @@ void UMVE_PC_StageLevel_StudioComponent::Client_StopPreparedAudio_Implementation
 	TArray<AActor*> FoundActors;
 	UGameplayStatics::GetAllActorsOfClass(this, AMVE_StageLevel_EffectSequenceManager::StaticClass(), FoundActors);
 
+	// 이벤트 호출
+	DummyAudienceManager->OnStopMusic();
+	
 	if (FoundActors.Num() > 0)
 	{
 		if (AMVE_StageLevel_EffectSequenceManager* Manager = Cast<AMVE_StageLevel_EffectSequenceManager>(FoundActors[0]))

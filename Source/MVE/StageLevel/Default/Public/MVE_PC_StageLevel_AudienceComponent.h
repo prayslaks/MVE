@@ -16,10 +16,6 @@ class MVE_API UMVE_PC_StageLevel_AudienceComponent : public UActorComponent
 
 public:
 	UMVE_PC_StageLevel_AudienceComponent();
-
-	virtual void BeginPlay() override;
-
-	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 	
 	UFUNCTION()
 	AMVE_PC_StageLevel* GetBindingPC() const;
