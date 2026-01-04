@@ -27,7 +27,7 @@ public:
 	 * 콘서트 목록 업데이트
 	 */
 	UFUNCTION(BlueprintCallable)
-	void UpdateConcertList(const TArray<FConcertInfo>& Concerts);
+	void UpdateConcertList(const TArray<FConcertInfo>& Concerts, bool bShowAd);
 
 	/**
 	 * 콘서트 목록 초기화

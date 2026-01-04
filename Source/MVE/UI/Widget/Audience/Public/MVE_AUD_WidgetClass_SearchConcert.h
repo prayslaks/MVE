@@ -8,6 +8,8 @@
 class UEditableTextBox;
 class UButton;
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnSearchCommitted, const FString&, SearchText);
+
 UCLASS()
 class MVE_API UMVE_AUD_WidgetClass_SearchConcert : public UUserWidget
 {
@@ -18,6 +20,8 @@ public:
 
 	DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnRefreshClicked);
 	FOnRefreshClicked OnRefreshClicked;
+	
+	FOnSearchCommitted OnSearchCommitted; // 추가
 
 protected:
 	UPROPERTY(meta=(BindWidget))
@@ -29,10 +33,13 @@ protected:
 	UPROPERTY(meta=(BindWidget))
 	TObjectPtr<UButton> RefreshListButton;
 
-	
-
 private:
 	UFUNCTION()
 	void OnRefreshButtonClicked();
+
+    UFUNCTION()
+    void OnEditableTextBoxTextCommitted(const FText& Text, ETextCommit::Type CommitMethod);
 	
+	UFUNCTION()
+	void OnSearchButtonClicked(); // 추가
 };

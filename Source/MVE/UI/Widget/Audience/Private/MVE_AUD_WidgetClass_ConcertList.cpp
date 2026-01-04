@@ -51,7 +51,7 @@ void UMVE_AUD_WidgetClass_ConcertList::NativeDestruct()
 	Super::NativeDestruct();
 }
 
-void UMVE_AUD_WidgetClass_ConcertList::UpdateConcertList(const TArray<FConcertInfo>& Concerts)
+void UMVE_AUD_WidgetClass_ConcertList::UpdateConcertList(const TArray<FConcertInfo>& Concerts, bool bShowAd)
 {
 	if (!RoomTileView)
 	{
@@ -62,14 +62,18 @@ void UMVE_AUD_WidgetClass_ConcertList::UpdateConcertList(const TArray<FConcertIn
 	// 기존 데이터 초기화
 	ClearConcertList();
 
-	// 1. 광고 먼저 추가 (캐시된 광고 데이터 사용)
-	for (UConcertInfoData* AdData : CachedAdvertisements)
+	if (bShowAd)
 	{
-		if (AdData)
+		// 1. 광고 먼저 추가 (캐시된 광고 데이터 사용)
+		for (UConcertInfoData* AdData : CachedAdvertisements)
 		{
-			RoomTileView->AddItem(AdData);
+			if (AdData)
+			{
+				RoomTileView->AddItem(AdData);
+			}
 		}
 	}
+	
 
 	// 2. 실제 콘서트 목록 추가
 	for (const FConcertInfo& ConcertInfo : Concerts)
@@ -126,7 +130,7 @@ void UMVE_AUD_WidgetClass_ConcertList::OnSessionsFoundCallback(bool bSuccess, in
 				OnAirConcertList.Add(Info);
 			}
 		}
-		UpdateConcertList(OnAirConcertList);
+		UpdateConcertList(OnAirConcertList, true);
 	}
 	else
 	{
