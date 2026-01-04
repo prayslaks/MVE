@@ -3,6 +3,7 @@
 
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
+#include "Engine/DataTable.h"
 #include "Data/RoomInfo.h"
 #include "Data/RoomInfoData.h"
 #include "MVE_AUD_WidgetClass_ConcertList.generated.h"
@@ -16,6 +17,10 @@ class MVE_API UMVE_AUD_WidgetClass_ConcertList : public UUserWidget
 protected:
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UTileView> RoomTileView;
+
+	// 광고용 콘서트 데이터 테이블
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Advertisement")
+	TObjectPtr<UDataTable> AdvertisementDataTable;
 
 public:
 	/**
@@ -56,10 +61,21 @@ private:
 	 */
 	UFUNCTION()
 	void OnConcertItemClicked(UObject* ClickedItem);
-	
+
+	/**
+	 * 광고 데이터 로드 및 TileView에 추가
+	 */
+	void LoadAdvertisements();
+
 	/**
 	 * SessionManager 참조
 	 */
 	UPROPERTY()
 	TObjectPtr<class UMVE_GIS_SessionManager> SessionManager;
+
+	/**
+	 * 광고 데이터 캐시 (세션 목록 업데이트 시 재사용)
+	 */
+	UPROPERTY()
+	TArray<TObjectPtr<UConcertInfoData>> CachedAdvertisements;
 };

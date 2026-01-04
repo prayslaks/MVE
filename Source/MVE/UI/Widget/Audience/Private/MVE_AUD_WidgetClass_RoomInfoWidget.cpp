@@ -73,74 +73,63 @@ void UMVE_AUD_WidgetClass_RoomInfoWidget::UpdateUI(UConcertInfoData* RoomData)
 	PRINTLOG(TEXT("  StudioName: %s"), *RoomData->ConcertInfo.StudioName);
 	PRINTLOG(TEXT("  ConcertName: %s"), *RoomData->ConcertInfo.ConcertName);
 
-	// 콘서트 제목
+	// 콘서트 제목 or 광고 제목 설정
 	if (ConcertNameText)
 	{
 		ConcertNameText->SetText(FText::FromString(FString::Printf(TEXT("%s"), *RoomData->ConcertInfo.ConcertName)));
 	}
 
-	// 방송인 이름 (이메일에서 @ 앞부분만 추출)
-	if (SessionOwnerNameText)
+	// 광고가 아닐 때
+	if (!RoomData->ConcertInfo.IsAdvertisement)
 	{
-		FString StudioName = RoomData->ConcertInfo.StudioName;
-
-		// 이메일 형식이면 @ 앞부분만 추출 (예: abcd1234@gmail.com → abcd1234)
-		int32 AtIndex;
-		if (StudioName.FindChar(TEXT('@'), AtIndex))
+		// 방송인 이름 (이메일에서 @ 앞부분만 추출)
+		if (SessionOwnerNameText)
 		{
-			StudioName = StudioName.Left(AtIndex);
+			FString StudioName = RoomData->ConcertInfo.StudioName;
+
+			// 이메일 형식이면 @ 앞부분만 추출 (예: abcd1234@gmail.com → abcd1234)
+			int32 AtIndex;
+			if (StudioName.FindChar(TEXT('@'), AtIndex))
+			{
+				StudioName = StudioName.Left(AtIndex);
+			}
+			StudioName.Append(TEXT(" 님의 콘서트"));
+
+			SessionOwnerNameText->SetText(FText::FromString(StudioName));
 		}
-		StudioName.Append(TEXT(" 님의 콘서트"));
 
-		SessionOwnerNameText->SetText(FText::FromString(StudioName));
-	}
-
-	// 방송 시간
-	if (BroadcastTimeText)
-	{
-		//FString TimeStr = RoomData->RoomInfo.BroadcastTime.ToString(TEXT("%H:%M"));
-		FString TimeStr = TEXT("1분 전");
-		BroadcastTimeText->SetText(FText::FromString(TimeStr));
-	}
-
-	// 시청자 수
-	if (ViewerCountText)
-	{
-		ViewerCountText->SetText(FText::FromString(FString::Printf(TEXT("%d"), RoomData->ConcertInfo.CurrentAudience)));
-	}
-	
-	if (ThumbnailImage)
-	{
-		if (Thumbnails.Num() > 0)
+		// 썸네일 랜덤 이미지로 생성
+		if (ThumbnailImage)
 		{
-			int idx = FMath::RandRange(0, Thumbnails.Num()-1);
-			ThumbnailImage->SetBrushFromTexture(Thumbnails[idx]);	
+			if (Thumbnails.Num() > 0)
+			{
+				int idx = FMath::RandRange(0, Thumbnails.Num()-1);
+				ThumbnailImage->SetBrushFromTexture(Thumbnails[idx]);	
+			}
 		}
 	}
+	else // 광고일 때
+	{
+		// 썸네일 광고 설정
+		if (ThumbnailImage)
+		{
+			ThumbnailImage->SetBrushFromTexture(RoomData->ConcertInfo.AdvertisementImage.LoadSynchronous());
+		}
+
+		// 스폰서 이름 설정
+		if (SessionOwnerNameText)
+		{
+			FString StudioName = RoomData->ConcertInfo.StudioName;
+			SessionOwnerNameText->SetText(FText::FromString(StudioName));
+		}
+
+		if (AdvertisementText)
+		{
+			AdvertisementText->SetText(FText::FromString(RoomData->ConcertInfo.AdvertisementText));
+			AdvertisementText->SetVisibility(ESlateVisibility::Visible);
+		}
+	}
 	
-	// 라이브 인디케이터
-	if (LiveIndicator)
-	{
-		LiveIndicator->SetVisibility(RoomData->ConcertInfo.IsOpen ? ESlateVisibility::Visible : ESlateVisibility::Collapsed);
-	}
-
-	// 추천 배지
-	if (FeaturedBadge)
-	{
-		//FeaturedBadge->SetVisibility(RoomData->RoomInfo.bIsFeatured ? ESlateVisibility::Visible : ESlateVisibility::Collapsed);
-	}
-
-	// 신규 배지
-	if (NewBadge)
-	{
-		//NewBadge->SetVisibility(RoomData->RoomInfo.bIsNew ? ESlateVisibility::Visible : ESlateVisibility::Collapsed);
-	}
-
-	// 커스텀 색상 적용
-	if (RoomBorder)
-	{
-		//RoomBorder->SetBrushColor(RoomData->RoomInfo.RoomColor);
-	}
 }
 
 void UMVE_AUD_WidgetClass_RoomInfoWidget::OnConcertRoomButtonClicked()

@@ -449,28 +449,48 @@ struct FConcertInfo
     GENERATED_BODY()
     UPROPERTY(BlueprintReadOnly, Category="MVE|API Response|Concert")
     FString RoomId;
+    
     UPROPERTY(BlueprintReadOnly, Category="MVE|API Response|Concert")
     int32 StudioUserId = 0;
+    
     UPROPERTY(BlueprintReadOnly, Category="MVE|API Response|Concert")
     FString StudioName;
+    
     UPROPERTY(BlueprintReadOnly, Category="MVE|API Response|Concert")
     FString ConcertName;
+    
     UPROPERTY(BlueprintReadOnly, Category="MVE|API Response|Concert")
     TArray<FConcertSong> Songs;
+    
     UPROPERTY(BlueprintReadOnly, Category="MVE|API Response|Concert")
     TArray<FAccessory> Accessories;
+    
     UPROPERTY(BlueprintReadOnly, Category="MVE|API Response|Concert")
     int32 MaxAudience = 0;
+    
     UPROPERTY(BlueprintReadOnly, Category="MVE|API Response|Concert")
     int64 CreatedAt = 0;
+    
     UPROPERTY(BlueprintReadOnly, Category="MVE|API Response|Concert")
     FListenServer ListenServer;
+    
     UPROPERTY(BlueprintReadOnly, Category="MVE|API Response|Concert")
     bool IsOpen = false;
+    
     UPROPERTY(BlueprintReadOnly, Category="MVE|API Response|Concert")
     int32 CurrentSong = 0;
+    
     UPROPERTY(BlueprintReadOnly, Category="MVE|API Response|Concert")
     int32 CurrentAudience = 0;
+
+    UPROPERTY(BlueprintReadOnly, Category="MVE|API Response|Concert")
+    bool IsAdvertisement = false;
+
+    UPROPERTY(BlueprintReadOnly, Category="MVE|API Response|Concert")
+    TSoftObjectPtr<UTexture2D> AdvertisementImage;
+
+    UPROPERTY(BlueprintReadOnly, Category="MVE|API Response|Concert")
+    FString AdvertisementText;
 };
 /**
  * @MveApiResponse GET /api/concert/{roomId}/info

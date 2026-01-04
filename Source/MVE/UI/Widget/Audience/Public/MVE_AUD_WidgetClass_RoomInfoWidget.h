@@ -25,6 +25,9 @@ protected:
 
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UTextBlock> SessionOwnerNameText;
+	
+	UPROPERTY(meta = (BindWidgetOptional))
+    TObjectPtr<UTextBlock> AdvertisementText;
 
 	UPROPERTY(meta = (BindWidgetOptional))
 	TObjectPtr<UTextBlock> BroadcastTimeText;
