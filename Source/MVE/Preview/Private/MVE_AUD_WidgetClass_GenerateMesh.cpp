@@ -41,6 +41,11 @@ void UMVE_AUD_WidgetClass_GenerateMesh::NativeConstruct()
 		CloseButton.Get()->OnClicked.AddDynamic(this, &UMVE_AUD_WidgetClass_GenerateMesh::OnCloseButtonClicked);
 	}
 
+	if (TestButton)
+	{
+		TestButton.Get()->OnClicked.AddDynamic(this, &UMVE_AUD_WidgetClass_GenerateMesh::OnTestButtonClicked);
+	}
+
 	if (HeadButton)
 		HeadButton->OnClicked.AddDynamic(this, &UMVE_AUD_WidgetClass_GenerateMesh::OnHeadButtonClicked);
 
@@ -206,6 +211,18 @@ void UMVE_AUD_WidgetClass_GenerateMesh::OnSaveButtonClicked()
 		// ⭐ PresetName 통일: "MyCustomization" 사용 (덮어쓰기 방식)
 		CustomizationManager->SaveAccessoryPresetToServer(TEXT("MyCustomization"));
 	}
+}
+
+void UMVE_AUD_WidgetClass_GenerateMesh::OnTestButtonClicked()
+{
+	UE_LOG(LogMVE, Log, TEXT("[GenerateMesh] 테스트 모드: Model ID %d로 presigned URL 요청"), TestModelId);
+	SetStatus(FString::Printf(TEXT("Model ID %d의 다운로드 URL 요청 중..."), TestModelId));
+	SetButtonsEnabled(false);
+
+	// GetModelDownloadUrl API 호출
+	FOnGetModelDownloadUrlComplete OnComplete;
+	OnComplete.BindUObject(this, &UMVE_AUD_WidgetClass_GenerateMesh::HandleGetModelDownloadUrl);
+	UMVE_API_Helper::GetModelDownloadUrl(TestModelId, OnComplete);
 }
 
 void UMVE_AUD_WidgetClass_GenerateMesh::HandleDownloadProgress(FGuid AssetID, int32 BytesReceived, int32 TotalBytes)
