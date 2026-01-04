@@ -943,6 +943,5 @@ void UMVE_STU_WC_EffectSequencePreview::UpdateLoadingFrame()
 	if (LoadingOverlayImage && LoadingFrames.IsValidIndex(CurrentLoadingFrameIndex))
 	{
 		LoadingOverlayImage->SetBrushFromTexture(LoadingFrames[CurrentLoadingFrameIndex]);
-		PRINTLOG(TEXT("🔄 프레임 전환: %d/%d"), CurrentLoadingFrameIndex, LoadingFrames.Num() - 1);
 	}
 }

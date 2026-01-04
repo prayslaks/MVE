@@ -26,6 +26,16 @@ void UMVE_STD_WidgetClass_FinalCheckSettings::NativeConstruct()
 		PlaylistBuilderWidget.Get()->OnBatchAnalyzeRequested.AddDynamic(this, &UMVE_STD_WidgetClass_FinalCheckSettings::OnBatchAnalyzeRequested);
 	}
 
+	// SenderReceiver 델리게이트 바인딩 (AI 서버 응답 수신용)
+	if (UGameInstance* GI = GetGameInstance())
+	{
+		if (USenderReceiver* SenderReceiver = GI->GetSubsystem<USenderReceiver>())
+		{
+			SenderReceiver->OnMusicAnalysisComplete.AddDynamic(this, &UMVE_STD_WidgetClass_FinalCheckSettings::OnMusicAnalysisReceived);
+			PRINTLOG(TEXT("✅ SenderReceiver OnMusicAnalysisComplete 델리게이트 바인딩 완료"));
+		}
+	}
+
 	// EffectSequenceManager 찾기 (PlaylistBuilder와 EffectSequencePreview에 공통 설정)
 	AMVE_StageLevel_EffectSequenceManager* Manager = nullptr;
 	TArray<AActor*> FoundActors;
@@ -83,6 +93,20 @@ void UMVE_STD_WidgetClass_FinalCheckSettings::NativeConstruct()
 			PRINTLOG(TEXT("StagePreviewCaptureActor를 찾을 수 없습니다. PreviewStageLevel에 배치되어 있는지 확인하세요."));
 		}
 	}
+}
+
+void UMVE_STD_WidgetClass_FinalCheckSettings::NativeDestruct()
+{
+	// 델리게이트 언바인딩
+	if (UGameInstance* GI = GetGameInstance())
+	{
+		if (USenderReceiver* SenderReceiver = GI->GetSubsystem<USenderReceiver>())
+		{
+			SenderReceiver->OnMusicAnalysisComplete.RemoveAll(this);
+		}
+	}
+
+	Super::NativeDestruct();
 }
 
 void UMVE_STD_WidgetClass_FinalCheckSettings::OnStartConcertButtonClicked()
