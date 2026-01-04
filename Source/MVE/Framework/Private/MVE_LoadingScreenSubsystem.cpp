@@ -1,8 +1,6 @@
 #include "MVE_LoadingScreenSubsystem.h"
-
 #include "MoviePlayer.h"
 #include "MVE.h"
-#include "MoviePlayer.h"
 #include "Kismet/GameplayStatics.h"
 
 void UMVE_LoadingScreenSubsystem::Initialize(FSubsystemCollectionBase& Collection)
