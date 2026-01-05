@@ -74,7 +74,10 @@ void UMVE_STD_WC_AudioPlayer::UpdatePlaybackProgress(const float CurrentTime, co
 
 void UMVE_STD_WC_AudioPlayer::UpdateTotalTime(const float TotalDuration) const
 {
-	TotalTimeTextBlock->SetText(FText::FromString(FormatTime(static_cast<int32>(TotalDuration))));
+	if (TotalTimeTextBlock)
+	{
+		TotalTimeTextBlock->SetText(FText::FromString(FormatTime(static_cast<int32>(TotalDuration))));
+	}
 }
 
 void UMVE_STD_WC_AudioPlayer::NativeOnInitialized()
