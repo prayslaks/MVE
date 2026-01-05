@@ -11,6 +11,7 @@ class UMVE_AUD_WidgetClass_CharacterPreviewWidget;
 class UTextBlock;
 class UButton;
 class UMultiLineEditableTextBox;
+class UImage;
 
 UCLASS()
 class MVE_API UMVE_AUD_WidgetClass_GenerateMesh : public UUserWidget
@@ -120,15 +121,53 @@ public:
 	void SetButtonsEnabled(bool bEnabled);
 
 	UPROPERTY(meta=(BindWidgetOptional))
-	TObjectPtr<UTextBlock> StatusTextBlock; 
+	TObjectPtr<UTextBlock> StatusTextBlock;
 
 	// 마지막으로 수신한 메타데이터 (부착 시 사용)
 	UPROPERTY()
 	FAssetMetadata LastReceivedMetadata;
-    
+
 	// 마지막으로 수신한 메시 (SkeletalMesh 또는 StaticMesh)
 	UPROPERTY()
 	TObjectPtr<UObject> LastReceivedMesh;
-	
+
+	// ========== 로딩 애니메이션 ==========
+
+	/** 로딩 애니메이션 오버레이 이미지 */
+	UPROPERTY(meta=(BindWidgetOptional))
+	TObjectPtr<UImage> LoadingOverlayImage;
+
+	/** 로딩 애니메이션 프레임 (GIF를 여러 PNG로 나눠서 배열로 저장) */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Loading Animation")
+	TArray<TObjectPtr<UTexture2D>> LoadingFrames;
+
+	/** 로딩 애니메이션 프레임 전환 속도 (초 단위) */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Loading Animation")
+	float LoadingFrameRate = 0.1f;
+
+	/**
+	 * 로딩 애니메이션 시작 (AI 서버 응답 대기 중 표시)
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Loading Animation")
+	void StartLoadingAnimation();
+
+	/**
+	 * 로딩 애니메이션 중지
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Loading Animation")
+	void StopLoadingAnimation();
+
+private:
+	/** 로딩 애니메이션 타이머 핸들 (프레임 전환용) */
+	FTimerHandle LoadingAnimationTimerHandle;
+
+	/** 현재 로딩 프레임 인덱스 */
+	int32 CurrentLoadingFrameIndex = 0;
+
+	/** 로딩 애니메이션 활성 여부 */
+	bool bIsLoadingAnimationActive = false;
+
+	/** 로딩 애니메이션 프레임 업데이트 */
+	void UpdateLoadingFrame();
 };
 

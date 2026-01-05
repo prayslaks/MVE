@@ -10,12 +10,15 @@
 #include "SenderReceiver.h"
 #include "UIManagerSubsystem.h"
 #include "Components/Button.h"
+#include "Components/Image.h"
 #include "Components/MultiLineEditableTextBox.h"
 #include "Components/TextBlock.h"
 #include "Engine/StaticMesh.h"
+#include "Engine/Texture2D.h"
 #include "HAL/PlatformFileManager.h"
 #include "Misc/FileHelper.h"
 #include "Misc/Paths.h"
+#include "TimerManager.h"
 
 void UMVE_AUD_WidgetClass_ThrowMeshGenerator::NativeConstruct()
 {
@@ -79,6 +82,7 @@ void UMVE_AUD_WidgetClass_ThrowMeshGenerator::OnSendPromptButtonClicked()
 		UE_LOG(LogMVE, Log, TEXT("[ThrowMeshGenerator] 테스트 모드: Model ID %d로 presigned URL 요청"), TestModelId);
 		SetStatus(FString::Printf(TEXT("Model ID %d의 다운로드 URL 요청 중..."), TestModelId));
 		SetButtonsEnabled(false);
+		StartLoadingAnimation();  // ⭐ 로딩 시작
 
 		// GetModelDownloadUrl API 호출
 		FOnGetModelDownloadUrlComplete OnComplete;
@@ -113,6 +117,7 @@ void UMVE_AUD_WidgetClass_ThrowMeshGenerator::OnSendPromptButtonClicked()
 		// UI 상태 업데이트
 		SetStatus(TEXT("서버에 요청 중..."));
 		SetButtonsEnabled(false);
+		StartLoadingAnimation();  // ⭐ 로딩 시작
 
 		// 서버에 전송
 		CustomizationManager->RequestModelGeneration(PromptText, ImagePath);
@@ -198,6 +203,7 @@ void UMVE_AUD_WidgetClass_ThrowMeshGenerator::HandleGenerationResponse(bool bSuc
 	{
 		UE_LOG(LogMVE, Error, TEXT("[ThrowMeshGenerator] 생성 요청 실패: %s"), *ErrorMessage);
 
+		StopLoadingAnimation();  // ⭐ 실패 시 로딩 중지
 		SetStatus(FString::Printf(TEXT(" 실패: %s"), *ErrorMessage));
 		SetButtonsEnabled(true);
 	}
@@ -227,6 +233,8 @@ void UMVE_AUD_WidgetClass_ThrowMeshGenerator::Download()
 
 void UMVE_AUD_WidgetClass_ThrowMeshGenerator::HandleAssetLoaded(UObject* Asset, const FAssetMetadata& Metadata)
 {
+	StopLoadingAnimation();  // ⭐ 로딩 중지 (성공/실패 모두)
+
 	if (!Asset)
 	{
 		UE_LOG(LogMVE, Error, TEXT("[ThrowMeshGenerator] Asset이 null입니다"));
@@ -387,6 +395,7 @@ void UMVE_AUD_WidgetClass_ThrowMeshGenerator::HandleGetModelDownloadUrl(bool bSu
 	if (!bSuccess)
 	{
 		UE_LOG(LogMVE, Error, TEXT("[ThrowMeshGenerator] Failed to get download URL: %s"), *ErrorCode);
+		StopLoadingAnimation();  // ⭐ 실패 시 로딩 중지
 		SetStatus(FString::Printf(TEXT("다운로드 URL 요청 실패: %s"), *ErrorCode));
 		SetButtonsEnabled(true);
 		return;
@@ -423,6 +432,9 @@ void UMVE_AUD_WidgetClass_ThrowMeshGenerator::HandleGetModelDownloadUrl(bool bSu
 
 				SetStatus(TEXT("모델 다운로드 완료! 프리뷰 시작 중..."));
 
+				// ⭐ 파일 저장 성공 직후 로딩 애니메이션 중지 (StartMeshPreview 호출 전)
+				StopLoadingAnimation();
+
 				// CustomizationManager에 RemoteURL 저장
 				UMVE_AUD_CustomizationManager* CustomizationManager =
 					GetGameInstance()->GetSubsystem<UMVE_AUD_CustomizationManager>();
@@ -456,6 +468,7 @@ void UMVE_AUD_WidgetClass_ThrowMeshGenerator::HandleGetModelDownloadUrl(bool bSu
 			{
 				UE_LOG(LogMVE, Error, TEXT("[ThrowMeshGenerator] Failed to save file: %s"), *SavePath);
 				SetStatus(TEXT("파일 저장 실패"));
+				StopLoadingAnimation();  // ⭐ 파일 저장 실패 시 로딩 중지
 				SetButtonsEnabled(true);
 			}
 		}
@@ -463,10 +476,105 @@ void UMVE_AUD_WidgetClass_ThrowMeshGenerator::HandleGetModelDownloadUrl(bool bSu
 		{
 			UE_LOG(LogMVE, Error, TEXT("[ThrowMeshGenerator] Model download failed: %s"), *ErrorMessage);
 			SetStatus(FString::Printf(TEXT("다운로드 실패: %s"), *ErrorMessage));
+			StopLoadingAnimation();  // ⭐ 다운로드 실패 시 로딩 중지
 			SetButtonsEnabled(true);
 		}
 	});
 
 	// S3 presigned URL은 Authorization 헤더 불필요
 	FMVE_HTTP_Client::DownloadFile(Data.Url, TEXT(""), OnDownloadComplete);
+}
+
+// ========== 로딩 애니메이션 ==========
+
+void UMVE_AUD_WidgetClass_ThrowMeshGenerator::StartLoadingAnimation()
+{
+	if (LoadingFrames.Num() == 0)
+	{
+		PRINTLOG(TEXT("⚠️ LoadingFrames가 비어있습니다. 블루프린트에서 로딩 프레임을 설정하세요."));
+		return;
+	}
+
+	if (!LoadingOverlayImage)
+	{
+		PRINTLOG(TEXT("⚠️ LoadingOverlayImage가 없습니다. 위젯 블루프린트에서 추가하세요."));
+		return;
+	}
+
+	if (bIsLoadingAnimationActive)
+	{
+		PRINTLOG(TEXT("⚠️ 로딩 애니메이션이 이미 실행 중입니다."));
+		return;
+	}
+
+	PRINTLOG(TEXT("🔄 로딩 애니메이션 시작 (%d 프레임, %.2f초 간격)"), LoadingFrames.Num(), LoadingFrameRate);
+
+	bIsLoadingAnimationActive = true;
+	CurrentLoadingFrameIndex = 0;
+
+	// 오버레이 이미지에 첫 프레임 표시
+	if (LoadingFrames.IsValidIndex(0))
+	{
+		LoadingOverlayImage->SetBrushFromTexture(LoadingFrames[0]);
+		LoadingOverlayImage->SetVisibility(ESlateVisibility::Visible);
+		PRINTLOG(TEXT("✅ LoadingOverlayImage Visibility → Visible, Brush 설정 완료"));
+	}
+	else
+	{
+		PRINTLOG(TEXT("❌ LoadingFrames[0]이 유효하지 않음"));
+	}
+
+	// 타이머 시작 (프레임 전환)
+	if (GetWorld())
+	{
+		GetWorld()->GetTimerManager().SetTimer(
+			LoadingAnimationTimerHandle,
+			this,
+			&UMVE_AUD_WidgetClass_ThrowMeshGenerator::UpdateLoadingFrame,
+			LoadingFrameRate,
+			true // 반복
+		);
+		PRINTLOG(TEXT("✅ 로딩 애니메이션 타이머 시작"));
+	}
+}
+
+void UMVE_AUD_WidgetClass_ThrowMeshGenerator::StopLoadingAnimation()
+{
+	if (!bIsLoadingAnimationActive)
+	{
+		return;
+	}
+
+	PRINTLOG(TEXT("⏹️ 로딩 애니메이션 중지"));
+
+	bIsLoadingAnimationActive = false;
+
+	// 타이머 중지
+	if (GetWorld())
+	{
+		GetWorld()->GetTimerManager().ClearTimer(LoadingAnimationTimerHandle);
+	}
+
+	// 오버레이 이미지 숨김
+	if (LoadingOverlayImage)
+	{
+		LoadingOverlayImage->SetVisibility(ESlateVisibility::Collapsed);
+	}
+}
+
+void UMVE_AUD_WidgetClass_ThrowMeshGenerator::UpdateLoadingFrame()
+{
+	if (!bIsLoadingAnimationActive || LoadingFrames.Num() == 0)
+	{
+		return;
+	}
+
+	// 다음 프레임으로 전환
+	CurrentLoadingFrameIndex = (CurrentLoadingFrameIndex + 1) % LoadingFrames.Num();
+
+	// 오버레이 이미지에 프레임 표시
+	if (LoadingOverlayImage && LoadingFrames.IsValidIndex(CurrentLoadingFrameIndex))
+	{
+		LoadingOverlayImage->SetBrushFromTexture(LoadingFrames[CurrentLoadingFrameIndex]);
+	}
 }
