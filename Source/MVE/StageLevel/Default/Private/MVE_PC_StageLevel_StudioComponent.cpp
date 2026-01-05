@@ -4,6 +4,7 @@
 #include "glTFRuntimeFunctionLibrary.h"
 #include "glTFRuntimeAudioFunctionLibrary.h"
 #include "MVE.h"
+#include "MVE_PC_StageLevel.h"
 #include "MVE_StageLevel_DummyAudienceManager.h"
 #include "MVE_StageLevel_EffectSequenceManager.h"
 #include "Kismet/GameplayStatics.h"
@@ -90,11 +91,11 @@ void UMVE_PC_StageLevel_StudioComponent::OnAudioLoadedFromUrl(UglTFRuntimeAsset*
 		// 총 재생 시간 업데이트
 		TotalPlaybackDuration = LoadedSoundWave->Duration;
 		PRINTNETLOG(this, TEXT("[오디오 동기화] 총 재생 시간: %.2f초"), TotalPlaybackDuration);
-		AudioPlayer->UpdateTotalTime(TotalPlaybackDuration);
 
 		// UI 슬라이더 및 재생 시간 초기화 (새 곡 로드 시)
 		if (AudioPlayer)
 		{
+			AudioPlayer->UpdateTotalTime(TotalPlaybackDuration);
 			AudioPlayer->ResetPlaybackUI();
 			LastPlaybackTime = 0.f;
 			PRINTNETLOG(this, TEXT("[오디오 동기화] AudioPlayer UI 초기화 완료"));
@@ -122,6 +123,13 @@ void UMVE_PC_StageLevel_StudioComponent::OnAudioLoadedFromUrl(UglTFRuntimeAsset*
 			}
 		}
 		PRINTNETLOG(this, TEXT("[오디오 동기화] %d개의 스피커에 사운드 설정 완료. 재생 준비 완료."), SpeakerCount);
+
+		// 오디오 준비 완료를 서버에 알립니다
+		if (AMVE_PC_StageLevel* PC = Cast<AMVE_PC_StageLevel>(GetOwner()))
+		{
+			PC->NotifyAudioReady();
+			PRINTNETLOG(this, TEXT("[오디오 동기화] 서버에 오디오 준비 완료 알림 전송"));
+		}
 	}
 	else
 	{

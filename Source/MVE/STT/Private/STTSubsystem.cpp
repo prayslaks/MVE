@@ -60,38 +60,40 @@ FString USTTSubsystem::GetCommandDisplayName(ESTTCommandType CommandType)
 ESTTCommandType USTTSubsystem::ParseCommandString(const FString& CommandString)
 {
     // Python 서버의 parse_command() 반환값과 매칭
-    if (CommandString == TEXT("NextTrack"))
-    {
-        return ESTTCommandType::NextTrack;
-    }
-    else if (CommandString == TEXT("StopTrack"))
+    if (CommandString.Equals(TEXT("StopTrack"), ESearchCase::IgnoreCase))
     {
         return ESTTCommandType::StopTrack;
     }
-    else if (CommandString == TEXT("PlayTrack"))
+    else if (CommandString.Equals(TEXT("NextTrack"), ESearchCase::IgnoreCase))
+    {
+        return ESTTCommandType::NextTrack;
+    }
+    else if (CommandString.Equals(TEXT("PlayTrack"), ESearchCase::IgnoreCase))
     {
         return ESTTCommandType::PlayTrack;
     }
-    else if (CommandString == TEXT("ConcertOpen"))
+    else if (CommandString.Equals(TEXT("ConcertOpen"), ESearchCase::IgnoreCase))
     {
-            return ESTTCommandType::ConcertOpen;
+        return ESTTCommandType::ConcertOpen;
     }
-    else if (CommandString == TEXT("ConcertClose"))
+    else if (CommandString.Equals(TEXT("ConcertClose"), ESearchCase::IgnoreCase))
     {
         return ESTTCommandType::ConcertClose;
     }
-    else if (CommandString == TEXT("ThemeChristmas"))
+    else if (CommandString.Equals(TEXT("ThemeChristmas"), ESearchCase::IgnoreCase))
     {
         return ESTTCommandType::ThemeChristmas;
     }
-    else if (CommandString == TEXT("ThemeNewYear"))
+    else if (CommandString.Equals(TEXT("ThemeNewYear"), ESearchCase::IgnoreCase))
     {
         return ESTTCommandType::ThemeNewYear;
     }
-    else if (CommandString == TEXT("ThemeClear"))
+    else if (CommandString.Equals(TEXT("ThemeClear"), ESearchCase::IgnoreCase))
     {
         return ESTTCommandType::ThemeClear;
     }
+
+    // 매칭되는 명령어가 없을 경우
     return ESTTCommandType::None;
 }
 

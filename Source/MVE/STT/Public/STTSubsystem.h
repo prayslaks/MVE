@@ -133,8 +133,8 @@ public:
     // 서버 설정
     // ================================================================================================
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "STT|Config")
-    FString WebSocketURL = TEXT("ws://172.30.1.29:8001/ws");
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "STT|Config")    
+    FString WebSocketURL = TEXT("ws://172.16.100.52:8001/ws");
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "STT|Config")
     int32 SampleRate = 48000;
