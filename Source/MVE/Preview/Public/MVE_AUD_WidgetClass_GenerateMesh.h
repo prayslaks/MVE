@@ -4,6 +4,7 @@
 #include "CoreMinimal.h"
 #include "AssetTypes.h"
 #include "Blueprint/UserWidget.h"
+#include "Components/Overlay.h"
 #include "Data/RoomInfo.h"
 #include "MVE_AUD_WidgetClass_GenerateMesh.generated.h"
 
@@ -136,6 +137,12 @@ public:
 	/** 로딩 애니메이션 오버레이 이미지 */
 	UPROPERTY(meta=(BindWidgetOptional))
 	TObjectPtr<UImage> LoadingOverlayImage;
+
+	UPROPERTY(meta=(BindWidgetOptional))
+	TObjectPtr<UImage> LoadingBackgroundImage;
+
+	UPROPERTY(meta=(BindWidgetOptional))
+	TObjectPtr<UOverlay> LoadingOverlay;
 
 	/** 로딩 애니메이션 프레임 (GIF를 여러 PNG로 나눠서 배열로 저장) */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Loading Animation")

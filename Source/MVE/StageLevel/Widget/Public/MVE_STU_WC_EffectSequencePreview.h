@@ -6,6 +6,7 @@
 #include "API/Public/MVE_API_ResponseData.h"
 #include "MVE_STU_WC_EffectSequencePreview.generated.h"
 
+class UOverlay;
 class AMVE_StageLevel_EffectSequenceManager;
 class UButton;
 class USlider;
@@ -144,6 +145,12 @@ protected:
 	/** 로딩 애니메이션 오버레이 이미지 (StagePreviewImage 위에 표시) */
 	UPROPERTY(meta=(BindWidgetOptional))
 	TObjectPtr<UImage> LoadingOverlayImage;
+
+	UPROPERTY(meta=(BindWidgetOptional))
+	TObjectPtr<UImage> LoadingBackgroundImage;
+
+	UPROPERTY(meta=(BindWidgetOptional))
+	TObjectPtr<UOverlay> LoadingOverlay;
 
 	/** 재생/일시정지 버튼 */
 	UPROPERTY(meta = (BindWidget))

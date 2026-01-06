@@ -16,6 +16,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "glTFRuntimeFunctionLibrary.h"
 #include "glTFRuntimeAudioFunctionLibrary.h"
+#include "Components/Overlay.h"
 
 void UMVE_STU_WC_EffectSequencePreview::NativeConstruct()
 {
@@ -859,6 +860,8 @@ void UMVE_STU_WC_EffectSequencePreview::StartLoadingAnimation()
 	{
 		LoadingOverlayImage->SetBrushFromTexture(LoadingFrames[0]);
 		LoadingOverlayImage->SetVisibility(ESlateVisibility::Visible);
+		LoadingBackgroundImage->SetVisibility(ESlateVisibility::Visible);
+		LoadingOverlay->SetVisibility(ESlateVisibility::Visible);
 		PRINTLOG(TEXT("✅ LoadingOverlayImage Visibility → Visible, Brush 설정 완료"));
 	}
 	else
@@ -906,6 +909,8 @@ void UMVE_STU_WC_EffectSequencePreview::StopLoadingAnimation()
 	if (LoadingOverlayImage)
 	{
 		LoadingOverlayImage->SetVisibility(ESlateVisibility::Collapsed);
+		LoadingBackgroundImage->SetVisibility(ESlateVisibility::Collapsed);
+		LoadingOverlay->SetVisibility(ESlateVisibility::Collapsed);
 	}
 }
 

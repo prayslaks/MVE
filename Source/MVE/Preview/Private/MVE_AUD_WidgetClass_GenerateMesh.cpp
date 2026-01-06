@@ -569,6 +569,8 @@ void UMVE_AUD_WidgetClass_GenerateMesh::StartLoadingAnimation()
 	{
 		LoadingOverlayImage->SetBrushFromTexture(LoadingFrames[0]);
 		LoadingOverlayImage->SetVisibility(ESlateVisibility::Visible);
+		LoadingBackgroundImage->SetVisibility(ESlateVisibility::Visible);
+		LoadingOverlay->SetVisibility(ESlateVisibility::Visible);
 		PRINTLOG(TEXT("✅ LoadingOverlayImage Visibility → Visible, Brush 설정 완료"));
 	}
 	else
@@ -611,6 +613,8 @@ void UMVE_AUD_WidgetClass_GenerateMesh::StopLoadingAnimation()
 	if (LoadingOverlayImage)
 	{
 		LoadingOverlayImage->SetVisibility(ESlateVisibility::Collapsed);
+		LoadingBackgroundImage->SetVisibility(ESlateVisibility::Collapsed);
+		LoadingOverlay->SetVisibility(ESlateVisibility::Collapsed);
 	}
 }
 
