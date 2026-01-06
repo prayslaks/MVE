@@ -26,9 +26,6 @@ public:
 	virtual void SetupInputComponent() override;
 	virtual void PlayerTick(float DeltaTime) override;
 
-	UPROPERTY(EditAnywhere, Category = "Test")
-	bool bTestMode = false;
-
 	// CameraPawn 가져오기
 	UFUNCTION(BlueprintCallable, Category = "Camera")
 	AMVE_AUD_PreviewCameraPawn* GetCameraPawn() const;

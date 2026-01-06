@@ -103,7 +103,6 @@ void UMVE_STD_WC_PlaylistBuilder::OnAnalyzePlaylistClicked()
 
 	PRINTLOG(TEXT("📤 재생목록 전체 분석 요청 - %d곡"), Playlist.Num());
 
-	// 델리게이트 발동 (FinalCheckSettings에서 bTestMode 체크하고 처리)
 	OnBatchAnalyzeRequested.Broadcast();
 }
 

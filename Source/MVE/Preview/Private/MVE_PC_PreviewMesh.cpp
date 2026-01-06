@@ -34,15 +34,11 @@ void AMVE_PC_PreviewMesh::BeginPlay()
 		}
 	}
 
-	if (!bTestMode)
+	if (UUIManagerSubsystem* UIManager = UUIManagerSubsystem::Get(this))
 	{
-		if (UUIManagerSubsystem* UIManager = UUIManagerSubsystem::Get(this))
-		{
-			UIManager->ShowScreen(EUIScreen::AudienceStation);
-		}
+		UIManager->ShowScreen(EUIScreen::AudienceStation);
 	}
 	
-
 	PRINTLOG(TEXT("✅ PreviewMesh PlayerController initialized"));
 }
 
