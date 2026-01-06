@@ -311,15 +311,27 @@ void UMVE_AUD_CustomizationManager::OnGetModelStatusComplete(bool bSuccess, cons
 					{
 						StartMeshPreview(SavePath, MeshPreviewWidget);
 					}
+
+					// 모델 생성 완료 델리게이트 브로드캐스트 (UI 업데이트용)
+					OnModelGenerationComplete.Broadcast(true);
+					PRINTLOG(TEXT("✅ OnModelGenerationComplete broadcast (success)"));
 				}
 				else
 				{
 					PRINTLOG(TEXT("❌ Failed to save file: %s"), *SavePath);
+
+					// 실패 델리게이트 브로드캐스트
+					OnModelGenerationComplete.Broadcast(false);
+					PRINTLOG(TEXT("❌ OnModelGenerationComplete broadcast (failed - save error)"));
 				}
 			}
 			else
 			{
 				PRINTLOG(TEXT("❌ Model download failed: %s"), *ErrorMessage);
+
+				// 실패 델리게이트 브로드캐스트
+				OnModelGenerationComplete.Broadcast(false);
+				PRINTLOG(TEXT("❌ OnModelGenerationComplete broadcast (failed - download error)"));
 			}
 		});
 
@@ -337,6 +349,10 @@ void UMVE_AUD_CustomizationManager::OnGetModelStatusComplete(bool bSuccess, cons
 			World->GetTimerManager().ClearTimer(ModelStatusCheckTimer);
 			PRINTLOG(TEXT("⏹️ Status check timer stopped"));
 		}
+
+		// 실패 델리게이트 브로드캐스트
+		OnModelGenerationComplete.Broadcast(false);
+		PRINTLOG(TEXT("❌ OnModelGenerationComplete broadcast (failed - generation error)"));
 	}
 	else if (JobStatus.Status.Equals(TEXT("pending"), ESearchCase::IgnoreCase) ||
 	         JobStatus.Status.Equals(TEXT("processing"), ESearchCase::IgnoreCase))
