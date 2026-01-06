@@ -55,7 +55,7 @@ public:
 
 	// 생성 요청
 	UFUNCTION(BlueprintCallable)
-	void RequestModelGeneration(const FString& PromptText, const FString& ImagePath);
+	void RequestModelGeneration(const FString& PromptText, const FString& ImagePath, bool bIsThrowMesh = false);
 	
 	UFUNCTION(BlueprintCallable)
 	FString GetReferenceImageDataAsBase64() const
@@ -98,6 +98,9 @@ private:
 
 	// 상태 확인 주기 (초 단위)
 	float StatusCheckInterval = 2.0f;
+
+	// 현재 생성 중인 메시가 던지기 메시인지 여부
+	bool bCurrentGenerationIsThrowMesh = false;
 
 
 	/*

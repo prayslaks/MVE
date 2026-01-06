@@ -121,10 +121,13 @@ void AMVE_ThrowObject::OnRep_OwnerUserID()
 	if (AMVE_GS_StageLevel* GameState = GetWorld()->GetGameState<AMVE_GS_StageLevel>())
 	{
 		UStaticMesh* OwnerThrowMesh = GameState->GetThrowMeshForUser(OwnerUserID);
+		float ThrowMeshScale = GameState->GetThrowMeshScaleForUser(OwnerUserID);
+
 		if (OwnerThrowMesh && MeshComp)
 		{
 			MeshComp->SetStaticMesh(OwnerThrowMesh);
-			PRINTLOG(TEXT("✅ Throw mesh applied for UserID: %s"), *OwnerUserID);
+			MeshComp->SetRelativeScale3D(FVector(ThrowMeshScale));
+			PRINTLOG(TEXT("✅ Throw mesh applied for UserID: %s (Scale: %.2f)"), *OwnerUserID, ThrowMeshScale);
 		}
 		else
 		{

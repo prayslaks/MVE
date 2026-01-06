@@ -34,6 +34,10 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "MVE|Customization")
 	UStaticMesh* GetThrowMeshForUser(const FString& UserID) const;
 
+	// UserID로 던지기 메시 Scale 가져오기
+	UFUNCTION(BlueprintCallable, Category = "MVE|Customization")
+	float GetThrowMeshScaleForUser(const FString& UserID) const;
+
 protected:
 	UPROPERTY(ReplicatedUsing = OnRep_ViewerCount)
 	int32 ViewerCount;
@@ -69,6 +73,11 @@ private:
 	// Key: UserID, Value: ThrowMesh
 	UPROPERTY()
 	TMap<FString, UStaticMesh*> UserThrowMeshes;
+
+	// UserID별 던지기 메시 Scale 저장
+	// Key: UserID, Value: Scale
+	UPROPERTY()
+	TMap<FString, float> UserThrowMeshScales;
 
 	// SenderReceiver 델리게이트 콜백
 	UFUNCTION()

@@ -76,20 +76,7 @@ void UMVE_AUD_WidgetClass_ThrowMeshGenerator::NativeConstruct()
 					UE_LOG(LogMVE, Log, TEXT("[ThrowMeshGenerator] LastReceivedMetadata.RemotePath set from delegate: %s"), *RemoteURL);
 				}
 
-				// ⭐ 던지기 메시 프리뷰 시작 (bTestMode==false일 때)
-				UMVE_AUD_CustomizationManager* CM = GetGameInstance()->GetSubsystem<UMVE_AUD_CustomizationManager>();
-				if (CM && MeshPreviewWidget && !CM->CurrentGLBFilePath.IsEmpty())
-				{
-					UMVE_AUD_WidgetClass_PreviewWidget* PreviewWidget =
-						Cast<UMVE_AUD_WidgetClass_PreviewWidget>(MeshPreviewWidget);
-
-					if (PreviewWidget)
-					{
-						CM->StartThrowMeshPreview(CM->CurrentGLBFilePath, PreviewWidget);
-						UE_LOG(LogMVE, Log, TEXT("[ThrowMeshGenerator] StartThrowMeshPreview called with path: %s"), *CM->CurrentGLBFilePath);
-					}
-				}
-
+				// ⭐ CustomizationManager가 이미 StartThrowMeshPreview를 호출했으므로 여기서는 불필요
 				SetStatus(TEXT("던지기 메시 생성 완료!"));
 			}
 			else
@@ -180,8 +167,8 @@ void UMVE_AUD_WidgetClass_ThrowMeshGenerator::OnSendPromptButtonClicked()
 		SetButtonsEnabled(false);
 		StartLoadingAnimation();  // ⭐ 로딩 시작
 
-		// 서버에 전송
-		CustomizationManager->RequestModelGeneration(PromptText, ImagePath);
+		// 서버에 전송 (⭐ bIsThrowMesh=true 전달)
+		CustomizationManager->RequestModelGeneration(PromptText, ImagePath, true);
 	}
 }
 
