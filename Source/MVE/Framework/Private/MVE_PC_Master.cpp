@@ -79,7 +79,7 @@ void AMVE_PC_Master::BeginPlay()
 	// Intro만 스킵하는 경우 - Login 화면으로
 	else if (bSkipIntro)
 	{
-		UIManager->ShowScreen(EUIScreen::Login);
+		UIManager->ShowScreen(EUIScreen::Main);
 	}
 	// 정상 플로우 - Intro부터 시작
 	else

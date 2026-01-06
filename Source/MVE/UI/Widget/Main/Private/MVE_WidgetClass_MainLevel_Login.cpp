@@ -3,7 +3,6 @@
 #include "MVE_GI.h"
 #include "MVE_GIS_API.h"
 #include "API/Public/MVE_API_Helper.h"
-#include "UIManagerSubsystem.h"
 #include "Components/Button.h"
 #include "Components/EditableTextBox.h"
 #include "Components/TextBlock.h"
