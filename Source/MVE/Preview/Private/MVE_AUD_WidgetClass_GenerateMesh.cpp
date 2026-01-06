@@ -127,9 +127,17 @@ void UMVE_AUD_WidgetClass_GenerateMesh::OnSendPromptButtonClicked()
 		SetStatus(TEXT("시스템 오류"));
 		return;
 	}
+	
+	// 테스트 변수 획득
+	bool CVarTestMode = false;
+	if (const IConsoleVariable* CVar = IConsoleManager::Get().FindConsoleVariable(TEXT("myproject.TestMode")))
+	{
+		CVarTestMode = CVar->GetBool();
+		GEngine->AddOnScreenDebugMessage(0, 5, FColor::Red, CVarTestMode ? TEXT("true") : TEXT("false"));
+	}
 
 	// 테스트 모드: 중계 서버에서 model id로 presigned URL 받아오기
-	if (bTestMode)
+	if (CVarTestMode)
 	{
 		UE_LOG(LogMVE, Log, TEXT("[GenerateMesh] 테스트 모드: Model ID %d로 presigned URL 요청"), TestModelId);
 		SetStatus(FString::Printf(TEXT("Model ID %d의 다운로드 URL 요청 중..."), TestModelId));

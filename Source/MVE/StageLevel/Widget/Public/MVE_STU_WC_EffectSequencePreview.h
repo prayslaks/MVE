@@ -130,10 +130,6 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Effect Preview")
 	void StartLoadingAnimationWithDuration(float Duration);
 
-	/** 테스트 모드 - true이면 더미 데이터 사용, false이면 AI 서버 응답 대기 */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effect Preview|Test")
-	bool bTestMode = true;
-
 protected:
 	virtual void NativeConstruct() override;
 	virtual void NativeOnInitialized() override;

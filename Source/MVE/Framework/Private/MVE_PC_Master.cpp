@@ -8,11 +8,12 @@
 #include "NetworkMessage.h"
 #include "UIManagerSubsystem.h"
 #include "Blueprint/UserWidget.h"
+#include "MVE.h"
 
 void AMVE_PC_Master::BeginPlay()
 {
 	Super::BeginPlay();
-
+	
 	// Input Mode, Mouse Cursor 보이기 설정
 	bShowMouseCursor = true;
 	bEnableClickEvents = true;
