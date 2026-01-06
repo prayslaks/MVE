@@ -20,6 +20,9 @@
 #include "Misc/Paths.h"
 #include "TimerManager.h"
 #include "Components/Overlay.h"
+#include "Kismet/GameplayStatics.h"
+#include "Components/AudioComponent.h"
+#include "Sound/SoundBase.h"
 
 void UMVE_AUD_WidgetClass_ThrowMeshGenerator::NativeConstruct()
 {
@@ -586,6 +589,25 @@ void UMVE_AUD_WidgetClass_ThrowMeshGenerator::StartLoadingAnimation()
 		);
 		PRINTLOG(TEXT("✅ 로딩 애니메이션 타이머 시작"));
 	}
+
+	// ⭐ 사운드 재생
+	if (LoadingStartSound)
+	{
+		UGameplayStatics::PlaySound2D(this, LoadingStartSound);
+		PRINTLOG(TEXT("✅ Loading start sound played"));
+	}
+
+	if (LoadingLoopSound)
+	{
+		LoadingAudioComponent = UGameplayStatics::CreateSound2D(this, LoadingLoopSound);
+		if (LoadingAudioComponent)
+		{
+			//LoadingAudioComponent->bLooping = true;
+			LoadingAudioComponent->SetVolumeMultiplier(1.0f);
+			LoadingAudioComponent->Play();
+			PRINTLOG(TEXT("✅ Loading loop sound started (looping enabled)"));
+		}
+	}
 }
 
 void UMVE_AUD_WidgetClass_ThrowMeshGenerator::StopLoadingAnimation()
@@ -611,6 +633,13 @@ void UMVE_AUD_WidgetClass_ThrowMeshGenerator::StopLoadingAnimation()
 		LoadingOverlayImage->SetVisibility(ESlateVisibility::Collapsed);
 		LoadingBackgroundImage->SetVisibility(ESlateVisibility::Collapsed);
 		LoadingOverlay->SetVisibility(ESlateVisibility::Collapsed);
+	}
+
+	// ⭐ 사운드 중지
+	if (LoadingAudioComponent && LoadingAudioComponent->IsPlaying())
+	{
+		LoadingAudioComponent->Stop();
+		PRINTLOG(TEXT("✅ Loading sound stopped"));
 	}
 }
 

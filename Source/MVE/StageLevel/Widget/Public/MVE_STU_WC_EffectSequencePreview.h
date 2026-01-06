@@ -204,6 +204,14 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Effect Preview|Loading")
 	float LoadingFrameRate = 0.1f;
 
+	/** 로딩 시작 시 재생할 사운드 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Effect Preview|Loading")
+	TObjectPtr<USoundBase> LoadingStartSound;
+
+	/** 로딩 중 반복 재생할 배경 음악 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Effect Preview|Loading")
+	TObjectPtr<USoundBase> LoadingLoopSound;
+
 
 
 private:
@@ -311,4 +319,8 @@ private:
 
 	/** 로딩 애니메이션 프레임 업데이트 */
 	void UpdateLoadingFrame();
+
+	/** 로딩 배경음악 오디오 컴포넌트 */
+	UPROPERTY()
+	TObjectPtr<UAudioComponent> LoadingAudioComponent;
 };
