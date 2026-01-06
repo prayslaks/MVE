@@ -63,7 +63,7 @@ void UMVE_AUD_WidgetClass_GenerateMesh::NativeConstruct()
 		SR->OnAssetLoaded.AddDynamic(this, &UMVE_AUD_WidgetClass_GenerateMesh::HandleAssetLoaded);
 		SR->OnGenerationResponse.AddDynamic(this, &UMVE_AUD_WidgetClass_GenerateMesh::HandleGenerationResponse);
 		SR->OnDownloadProgress.AddDynamic(this, &UMVE_AUD_WidgetClass_GenerateMesh::HandleDownloadProgress);
-        
+
 		UE_LOG(LogMVE, Log, TEXT("[GenerateMesh] 송수신 델리게이트 바인딩 완료"));
 	}
 	else
@@ -71,8 +71,46 @@ void UMVE_AUD_WidgetClass_GenerateMesh::NativeConstruct()
 		UE_LOG(LogMVE, Error, TEXT("[GenerateMesh] USenderReceiver를 찾을 수 없습니다"));
 	}
 
+	// CustomizationManager 델리게이트 바인딩 (모델 생성 완료 시 로딩 애니메이션 중지)
+	if (UMVE_AUD_CustomizationManager* CustomizationManager = GetGameInstance()->GetSubsystem<UMVE_AUD_CustomizationManager>())
+	{
+		CustomizationManager->OnModelGenerationComplete.AddLambda([this](bool bSuccess)
+		{
+			UE_LOG(LogMVE, Log, TEXT("[GenerateMesh] OnModelGenerationComplete received - Success: %s"), bSuccess ? TEXT("Yes") : TEXT("No"));
+			StopLoadingAnimation();
+
+			if (bSuccess)
+			{
+				SetStatus(TEXT("모델 생성 완료!"));
+			}
+			else
+			{
+				SetStatus(TEXT("모델 생성 실패"));
+				SetButtonsEnabled(true);
+			}
+		});
+
+		UE_LOG(LogMVE, Log, TEXT("[GenerateMesh] CustomizationManager 델리게이트 바인딩 완료"));
+	}
+	else
+	{
+		UE_LOG(LogMVE, Error, TEXT("[GenerateMesh] CustomizationManager를 찾을 수 없습니다"));
+	}
+
 	// 초기 상태
 	SetStatus(TEXT("프롬프트를 입력하세요"));
+}
+
+void UMVE_AUD_WidgetClass_GenerateMesh::NativeDestruct()
+{
+	Super::NativeDestruct();
+
+	// 델리게이트 언바인딩
+	if (UMVE_AUD_CustomizationManager* CustomizationManager = GetGameInstance()->GetSubsystem<UMVE_AUD_CustomizationManager>())
+	{
+		CustomizationManager->OnModelGenerationComplete.RemoveAll(this);
+		UE_LOG(LogMVE, Log, TEXT("[GenerateMesh] CustomizationManager 델리게이트 언바인딩 완료"));
+	}
 }
 
 void UMVE_AUD_WidgetClass_GenerateMesh::OnSendPromptButtonClicked()
@@ -132,6 +170,14 @@ void UMVE_AUD_WidgetClass_GenerateMesh::OnSendPromptButtonClicked()
 		SetStatus(TEXT("서버에 요청 중..."));
 		SetButtonsEnabled(false);
 		StartLoadingAnimation();  // ⭐ 로딩 시작
+
+		// CustomizationManager에 MeshPreviewWidget 전달 (프리뷰 시작 시 필요)
+		if (MeshPreviewWidget)
+		{
+			// CustomizationManager는 내부적으로 MeshPreviewWidget을 저장하고 있으므로,
+			// StartMeshPreview가 호출될 때 사용됨 (이미 설정되어 있을 수 있음)
+			// 필요하다면 여기서 재설정 가능 (하지만 현재는 불필요)
+		}
 
 		// 서버에 전송
 		CustomizationManager->RequestModelGeneration(PromptText, ImagePath);
@@ -324,6 +370,8 @@ void UMVE_AUD_WidgetClass_GenerateMesh::HandleAssetLoaded(UObject* Asset, const 
 		// 상태 업데이트
 		SetStatus(FString::Printf(TEXT("%s 생성 완료! (SkeletalMesh)"), *Metadata.DisplayName));
 
+		
+
 		// 프리뷰 위젯에 메시 적용
 		if (MeshPreviewWidget)
 		{
@@ -341,6 +389,7 @@ void UMVE_AUD_WidgetClass_GenerateMesh::HandleAssetLoaded(UObject* Asset, const 
 					
 					if (!LocalPath.IsEmpty())
 					{
+						StopLoadingAnimation();
 						CustomizationManager->StartMeshPreview(LocalPath, PreviewWidget);
 						UE_LOG(LogMVE, Log, TEXT("[GenerateMesh] 프리뷰 적용 완료 - 경로: %s"), *LocalPath);
 
@@ -395,6 +444,7 @@ void UMVE_AUD_WidgetClass_GenerateMesh::HandleAssetLoaded(UObject* Asset, const 
 					
 					if (!LocalPath.IsEmpty())
 					{
+						StopLoadingAnimation();
 						CustomizationManager->StartMeshPreview(LocalPath, PreviewWidget);
 						UE_LOG(LogMVE, Log, TEXT("[GenerateMesh] 프리뷰 적용 완료 - 경로: %s"), *LocalPath);
 					}
@@ -488,9 +538,7 @@ void UMVE_AUD_WidgetClass_GenerateMesh::HandleGetModelDownloadUrl(bool bSuccess,
 				UE_LOG(LogMVE, Log, TEXT("   File size: %.2f MB"), FileData.Num() / (1024.0f * 1024.0f));
 
 				SetStatus(TEXT("모델 다운로드 완료! 프리뷰 시작 중..."));
-
-				// ⭐ 파일 저장 성공 직후 로딩 애니메이션 중지 (StartMeshPreview 호출 전)
-				StopLoadingAnimation();
+				
 
 				// CustomizationManager에 RemoteURL 저장
 				UMVE_AUD_CustomizationManager* CustomizationManager =
@@ -509,6 +557,7 @@ void UMVE_AUD_WidgetClass_GenerateMesh::HandleGetModelDownloadUrl(bool bSuccess,
 
 						if (PreviewWidget)
 						{
+							StopLoadingAnimation();
 							CustomizationManager->StartMeshPreview(SavePath, PreviewWidget);
 							SetStatus(TEXT("테스트 모드: 프리뷰 완료! RightHandButton 클릭 가능"));
 							SetButtonsEnabled(true);

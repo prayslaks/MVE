@@ -58,8 +58,46 @@ void UMVE_AUD_WidgetClass_ThrowMeshGenerator::NativeConstruct()
 		UE_LOG(LogMVE, Error, TEXT("[ThrowMeshGenerator] USenderReceiver를 찾을 수 없습니다"));
 	}
 
+	// CustomizationManager 델리게이트 바인딩 (모델 생성 완료 시 로딩 애니메이션 중지)
+	if (UMVE_AUD_CustomizationManager* CustomizationManager = GetGameInstance()->GetSubsystem<UMVE_AUD_CustomizationManager>())
+	{
+		CustomizationManager->OnModelGenerationComplete.AddLambda([this](bool bSuccess)
+		{
+			UE_LOG(LogMVE, Log, TEXT("[ThrowMeshGenerator] OnModelGenerationComplete received - Success: %s"), bSuccess ? TEXT("Yes") : TEXT("No"));
+			StopLoadingAnimation();
+
+			if (bSuccess)
+			{
+				SetStatus(TEXT("던지기 메시 생성 완료!"));
+			}
+			else
+			{
+				SetStatus(TEXT("던지기 메시 생성 실패"));
+				SetButtonsEnabled(true);
+			}
+		});
+
+		UE_LOG(LogMVE, Log, TEXT("[ThrowMeshGenerator] CustomizationManager 델리게이트 바인딩 완료"));
+	}
+	else
+	{
+		UE_LOG(LogMVE, Error, TEXT("[ThrowMeshGenerator] CustomizationManager를 찾을 수 없습니다"));
+	}
+
 	// 초기 상태
 	SetStatus(TEXT("던질 메시의 프롬프트를 입력하세요"));
+}
+
+void UMVE_AUD_WidgetClass_ThrowMeshGenerator::NativeDestruct()
+{
+	Super::NativeDestruct();
+
+	// 델리게이트 언바인딩
+	if (UMVE_AUD_CustomizationManager* CustomizationManager = GetGameInstance()->GetSubsystem<UMVE_AUD_CustomizationManager>())
+	{
+		CustomizationManager->OnModelGenerationComplete.RemoveAll(this);
+		UE_LOG(LogMVE, Log, TEXT("[ThrowMeshGenerator] CustomizationManager 델리게이트 언바인딩 완료"));
+	}
 }
 
 void UMVE_AUD_WidgetClass_ThrowMeshGenerator::OnSendPromptButtonClicked()

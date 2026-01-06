@@ -268,6 +268,10 @@ public:
 	// 프리셋 로드 완료 델리게이트
 	DECLARE_DELEGATE_OneParam(FOnPresetLoaded, const FCustomizationData&);
 	FOnPresetLoaded OnPresetLoadedDelegate;
+
+	// 모델 생성 완료 델리게이트 (UI 업데이트용 - 로딩 애니메이션 중지 등)
+	DECLARE_MULTICAST_DELEGATE_OneParam(FOnModelGenerationComplete, bool /* bSuccess */);
+	FOnModelGenerationComplete OnModelGenerationComplete;
 	
 	// JSON 직렬화/역직렬화
 	UFUNCTION(BlueprintCallable, Category = "Customization")
