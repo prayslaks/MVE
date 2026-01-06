@@ -270,7 +270,8 @@ public:
 	FOnPresetLoaded OnPresetLoadedDelegate;
 
 	// 모델 생성 완료 델리게이트 (UI 업데이트용 - 로딩 애니메이션 중지 등)
-	DECLARE_MULTICAST_DELEGATE_OneParam(FOnModelGenerationComplete, bool /* bSuccess */);
+	// Params: bSuccess, RemoteURL (PresignedURL)
+	DECLARE_MULTICAST_DELEGATE_TwoParams(FOnModelGenerationComplete, bool /* bSuccess */, const FString& /* RemoteURL */);
 	FOnModelGenerationComplete OnModelGenerationComplete;
 	
 	// JSON 직렬화/역직렬화

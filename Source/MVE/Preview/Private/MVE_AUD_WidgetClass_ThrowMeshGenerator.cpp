@@ -61,13 +61,35 @@ void UMVE_AUD_WidgetClass_ThrowMeshGenerator::NativeConstruct()
 	// CustomizationManager 델리게이트 바인딩 (모델 생성 완료 시 로딩 애니메이션 중지)
 	if (UMVE_AUD_CustomizationManager* CustomizationManager = GetGameInstance()->GetSubsystem<UMVE_AUD_CustomizationManager>())
 	{
-		CustomizationManager->OnModelGenerationComplete.AddLambda([this](bool bSuccess)
+		CustomizationManager->OnModelGenerationComplete.AddLambda([this](bool bSuccess, const FString& RemoteURL)
 		{
-			UE_LOG(LogMVE, Log, TEXT("[ThrowMeshGenerator] OnModelGenerationComplete received - Success: %s"), bSuccess ? TEXT("Yes") : TEXT("No"));
+			UE_LOG(LogMVE, Log, TEXT("[ThrowMeshGenerator] OnModelGenerationComplete received - Success: %s, RemoteURL: %s"),
+				bSuccess ? TEXT("Yes") : TEXT("No"), *RemoteURL);
 			StopLoadingAnimation();
 
 			if (bSuccess)
 			{
+				// ⭐ RemoteURL 저장 (Save 버튼용) - bTestMode==false일 때 필수!
+				if (!RemoteURL.IsEmpty())
+				{
+					LastReceivedMetadata.RemotePath = RemoteURL;
+					UE_LOG(LogMVE, Log, TEXT("[ThrowMeshGenerator] LastReceivedMetadata.RemotePath set from delegate: %s"), *RemoteURL);
+				}
+
+				// ⭐ 던지기 메시 프리뷰 시작 (bTestMode==false일 때)
+				UMVE_AUD_CustomizationManager* CM = GetGameInstance()->GetSubsystem<UMVE_AUD_CustomizationManager>();
+				if (CM && MeshPreviewWidget && !CM->CurrentGLBFilePath.IsEmpty())
+				{
+					UMVE_AUD_WidgetClass_PreviewWidget* PreviewWidget =
+						Cast<UMVE_AUD_WidgetClass_PreviewWidget>(MeshPreviewWidget);
+
+					if (PreviewWidget)
+					{
+						CM->StartThrowMeshPreview(CM->CurrentGLBFilePath, PreviewWidget);
+						UE_LOG(LogMVE, Log, TEXT("[ThrowMeshGenerator] StartThrowMeshPreview called with path: %s"), *CM->CurrentGLBFilePath);
+					}
+				}
+
 				SetStatus(TEXT("던지기 메시 생성 완료!"));
 			}
 			else

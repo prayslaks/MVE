@@ -153,10 +153,12 @@ private:
 	
 	FString UserEmail;
 	FString UserName;
-	
-	
+
+
 	void Initialize();
 
+	// 서버에서 액세서리 & 던지기 메시 프리셋 로드
+	void LoadCustomizationPresets();
 
 	FOnSetUserInfoFinished OnSetUserInfoFinished;
 

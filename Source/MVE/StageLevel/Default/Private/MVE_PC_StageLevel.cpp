@@ -96,6 +96,9 @@ void AMVE_PC_StageLevel::BeginPlay()
 	// 위젯 생성
 	CreateWidgets();
 
+	// ⭐ 서버에서 액세서리 & 던지기 메시 프리셋 로드 (Initialize 전에 호출)
+	LoadCustomizationPresets();
+
 	// 유저 정보 저장
 	FOnGetProfileComplete OnGetProfileComplete;
 	OnGetProfileComplete.BindUObject(this, &AMVE_PC_StageLevel::SetUserInfo);
@@ -638,4 +641,31 @@ void AMVE_PC_StageLevel::NotifyAudioReady()
 			PS->Server_SetIsAudioReady(true);
 		}
 	}
+}
+
+void AMVE_PC_StageLevel::LoadCustomizationPresets()
+{
+	PRINTLOG(TEXT("=== LoadCustomizationPresets ==="));
+
+	// CustomizationManager 가져오기
+	UMVE_AUD_CustomizationManager* CustomizationManager = GetGameInstance()->GetSubsystem<UMVE_AUD_CustomizationManager>();
+
+	if (!CustomizationManager)
+	{
+		PRINTLOG(TEXT("❌ CustomizationManager not found"));
+		return;
+	}
+
+	// 1. 액세서리 프리셋 로드 (서버에서)
+	CustomizationManager->LoadAccessoryPresetFromServer();
+	PRINTLOG(TEXT("✅ LoadAccessoryPresetFromServer called"));
+
+	// 2. 던지기 메시 프리셋 로드 (서버에서)
+	CustomizationManager->LoadThrowMeshPreset();
+	PRINTLOG(TEXT("✅ LoadThrowMeshPreset called"));
+
+	// ⭐ Note: 실제 로딩은 비동기이므로, CustomizationManager의 콜백에서
+	//    SavedCustomization과 SavedThrowMeshData가 채워집니다.
+	//    Initialize()는 OnSetUserInfoFinished 콜백으로 호출되므로,
+	//    타이밍 상 프리셋 로딩이 완료된 후에 호출될 가능성이 높습니다.
 }

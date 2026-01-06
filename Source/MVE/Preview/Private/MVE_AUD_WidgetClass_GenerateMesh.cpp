@@ -74,13 +74,16 @@ void UMVE_AUD_WidgetClass_GenerateMesh::NativeConstruct()
 	// CustomizationManager 델리게이트 바인딩 (모델 생성 완료 시 로딩 애니메이션 중지)
 	if (UMVE_AUD_CustomizationManager* CustomizationManager = GetGameInstance()->GetSubsystem<UMVE_AUD_CustomizationManager>())
 	{
-		CustomizationManager->OnModelGenerationComplete.AddLambda([this](bool bSuccess)
+		CustomizationManager->OnModelGenerationComplete.AddLambda([this](bool bSuccess, const FString& RemoteURL)
 		{
-			UE_LOG(LogMVE, Log, TEXT("[GenerateMesh] OnModelGenerationComplete received - Success: %s"), bSuccess ? TEXT("Yes") : TEXT("No"));
+			UE_LOG(LogMVE, Log, TEXT("[GenerateMesh] OnModelGenerationComplete received - Success: %s, RemoteURL: %s"),
+				bSuccess ? TEXT("Yes") : TEXT("No"), *RemoteURL);
 			StopLoadingAnimation();
 
 			if (bSuccess)
 			{
+				// ⭐ RemoteURL 저장 (Save 버튼용) - 액세서리용이므로 필요시 사용
+				// LastReceivedMetadata.RemotePath = RemoteURL;
 				SetStatus(TEXT("모델 생성 완료!"));
 			}
 			else
