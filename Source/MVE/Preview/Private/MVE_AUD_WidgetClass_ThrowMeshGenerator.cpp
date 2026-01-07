@@ -207,16 +207,20 @@ void UMVE_AUD_WidgetClass_ThrowMeshGenerator::OnCloseButtonClicked()
 
 void UMVE_AUD_WidgetClass_ThrowMeshGenerator::OnSaveButtonClicked()
 {
+	UE_LOG(LogMVE, Warning, TEXT("=== ThrowMeshGenerator Save Button Clicked ==="));
+
 	if (UMVE_AUD_CustomizationManager* CustomizationManager = GetGameInstance()->GetSubsystem<UMVE_AUD_CustomizationManager>())
 	{
 		// 던지기 메시 저장 (SocketName = "THROW_MESH")
 		if (!LastReceivedMetadata.RemotePath.IsEmpty())
 		{
+			UE_LOG(LogMVE, Warning, TEXT("✅ RemotePath exists: %s"), *LastReceivedMetadata.RemotePath);
 			CustomizationManager->SaveThrowMeshPreset(LastReceivedMetadata.RemotePath);
 			SetStatus(TEXT("던지기 메시가 서버에 저장되었습니다"));
 		}
 		else
 		{
+			UE_LOG(LogMVE, Error, TEXT("❌ RemotePath is EMPTY! Cannot save throw mesh!"));
 			SetStatus(TEXT("저장할 메시가 없습니다"));
 		}
 	}

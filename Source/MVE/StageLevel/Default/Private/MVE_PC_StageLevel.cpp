@@ -96,8 +96,8 @@ void AMVE_PC_StageLevel::BeginPlay()
 	// 위젯 생성
 	CreateWidgets();
 
-	// ⭐ 서버에서 액세서리 & 던지기 메시 프리셋 로드 (Initialize 전에 호출)
-	LoadCustomizationPresets();
+	// ⭐ 서버 API 로드 제거 - 로컬 CustomizationManager 메모리 사용
+	// LoadCustomizationPresets();  // 주석 처리: 타이밍 문제로 인해 로컬 메모리 사용
 
 	// 유저 정보 저장
 	FOnGetProfileComplete OnGetProfileComplete;
@@ -182,6 +182,8 @@ void AMVE_PC_StageLevel::SetupChatUI(UMVE_WC_Chat* InWidget)
 
 void AMVE_PC_StageLevel::Initialize()
 {
+	PRINTLOG(TEXT("=== Initialize called ==="));
+
 	// CustomizationManager 가져오기
 	UMVE_AUD_CustomizationManager* CustomizationManager = GetGameInstance()->GetSubsystem<UMVE_AUD_CustomizationManager>();
 
@@ -189,9 +191,13 @@ void AMVE_PC_StageLevel::Initialize()
 	{
 		// ⭐ 액세서리 데이터 가져오기
 		FCustomizationData SavedAccessory = CustomizationManager->GetSavedCustomization();
+		PRINTLOG(TEXT("📦 SavedAccessory - ModelUrl: %s, Socket: %s"),
+			*SavedAccessory.ModelUrl, *SavedAccessory.SocketName);
 
 		// ⭐ 던지기 메시 데이터 가져오기
 		FCustomizationData SavedThrowMesh = CustomizationManager->GetSavedThrowMeshData();
+		PRINTLOG(TEXT("📦 SavedThrowMesh - ModelUrl: %s, Socket: %s"),
+			*SavedThrowMesh.ModelUrl, *SavedThrowMesh.SocketName);
 
 		// 액세서리와 던지기 메시 모두 체크
 		bool bHasAccessory = !SavedAccessory.ModelUrl.IsEmpty();
@@ -226,43 +232,16 @@ void AMVE_PC_StageLevel::Initialize()
 			// CustomizationManager->LoadThrowMeshFromURL()는 호출하지 않음
 		}
 
-		// ⭐ JSON 직렬화 (올바른 배열 형식)
+		// ⭐ 모든 커스터마이징을 배열로 한 번에 서버에 전송 (JSON 없이 직접 전달)
 		PRINTLOG(TEXT("🔍 AllCustomizations count: %d"), AllCustomizations.Num());
 
-		TArray<TSharedPtr<FJsonValue>> JsonArray;
 		for (const FCustomizationData& Data : AllCustomizations)
 		{
-			PRINTLOG(TEXT("🔍 Processing customization: Socket=%s, ModelUrl=%s"), *Data.SocketName, *Data.ModelUrl);
-			TSharedPtr<FJsonObject> JsonObject = MakeShareable(new FJsonObject);
-			JsonObject->SetStringField(TEXT("socketName"), Data.SocketName);
-
-			TSharedPtr<FJsonObject> LocationObj = MakeShareable(new FJsonObject);
-			LocationObj->SetNumberField(TEXT("x"), Data.RelativeLocation.X);
-			LocationObj->SetNumberField(TEXT("y"), Data.RelativeLocation.Y);
-			LocationObj->SetNumberField(TEXT("z"), Data.RelativeLocation.Z);
-			JsonObject->SetObjectField(TEXT("relativeLocation"), LocationObj);
-
-			TSharedPtr<FJsonObject> RotationObj = MakeShareable(new FJsonObject);
-			RotationObj->SetNumberField(TEXT("pitch"), Data.RelativeRotation.Pitch);
-			RotationObj->SetNumberField(TEXT("yaw"), Data.RelativeRotation.Yaw);
-			RotationObj->SetNumberField(TEXT("roll"), Data.RelativeRotation.Roll);
-			JsonObject->SetObjectField(TEXT("relativeRotation"), RotationObj);
-
-			JsonObject->SetNumberField(TEXT("relativeScale"), Data.RelativeScale);
-			JsonObject->SetStringField(TEXT("modelUrl"), Data.ModelUrl);
-
-			JsonArray.Add(MakeShareable(new FJsonValueObject(JsonObject)));
+			PRINTLOG(TEXT("  - Socket: %s, ModelUrl: %s"), *Data.SocketName, *Data.ModelUrl);
 		}
 
-		FString PresetJSON;
-		TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&PresetJSON);
-		FJsonSerializer::Serialize(JsonArray, Writer);
-
-		PRINTLOG(TEXT("PresetJSON: %s"), *PresetJSON);
-
-		// 서버에 등록 요청
-		PRINTLOG(TEXT("Calling ServerRPC_RegisterAccessory..."));
-		ServerRPC_RegisterAccessory(UserName, PresetJSON);
+		PRINTLOG(TEXT("📤 Sending all customizations to server in one RPC call"));
+		ServerRPC_RegisterAccessory(UserName, AllCustomizations);
 	}
 }
 
@@ -280,31 +259,35 @@ AMVE_StageLevel_AudCharacter* AMVE_PC_StageLevel::GetBindingAudCharacter() const
 	return Cast<AMVE_StageLevel_AudCharacter>(GetPawn());
 }
 
-// 서버에 액세서리 정보 등록
-void AMVE_PC_StageLevel::ServerRPC_RegisterAccessory_Implementation(const FString& UserID, const FString& PresetJSON)
+// 서버에 액세서리 정보 등록 (배열로 한 번에 받아서 처리)
+void AMVE_PC_StageLevel::ServerRPC_RegisterAccessory_Implementation(const FString& UserID, const TArray<FCustomizationData>& CustomizationDataArray)
 {
 	PRINTLOG(TEXT("=== ServerRPC_RegisterAccessory (Server) ==="));
 	PRINTLOG(TEXT("UserID: %s"), *UserID);
-	PRINTLOG(TEXT("PresetJSON: %s"), *PresetJSON);
-	
+	PRINTLOG(TEXT("Received %d customizations"), CustomizationDataArray.Num());
+
 	if (!HasAuthority())
 	{
 		PRINTLOG(TEXT("❌ Not server authority"));
 		return;
 	}
-	
-	// GameMode 가져오기
-	AMVE_GM_StageLevel* StageGM = Cast<AMVE_GM_StageLevel>(GetWorld()->GetAuthGameMode());
-	if (!StageGM)
+
+	// GameState 가져오기
+	AMVE_GS_StageLevel* StageGS = GetWorld()->GetGameState<AMVE_GS_StageLevel>();
+	if (!StageGS)
 	{
-		PRINTLOG(TEXT("❌ StageGameMode not found"));
+		PRINTLOG(TEXT("❌ StageGameState not found"));
 		return;
 	}
-	
-	// GameMode에 액세서리 정보 전달
-	StageGM->RegisterPlayerAccessory(UserID, PresetJSON);
-	
-	PRINTLOG(TEXT("✅ Accessory registered to GameMode"));
+
+	// 각 커스터마이징을 모든 클라이언트에게 브로드캐스트
+	for (const FCustomizationData& CustomizationData : CustomizationDataArray)
+	{
+		PRINTLOG(TEXT("📤 Broadcasting - Socket: %s, ModelUrl: %s"), *CustomizationData.SocketName, *CustomizationData.ModelUrl);
+		StageGS->MulticastRPC_BroadcastAccessory(UserID, CustomizationData);
+	}
+
+	PRINTLOG(TEXT("✅ All %d customizations broadcasted to all clients"), CustomizationDataArray.Num());
 }
 
 // 신규 입장 시 기존 참여자들의 액세서리 정보 받기
@@ -382,54 +365,9 @@ void AMVE_PC_StageLevel::ClientRPC_ReceiveExistingAccessories_Implementation(
 			// GameState를 통해 다운로드 시작
 			if (AMVE_GS_StageLevel* GameState = GetWorld()->GetGameState<AMVE_GS_StageLevel>())
 			{
-				// 다운로드 대기 맵에 추가
-				USenderReceiver* SR = GetGameInstance()->GetSubsystem<USenderReceiver>();
-				if (!SR)
-				{
-					PRINTLOG(TEXT("❌ SenderReceiver not found"));
-					continue;
-				}
-
-				// 메타데이터 구성
-				FAssetMetadata Metadata;
-				Metadata.AssetType = EAssetType::MESH;
-				Metadata.UserEmail = UserID;  // ⭐ 매칭용 키
-				Metadata.RemotePath = Data.ModelUrl;  // PresignedURL
-				Metadata.AssetID = FGuid::NewGuid();
-
-				PRINTLOG(TEXT("✅ Queuing download for existing accessory:"));
-				PRINTLOG(TEXT("   AssetID: %s"), *Metadata.AssetID.ToString());
-				PRINTLOG(TEXT("   UserID: %s"), *UserID);
-				PRINTLOG(TEXT("   Socket: %s"), *Data.SocketName);
-
-				// PendingAccessories에 추가 (GameState의 OnAccessoryLoaded에서 사용)
-				// 직접 GameState 내부에 접근할 수 없으므로 MulticastRPC 로직을 재사용
-				// 각 항목을 개별 JSON으로 직렬화하여 처리
-				TSharedPtr<FJsonObject> SingleItemObj = MakeShareable(new FJsonObject);
-				SingleItemObj->SetStringField(TEXT("socketName"), Data.SocketName);
-
-				TSharedPtr<FJsonObject> LocObj = MakeShareable(new FJsonObject);
-				LocObj->SetNumberField(TEXT("x"), Data.RelativeLocation.X);
-				LocObj->SetNumberField(TEXT("y"), Data.RelativeLocation.Y);
-				LocObj->SetNumberField(TEXT("z"), Data.RelativeLocation.Z);
-				SingleItemObj->SetObjectField(TEXT("relativeLocation"), LocObj);
-
-				TSharedPtr<FJsonObject> RotObj = MakeShareable(new FJsonObject);
-				RotObj->SetNumberField(TEXT("pitch"), Data.RelativeRotation.Pitch);
-				RotObj->SetNumberField(TEXT("yaw"), Data.RelativeRotation.Yaw);
-				RotObj->SetNumberField(TEXT("roll"), Data.RelativeRotation.Roll);
-				SingleItemObj->SetObjectField(TEXT("relativeRotation"), RotObj);
-
-				SingleItemObj->SetNumberField(TEXT("relativeScale"), Data.RelativeScale);
-				SingleItemObj->SetStringField(TEXT("modelUrl"), Data.ModelUrl);
-
-				FString SingleItemJSON;
-				TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&SingleItemJSON);
-				FJsonSerializer::Serialize(SingleItemObj.ToSharedRef(), Writer);
-
 				// GameState의 MulticastRPC 로직을 로컬에서 직접 실행
 				// (이미 모든 클라이언트가 받았으므로 Multicast 불필요)
-				GameState->MulticastRPC_BroadcastAccessory(UserID, SingleItemJSON);
+				GameState->MulticastRPC_BroadcastAccessory(UserID, Data);
 			}
 		}
 	}

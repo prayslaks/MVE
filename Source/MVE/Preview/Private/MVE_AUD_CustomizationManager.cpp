@@ -1411,6 +1411,19 @@ void UMVE_AUD_CustomizationManager::HandleLoadPresetComplete(bool bSuccess, cons
 			// 던지기 메시 로드
 			PRINTLOG(TEXT("✅ Throw mesh preset found"));
 			PRINTLOG(TEXT("   Model URL: %s"), *Accessory.ModelUrl);
+
+			// ⭐ SavedThrowMeshData 채우기 (Initialize에서 사용)
+			SavedThrowMeshData.SocketName = Accessory.SocketName;
+			SavedThrowMeshData.RelativeLocation = Accessory.RelativeLocation;
+			SavedThrowMeshData.RelativeRotation = Accessory.RelativeRotation;
+			SavedThrowMeshData.RelativeScale = Accessory.RelativeScale;
+			SavedThrowMeshData.ModelUrl = Accessory.ModelUrl;
+
+			PRINTLOG(TEXT("   Location: %s"), *SavedThrowMeshData.RelativeLocation.ToString());
+			PRINTLOG(TEXT("   Rotation: %s"), *SavedThrowMeshData.RelativeRotation.ToString());
+			PRINTLOG(TEXT("   Scale: %.2f"), SavedThrowMeshData.RelativeScale);
+
+			// GLB 다운로드 및 메시 캐싱
 			LoadThrowMeshFromURL(Accessory.ModelUrl);
 		}
 		else

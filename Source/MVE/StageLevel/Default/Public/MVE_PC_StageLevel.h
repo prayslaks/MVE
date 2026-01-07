@@ -39,9 +39,9 @@ public:
 	UFUNCTION(Client, Reliable)
 	void Client_TriggerFlashPostProcess();
 	
-	// 서버에 액세서리 정보 등록
+	// 서버에 액세서리 정보 등록 (배열로 한 번에 전송)
 	UFUNCTION(Server, Reliable)
-	void ServerRPC_RegisterAccessory(const FString& UserID, const FString& PresetJSON);
+	void ServerRPC_RegisterAccessory(const FString& UserID, const TArray<FCustomizationData>& CustomizationDataArray);
 	
 	// 신규 입장 시 기존 참여자들의 액세서리 정보 받기
 	UFUNCTION(Client, Reliable)

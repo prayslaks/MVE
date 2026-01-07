@@ -65,24 +65,11 @@ void AMVE_GS_StageLevel::BeginPlay()
 	}
 }
 
-void AMVE_GS_StageLevel::MulticastRPC_BroadcastAccessory_Implementation(const FString& UserID, const FString& PresetJSON)
+void AMVE_GS_StageLevel::MulticastRPC_BroadcastAccessory_Implementation(const FString& UserID, const FCustomizationData& Data)
 {
 	PRINTLOG(TEXT("=== MulticastRPC_BroadcastAccessory (GameState) ==="));
 	PRINTLOG(TEXT("UserID: %s"), *UserID);
-	PRINTLOG(TEXT("PresetJSON: %s"), *PresetJSON);
-
-	// CustomizationManager 가져오기
-	UMVE_AUD_CustomizationManager* CustomizationManager =
-		GetGameInstance()->GetSubsystem<UMVE_AUD_CustomizationManager>();
-
-	if (!CustomizationManager)
-	{
-		PRINTLOG(TEXT("❌ CustomizationManager not found"));
-		return;
-	}
-
-	// JSON 역직렬화
-	FCustomizationData Data = CustomizationManager->DeserializeCustomizationData(PresetJSON);
+	PRINTLOG(TEXT("Socket: %s, ModelUrl: %s"), *Data.SocketName, *Data.ModelUrl);
 
 	// 데이터 검증
 	if (Data.ModelUrl.IsEmpty())
@@ -91,13 +78,10 @@ void AMVE_GS_StageLevel::MulticastRPC_BroadcastAccessory_Implementation(const FS
 		return;
 	}
 
-	PRINTLOG(TEXT("✅ Deserialized data:"));
+	PRINTLOG(TEXT("✅ Received customization data:"));
 	PRINTLOG(TEXT("   Model URL: %s"), *Data.ModelUrl);
 	PRINTLOG(TEXT("   Socket: %s"), *Data.SocketName);
 	PRINTLOG(TEXT("   Location: %s"), *Data.RelativeLocation.ToString());
-
-	// 대기 맵에 저장 (다운로드 완료 후 매칭용)
-	PendingAccessories.Add(UserID, Data);
 
 	// SenderReceiver 사용
 	USenderReceiver* SR = GetGameInstance()->GetSubsystem<USenderReceiver>();
@@ -119,10 +103,16 @@ void AMVE_GS_StageLevel::MulticastRPC_BroadcastAccessory_Implementation(const FS
 	PRINTLOG(TEXT("   UserID: %s"), *UserID);
 	PRINTLOG(TEXT("   RemotePath: %s"), *Metadata.RemotePath);
 
+	// ⭐ AssetID를 키로 대기 맵에 저장 (다운로드 완료 후 매칭용)
+	FPendingAccessoryData PendingData;
+	PendingData.UserID = UserID;
+	PendingData.Data = Data;
+	PendingAccessories.Add(Metadata.AssetID, PendingData);
+
 	// 다운로드 시작
 	SR->DownloadFromFileServer(Metadata);
 
-	PRINTLOG(TEXT("✅ Download queued for UserID: %s"), *UserID);
+	PRINTLOG(TEXT("✅ Download queued for AssetID: %s, UserID: %s"), *Metadata.AssetID.ToString(), *UserID);
 }
 
 APawn* AMVE_GS_StageLevel::FindCharacterByUserID(const FString& UserID) const
@@ -160,31 +150,34 @@ void AMVE_GS_StageLevel::OnAccessoryLoaded(UObject* Asset, const FAssetMetadata&
 	PRINTLOG(TEXT("DisplayName: %s"), *Metadata.DisplayName);
 	PRINTLOG(TEXT("AssetID: %s"), *Metadata.AssetID.ToString());
 
-	FString UserID = Metadata.UserEmail;
-
-	FCustomizationData* Data = PendingAccessories.Find(UserID);
-	if (!Data)
+	// ⭐ AssetID로 대기 중인 액세서리 찾기
+	FPendingAccessoryData* PendingData = PendingAccessories.Find(Metadata.AssetID);
+	if (!PendingData)
 	{
-		PRINTLOG(TEXT("⚠️ No pending accessory for UserID: %s"), *UserID);
+		PRINTLOG(TEXT("⚠️ No pending accessory for AssetID: %s"), *Metadata.AssetID.ToString());
 		return;
 	}
+
+	const FString& UserID = PendingData->UserID;
+	const FCustomizationData& Data = PendingData->Data;
 
 	if (!Asset)
 	{
 		PRINTLOG(TEXT("❌ Asset is null"));
-		PendingAccessories.Remove(UserID);
+		PendingAccessories.Remove(Metadata.AssetID);
 		return;
 	}
 
 	PRINTLOG(TEXT("✅ Asset loaded successfully"));
 	PRINTLOG(TEXT("   Asset Type: %s"), *Asset->GetClass()->GetName());
-	PRINTLOG(TEXT("   Socket: %s"), *Data->SocketName);
+	PRINTLOG(TEXT("   UserID: %s"), *UserID);
+	PRINTLOG(TEXT("   Socket: %s"), *Data.SocketName);
 
 	// 액세서리 적용
-	ApplyAccessoryToCharacter(UserID, Asset, *Data);
+	ApplyAccessoryToCharacter(UserID, Asset, Data);
 
 	// 정리
-	PendingAccessories.Remove(UserID);
+	PendingAccessories.Remove(Metadata.AssetID);
 }
 
 void AMVE_GS_StageLevel::ApplyAccessoryToCharacter(const FString& UserID, UObject* Asset, const FCustomizationData& Data)

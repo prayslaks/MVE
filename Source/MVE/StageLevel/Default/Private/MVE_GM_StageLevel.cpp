@@ -371,29 +371,9 @@ void AMVE_GM_StageLevel::UpdateViewerCount()
 
 void AMVE_GM_StageLevel::RegisterPlayerAccessory(const FString& UserID, const FString& PresetJSON)
 {
-	PRINTLOG(TEXT("=== RegisterPlayerAccessory (Server) ==="));
-	PRINTLOG(TEXT("UserID: %s"), *UserID);
-
-	if (!HasAuthority())
-	{
-		PRINTLOG(TEXT("❌ Not server authority"));
-		return;
-	}
-
-	// TMap에 저장 (기존 데이터 덮어쓰기 가능)
-	PlayerAccessories.Add(UserID, PresetJSON);
-	PRINTLOG(TEXT("✅ Accessory stored in map (Total: %d)"), PlayerAccessories.Num());
-
-	// GameState를 통해 모든 클라이언트에게 브로드캐스트
-	if (AMVE_GS_StageLevel* StageGameState = GetGameState<AMVE_GS_StageLevel>())
-	{
-		StageGameState->MulticastRPC_BroadcastAccessory(UserID, PresetJSON);
-		PRINTLOG(TEXT("✅ GameState Multicast RPC called"));
-	}
-	else
-	{
-		PRINTLOG(TEXT("❌ Failed to get GameState"));
-	}
+	// ⚠️ 이 함수는 더 이상 사용되지 않음
+	// ServerRPC_RegisterAccessory_Implementation에서 GameState를 직접 호출하도록 변경됨
+	PRINTLOG(TEXT("⚠️ RegisterPlayerAccessory called but deprecated"));
 }
 
 void AMVE_GM_StageLevel::PostLogin(APlayerController* NewPlayer)
@@ -401,25 +381,13 @@ void AMVE_GM_StageLevel::PostLogin(APlayerController* NewPlayer)
 	Super::PostLogin(NewPlayer);
 
 	if (!HasAuthority()) return;
-	
-	// RPC 전송을 위해 TMap → TArray 변환
+
 	PRINTLOG(TEXT("=== PostLogin called ==="));
 
-	// TMap을 TArray로 변환
-	TArray<FPlayerAccessoryInfo> AccessoryArray;
-	for (const auto& Pair : PlayerAccessories)
-	{
-		FPlayerAccessoryInfo Info(Pair.Key, Pair.Value);
-		AccessoryArray.Add(Info);
-	}
-	
-	// 신규 입장자에게 기존 참여자들의 액세서리 정보 전송
-	AMVE_PC_StageLevel* PC = Cast<AMVE_PC_StageLevel>(NewPlayer);
-	if (PC && AccessoryArray.Num() > 0)
-	{
-		PRINTLOG(TEXT("Sending %d existing accessories to new player"), AccessoryArray.Num());
-		PC->ClientRPC_ReceiveExistingAccessories(AccessoryArray);
-	}
+	// ⚠️ 액세서리 동기화 시스템이 변경됨
+	// 이제 GameState에서 직접 Multicast RPC를 통해 동기화되므로
+	// 신규 입장자는 자동으로 모든 클라이언트의 액세서리를 받게 됨
+	// (PostLogin에서 별도로 전송할 필요 없음)
 }
 
 // 플래시 눈부심 효과 적용 여부 제어

@@ -270,9 +270,12 @@ void UMVE_AUD_WidgetClass_GenerateMesh::OnHeadButtonClicked()
 
 void UMVE_AUD_WidgetClass_GenerateMesh::OnSaveButtonClicked()
 {
+	UE_LOG(LogMVE, Warning, TEXT("=== GenerateMesh Save Button Clicked ==="));
+
 	if (UMVE_AUD_CustomizationManager* CustomizationManager = GetGameInstance()->GetSubsystem<UMVE_AUD_CustomizationManager>())
 	{
 		// ⭐ PresetName 통일: "MyCustomization" 사용 (덮어쓰기 방식)
+		UE_LOG(LogMVE, Warning, TEXT("✅ Calling SaveAccessoryPresetToServer"));
 		CustomizationManager->SaveAccessoryPresetToServer(TEXT("MyCustomization"));
 	}
 }

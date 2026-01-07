@@ -11,6 +11,19 @@ struct FAssetMetadata;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnViewerCountChanged, int32, NewCount);
 
+// 액세서리 다운로드 대기 중인 데이터
+USTRUCT()
+struct FPendingAccessoryData
+{
+	GENERATED_BODY()
+
+	UPROPERTY()
+	FString UserID;
+
+	UPROPERTY()
+	FCustomizationData Data;
+};
+
 /**
  * StageLevel 전용 Game State
  */
@@ -53,7 +66,7 @@ protected:
 public:
 	// 모든 클라이언트에게 액세서리 정보 브로드캐스트
 	UFUNCTION(NetMulticast, Reliable)
-	void MulticastRPC_BroadcastAccessory(const FString& UserID, const FString& PresetJSON);
+	void MulticastRPC_BroadcastAccessory(const FString& UserID, const FCustomizationData& CustomizationData);
 
 	// UserID로 캐릭터 찾기
 	APawn* FindCharacterByUserID(const FString& UserID) const;
@@ -65,9 +78,9 @@ protected:
 
 private:
 	// 액세서리 다운로드 진행 중인 세션
-	// Key: UserID, Value: CustomizationData
+	// Key: AssetID (FGuid), Value: {UserID, CustomizationData}
 	UPROPERTY()
-	TMap<FString, FCustomizationData> PendingAccessories;
+	TMap<FGuid, FPendingAccessoryData> PendingAccessories;
 
 	// UserID별 던지기 메시 저장
 	// Key: UserID, Value: ThrowMesh
