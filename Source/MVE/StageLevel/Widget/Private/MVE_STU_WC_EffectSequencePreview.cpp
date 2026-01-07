@@ -99,7 +99,7 @@ void UMVE_STU_WC_EffectSequencePreview::HideErrorText()
 {
 	LoadingOverlay->SetVisibility(ESlateVisibility::Collapsed);
 	LoadingBackgroundImage->SetVisibility(ESlateVisibility::Collapsed);
-	LoadingBackgroundImage->SetVisibility(ESlateVisibility::Collapsed);
+	ErrorText->SetVisibility(ESlateVisibility::Collapsed);
 }
 
 void UMVE_STU_WC_EffectSequencePreview::SetSequenceData(const TArray<FEffectSequenceData>& SequenceData, int32 TotalDuration)
