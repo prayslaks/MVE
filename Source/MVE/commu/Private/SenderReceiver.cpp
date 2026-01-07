@@ -847,11 +847,15 @@ void USenderReceiver::HandleBatchMusicAnalysisResponse(
     // 응답 유효성 검사
     // ------------------------------------------------------------------------
 
+    TArray<FEffectSequenceData> SequenceDataArray;
+
     if (!bWasSuccessful || !Response.IsValid())
     {
         AnalyzeConnectionError(Response, bWasSuccessful);
 
         UE_LOG(LogMVE, Error, TEXT("  [상태] ✗ HTTP 요청 실패 - 연결 오류"));
+        OnMusicAnalysisComplete.Broadcast(false, SequenceDataArray,
+                FString::Printf(TEXT("HTTP 요청 실패 - 연결 오류: %d"), 1));
         return;
     }
 
@@ -871,10 +875,14 @@ void USenderReceiver::HandleBatchMusicAnalysisResponse(
         if (ResponseCode >= 400 && ResponseCode < 500)
         {
             UE_LOG(LogMVE, Error, TEXT("  [상태] ✗ 클라이언트 에러 (%d)"), ResponseCode);
+            OnMusicAnalysisComplete.Broadcast(false, SequenceDataArray,
+                FString::Printf(TEXT("클라이언트 에러: %d"), ResponseCode));
         }
         else if (ResponseCode >= 500)
         {
             UE_LOG(LogMVE, Error, TEXT("  [상태] ✗ 서버 에러 (%d)"), ResponseCode);
+            OnMusicAnalysisComplete.Broadcast(false, SequenceDataArray,
+                FString::Printf(TEXT("서버 에러: %d"), ResponseCode));
         }
         return;
     }
@@ -893,6 +901,8 @@ void USenderReceiver::HandleBatchMusicAnalysisResponse(
     if (!FJsonSerializer::Deserialize(Reader, ResultsArray))
     {
         UE_LOG(LogMVE, Error, TEXT("  [상태] ✗ JSON 배열 파싱 실패"));
+        OnMusicAnalysisComplete.Broadcast(false, SequenceDataArray,
+                FString::Printf(TEXT("JSON 배열 파싱 실패: %d"), ResponseCode));
         return;
     }
 
@@ -932,9 +942,6 @@ void USenderReceiver::HandleBatchMusicAnalysisResponse(
         }
 
         UE_LOG(LogMVE, Log, TEXT("  [분석 결과] %d개 이펙트"), TimelineArray->Num());
-
-        // FEffectSequenceData 배열 생성
-        TArray<FEffectSequenceData> SequenceDataArray;
 
         for (const TSharedPtr<FJsonValue>& EffectValue : *TimelineArray)
         {
