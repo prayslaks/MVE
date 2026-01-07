@@ -5,7 +5,6 @@
 #include "MVE.h"
 #include "MVE_AUD_CustomizationManager.h"
 #include "MVE_AUD_WidgetClass_PreviewWidget.h"
-#include "MVE_GIS_SessionManager.h"
 #include "MVE_HTTP_Client.h"
 #include "SenderReceiver.h"
 #include "UIManagerSubsystem.h"
@@ -135,15 +134,15 @@ void UMVE_AUD_WidgetClass_GenerateMesh::OnSendPromptButtonClicked()
 	}
 	
 	// 테스트 변수 획득
-	bool CVarTestMode = false;
+	bool bTestMode = false;
 	if (const IConsoleVariable* CVar = IConsoleManager::Get().FindConsoleVariable(TEXT("myproject.TestMode")))
 	{
-		CVarTestMode = CVar->GetBool();
-		GEngine->AddOnScreenDebugMessage(0, 5, FColor::Red, CVarTestMode ? TEXT("true") : TEXT("false"));
+		bTestMode = CVar->GetBool();
+		GEngine->AddOnScreenDebugMessage(0, 5, FColor::Red, bTestMode ? TEXT("true") : TEXT("false"));
 	}
 
 	// 테스트 모드: 중계 서버에서 model id로 presigned URL 받아오기
-	if (CVarTestMode)
+	if (bTestMode)
 	{
 		UE_LOG(LogMVE, Log, TEXT("[GenerateMesh] 테스트 모드: Model ID %d로 presigned URL 요청"), TestModelId);
 		SetStatus(FString::Printf(TEXT("Model ID %d의 다운로드 URL 요청 중..."), TestModelId));
@@ -164,7 +163,7 @@ void UMVE_AUD_WidgetClass_GenerateMesh::OnSendPromptButtonClicked()
 			return;
 		}
 
-		FString PromptText = PromptEditableBox->GetText().ToString();
+		const FString PromptText = PromptEditableBox->GetText().ToString();
 	
 		if (PromptText.IsEmpty())
 		{
