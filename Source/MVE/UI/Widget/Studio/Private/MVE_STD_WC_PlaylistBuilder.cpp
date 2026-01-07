@@ -93,7 +93,7 @@ void UMVE_STD_WC_PlaylistBuilder::OnSearchTextChanged(const FText& Text)
 void UMVE_STD_WC_PlaylistBuilder::OnAnalyzePlaylistClicked()
 {
 	PRINTLOG(TEXT("AI 분석 시작 버튼 클릭됨!"));
-
+	
 	// 재생목록이 비어있는지 확인
 	if (Playlist.Num() == 0)
 	{
@@ -102,7 +102,7 @@ void UMVE_STD_WC_PlaylistBuilder::OnAnalyzePlaylistClicked()
 	}
 
 	PRINTLOG(TEXT("📤 재생목록 전체 분석 요청 - %d곡"), Playlist.Num());
-
+	
 	OnBatchAnalyzeRequested.Broadcast();
 }
 

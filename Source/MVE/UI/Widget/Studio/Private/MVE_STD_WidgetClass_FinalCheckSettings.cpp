@@ -206,8 +206,10 @@ void UMVE_STD_WidgetClass_FinalCheckSettings::OnBatchAnalyzeRequested()
 		return;
 	}
 
-	TArray<FAudioFile> Playlist = PlaylistBuilderWidget->GetPlaylist();
+	EffectSequencePreviewWidget->HideErrorText();
 
+	TArray<FAudioFile> Playlist = PlaylistBuilderWidget->GetPlaylist();
+	
 	if (Playlist.Num() == 0)
 	{
 		PRINTLOG(TEXT("❌ 재생목록이 비어있습니다"));
@@ -301,5 +303,7 @@ void UMVE_STD_WidgetClass_FinalCheckSettings::OnMusicAnalysisReceived(const bool
 	else
 	{
 		PRINTLOG(TEXT("❌ 음악 분석 실패: %s"), *ErrorMessage);
+		EffectSequencePreviewWidget->StopLoadingAnimation();
+		EffectSequencePreviewWidget->ShowErrorText();
 	}
 }

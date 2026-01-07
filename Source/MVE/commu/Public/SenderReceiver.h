@@ -62,7 +62,7 @@ public:
     // ComfyUI 서버 URL (메시 생성용)
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GenAI|Config")
     FString ComfyUIServerURL = TEXT("http://172.16.100.123:8001");
-
+	
     // 음악 분석 서버 URL
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GenAI|Config")
     FString MusicAnalysisServerURL = TEXT("http://ec2-13-125-244-186.ap-northeast-2.compute.amazonaws.com");

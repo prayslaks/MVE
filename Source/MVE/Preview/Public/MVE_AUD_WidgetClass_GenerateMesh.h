@@ -142,6 +142,12 @@ public:
 	UPROPERTY(meta=(BindWidgetOptional))
 	TObjectPtr<UOverlay> LoadingOverlay;
 
+	UPROPERTY(meta=(BindWidgetOptional))
+	TObjectPtr<UTextBlock> ErrorText;
+
+	void ShowErrorText();
+	void HideErrorText();
+
 	/** 로딩 애니메이션 프레임 (GIF를 여러 PNG로 나눠서 배열로 저장) */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Loading Animation")
 	TArray<TObjectPtr<UTexture2D>> LoadingFrames;

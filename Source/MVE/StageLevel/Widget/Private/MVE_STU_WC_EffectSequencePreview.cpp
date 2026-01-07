@@ -88,6 +88,20 @@ void UMVE_STU_WC_EffectSequencePreview::NativeDestruct()
 	ClearEffectIcons();
 }
 
+void UMVE_STU_WC_EffectSequencePreview::ShowErrorText()
+{
+	LoadingOverlay->SetVisibility(ESlateVisibility::Visible);
+	LoadingBackgroundImage->SetVisibility(ESlateVisibility::Visible);
+	ErrorText->SetVisibility(ESlateVisibility::Visible);
+}
+
+void UMVE_STU_WC_EffectSequencePreview::HideErrorText()
+{
+	LoadingOverlay->SetVisibility(ESlateVisibility::Collapsed);
+	LoadingBackgroundImage->SetVisibility(ESlateVisibility::Collapsed);
+	LoadingBackgroundImage->SetVisibility(ESlateVisibility::Collapsed);
+}
+
 void UMVE_STU_WC_EffectSequencePreview::SetSequenceData(const TArray<FEffectSequenceData>& SequenceData, int32 TotalDuration)
 {
 	SequenceDataArray = SequenceData;

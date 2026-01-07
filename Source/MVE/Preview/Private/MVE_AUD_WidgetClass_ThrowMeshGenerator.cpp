@@ -69,6 +69,7 @@ void UMVE_AUD_WidgetClass_ThrowMeshGenerator::NativeConstruct()
 			UE_LOG(LogMVE, Log, TEXT("[ThrowMeshGenerator] OnModelGenerationComplete received - Success: %s, RemoteURL: %s"),
 				bSuccess ? TEXT("Yes") : TEXT("No"), *RemoteURL);
 			StopLoadingAnimation();
+			SetButtonsEnabled(true);
 
 			if (bSuccess)
 			{
@@ -85,7 +86,7 @@ void UMVE_AUD_WidgetClass_ThrowMeshGenerator::NativeConstruct()
 			else
 			{
 				SetStatus(TEXT("던지기 메시 생성 실패"));
-				SetButtonsEnabled(true);
+				ShowErrorText();
 			}
 		});
 
@@ -115,6 +116,7 @@ void UMVE_AUD_WidgetClass_ThrowMeshGenerator::NativeDestruct()
 void UMVE_AUD_WidgetClass_ThrowMeshGenerator::OnSendPromptButtonClicked()
 {
 	UE_LOG(LogMVE, Log, TEXT("[ThrowMeshGenerator] 전송 버튼 클릭"));
+	HideErrorText();
 
 	// CustomizationManager에서 이미지 경로 가져오기
 	UMVE_AUD_CustomizationManager* CustomizationManager =
@@ -541,6 +543,20 @@ void UMVE_AUD_WidgetClass_ThrowMeshGenerator::HandleGetModelDownloadUrl(bool bSu
 }
 
 // ========== 로딩 애니메이션 ==========
+
+void UMVE_AUD_WidgetClass_ThrowMeshGenerator::ShowErrorText()
+{
+	LoadingOverlay->SetVisibility(ESlateVisibility::Visible);
+	LoadingBackgroundImage->SetVisibility(ESlateVisibility::Visible);
+	ErrorText->SetVisibility(ESlateVisibility::Visible);
+}
+
+void UMVE_AUD_WidgetClass_ThrowMeshGenerator::HideErrorText()
+{
+	LoadingOverlay->SetVisibility(ESlateVisibility::Collapsed);
+	LoadingBackgroundImage->SetVisibility(ESlateVisibility::Collapsed);
+	LoadingBackgroundImage->SetVisibility(ESlateVisibility::Collapsed);
+}
 
 void UMVE_AUD_WidgetClass_ThrowMeshGenerator::StartLoadingAnimation()
 {

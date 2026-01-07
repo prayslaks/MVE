@@ -81,6 +81,7 @@ void UMVE_AUD_WidgetClass_GenerateMesh::NativeConstruct()
 			UE_LOG(LogMVE, Log, TEXT("[GenerateMesh] OnModelGenerationComplete received - Success: %s, RemoteURL: %s"),
 				bSuccess ? TEXT("Yes") : TEXT("No"), *RemoteURL);
 			StopLoadingAnimation();
+			SetButtonsEnabled(true);
 
 			if (bSuccess)
 			{
@@ -92,6 +93,7 @@ void UMVE_AUD_WidgetClass_GenerateMesh::NativeConstruct()
 			{
 				SetStatus(TEXT("모델 생성 실패"));
 				SetButtonsEnabled(true);
+				ShowErrorText();
 			}
 		});
 
@@ -121,6 +123,7 @@ void UMVE_AUD_WidgetClass_GenerateMesh::NativeDestruct()
 void UMVE_AUD_WidgetClass_GenerateMesh::OnSendPromptButtonClicked()
 {
 	UE_LOG(LogMVE, Log, TEXT("[GenerateMesh] 전송 버튼 클릭"));
+	HideErrorText();
 
 	// CustomizationManager에서 이미지 경로 가져오기
 	UMVE_AUD_CustomizationManager* CustomizationManager =
@@ -603,6 +606,20 @@ void UMVE_AUD_WidgetClass_GenerateMesh::HandleGetModelDownloadUrl(bool bSuccess,
 }
 
 // ========== 로딩 애니메이션 ==========
+
+void UMVE_AUD_WidgetClass_GenerateMesh::ShowErrorText()
+{
+	LoadingOverlay->SetVisibility(ESlateVisibility::Visible);
+	LoadingBackgroundImage->SetVisibility(ESlateVisibility::Visible);
+	ErrorText->SetVisibility(ESlateVisibility::Visible);
+}
+
+void UMVE_AUD_WidgetClass_GenerateMesh::HideErrorText()
+{
+	LoadingOverlay->SetVisibility(ESlateVisibility::Collapsed);
+	LoadingBackgroundImage->SetVisibility(ESlateVisibility::Collapsed);
+	LoadingBackgroundImage->SetVisibility(ESlateVisibility::Collapsed);
+}
 
 void UMVE_AUD_WidgetClass_GenerateMesh::StartLoadingAnimation()
 {

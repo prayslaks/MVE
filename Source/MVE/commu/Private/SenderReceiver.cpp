@@ -416,6 +416,8 @@ void USenderReceiver::SendBatchMusicAnalysisRequest(const TArray<FAudioFile>& Au
     if (AudioFiles.Num() == 0)
     {
         UE_LOG(LogMVE, Error, TEXT("  [상태] ✗ 분석할 음악이 없습니다"));
+        TArray<FEffectSequenceData> EmptyArray;
+        OnMusicAnalysisComplete.Broadcast(false, EmptyArray, TEXT("전송 실패"));
         return;
     }
 
@@ -465,6 +467,8 @@ void USenderReceiver::SendBatchMusicAnalysisRequest(const TArray<FAudioFile>& Au
     else
     {
         UE_LOG(LogMVE, Error, TEXT("  [상태] ✗ JSON 직렬화 실패"));
+        TArray<FEffectSequenceData> EmptyArray;
+        OnMusicAnalysisComplete.Broadcast(false, EmptyArray, TEXT("실패"));
         return;
     }
 
@@ -484,6 +488,8 @@ void USenderReceiver::SendBatchMusicAnalysisRequest(const TArray<FAudioFile>& Au
     else
     {
         UE_LOG(LogMVE, Error, TEXT("  [상태] ✗ 배치 요청 전송 실패"));
+        TArray<FEffectSequenceData> EmptyArray;
+        OnMusicAnalysisComplete.Broadcast(false, EmptyArray, TEXT("전송 실패"));
     }
 
     UE_LOG(LogMVE, Log, TEXT(""));

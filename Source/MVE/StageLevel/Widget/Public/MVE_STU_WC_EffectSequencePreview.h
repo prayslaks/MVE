@@ -148,6 +148,15 @@ protected:
 	UPROPERTY(meta=(BindWidgetOptional))
 	TObjectPtr<UOverlay> LoadingOverlay;
 
+	UPROPERTY(meta=(BindWidgetOptional))
+	TObjectPtr<UTextBlock> ErrorText;
+
+public:
+	void ShowErrorText();
+	void HideErrorText();
+
+protected:
+
 	/** 재생/일시정지 버튼 */
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UButton> PlayButton;

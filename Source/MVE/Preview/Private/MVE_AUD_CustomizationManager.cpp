@@ -215,6 +215,10 @@ void UMVE_AUD_CustomizationManager::OnGenerateModelComplete(bool bSuccess, const
 		PRINTLOG(TEXT("❌ Model generation request failed"));
 		PRINTLOG(TEXT("   Error Code: %s"), *ErrorCode);
 		PRINTLOG(TEXT("   Message: %s"), *ResponseData.Message);
+
+		// ⭐ 실패 시에도 델리게이트 발동 (위젯이 로딩 중지할 수 있게)
+		OnModelGenerationComplete.Broadcast(false, TEXT(""));
+		PRINTLOG(TEXT("✅ Broadcast OnModelGenerationComplete with failure"));
 	}
 }
 
