@@ -154,7 +154,7 @@ void UMVE_AUD_WidgetClass_GenerateMesh::OnSendPromptButtonClicked()
 		FOnGetModelDownloadUrlComplete OnComplete;
 		OnComplete.BindUObject(this, &UMVE_AUD_WidgetClass_GenerateMesh::HandleGetModelDownloadUrl);
 		UMVE_API_Helper::GetModelDownloadUrl(TestModelId, OnComplete);
-	}
+	} 
 	else
 	{
 		// 입력값 검증
