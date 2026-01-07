@@ -618,7 +618,7 @@ void UMVE_AUD_WidgetClass_GenerateMesh::HideErrorText()
 {
 	LoadingOverlay->SetVisibility(ESlateVisibility::Collapsed);
 	LoadingBackgroundImage->SetVisibility(ESlateVisibility::Collapsed);
-	LoadingBackgroundImage->SetVisibility(ESlateVisibility::Collapsed);
+	ErrorText->SetVisibility(ESlateVisibility::Collapsed);
 }
 
 void UMVE_AUD_WidgetClass_GenerateMesh::StartLoadingAnimation()
