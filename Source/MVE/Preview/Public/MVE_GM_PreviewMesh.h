@@ -20,7 +20,7 @@ public:
 
 	// 프리뷰용 캐릭터 스폰 위치
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Preview")
-	FVector CharacterSpawnLocation = FVector(0.0f, 0.0f, 0.0f);
+	FVector CharacterSpawnLocation = FVector(0.0f, 0.0f, 50.0f);
 
 	// 프리뷰용 캐릭터 클래스
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Preview")

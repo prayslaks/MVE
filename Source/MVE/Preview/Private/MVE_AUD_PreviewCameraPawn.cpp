@@ -112,7 +112,7 @@ void AMVE_AUD_PreviewCameraPawn::SetTargetActor(AActor* InTargetActor)
 	{
 		// Pawn을 타겟 위치로 이동
 		FVector TargetLocation = TargetActor->GetActorLocation();
-		TargetLocation.Z += 50.0f;  // 캐릭터 중심보다 약간 위
+		//TargetLocation.Z += 50.0f;  // 캐릭터 중심보다 약간 위
 		SetActorLocation(TargetLocation);
 
 		// 현재 캐릭터의 Yaw 값을 저장
