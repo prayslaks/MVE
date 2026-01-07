@@ -134,7 +134,7 @@ public:
     // ================================================================================================
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "STT|Config")    
-    FString WebSocketURL = TEXT("ws://172.16.100.52:8001/ws");
+    FString WebSocketURL = TEXT("ws://172.16.100.41:8001/ws");
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "STT|Config")
     int32 SampleRate = 48000;
