@@ -20,9 +20,6 @@ class MVE_API UMVE_AUD_WidgetClass_GenerateMesh : public UUserWidget
 	GENERATED_BODY()
 
 public:
-	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly)
-	bool bTestMode = false;
-
 	// 테스트 모드용 Model ID (중계 서버에서 presigned URL 받아오기)
 	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly)
 	int32 TestModelId = 18;
