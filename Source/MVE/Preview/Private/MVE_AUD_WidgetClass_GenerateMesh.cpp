@@ -707,6 +707,13 @@ void UMVE_AUD_WidgetClass_GenerateMesh::StopLoadingAnimation()
 		LoadingAudioComponent->Stop();
 		PRINTLOG(TEXT("✅ Loading sound stopped"));
 	}
+
+	// ⭐ 로딩 완료 사운드 재생
+	if (LoadingEndSound)
+	{
+		UGameplayStatics::PlaySound2D(GetWorld(), LoadingEndSound);
+		PRINTLOG(TEXT("✅ Loading end sound played"));
+	}
 }
 
 void UMVE_AUD_WidgetClass_GenerateMesh::UpdateLoadingFrame()

@@ -208,6 +208,10 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Effect Preview|Loading")
 	TObjectPtr<USoundBase> LoadingLoopSound;
 
+	/** 로딩 완료 시 재생할 사운드 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Effect Preview|Loading")
+	TObjectPtr<USoundBase> LoadingEndSound;
+
 
 
 private:

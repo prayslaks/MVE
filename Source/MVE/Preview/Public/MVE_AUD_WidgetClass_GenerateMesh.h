@@ -158,6 +158,10 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Loading Animation")
 	TObjectPtr<USoundBase> LoadingLoopSound;
 
+	/** 로딩 완료 시 재생할 사운드 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Loading Animation")
+	TObjectPtr<USoundBase> LoadingEndSound;
+
 	/**
 	 * 로딩 애니메이션 시작 (AI 서버 응답 대기 중 표시)
 	 */
