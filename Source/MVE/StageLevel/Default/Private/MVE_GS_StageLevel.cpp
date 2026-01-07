@@ -211,9 +211,10 @@ void AMVE_GS_StageLevel::ApplyAccessoryToCharacter(const FString& UserID, UObjec
 		UStaticMesh* ThrowMesh = Cast<UStaticMesh>(Asset);
 		if (ThrowMesh)
 		{
-			// ⭐ GameState에 UserID별로 저장
+			// ⭐ GameState에 UserID별로 저장 (메시 + Scale)
 			UserThrowMeshes.Add(UserID, ThrowMesh);
-			PRINTLOG(TEXT("✅ Throw mesh stored for UserID: %s"), *UserID);
+			UserThrowMeshScales.Add(UserID, Data.RelativeScale);
+			PRINTLOG(TEXT("✅ Throw mesh stored for UserID: %s (Scale: %.2f)"), *UserID, Data.RelativeScale);
 
 			// ⭐ 로컬 플레이어의 CustomizationManager에도 저장 (자신이 던질 때 사용)
 			if (UGameInstance* GameInstance = GetWorld()->GetGameInstance())
@@ -321,4 +322,11 @@ UStaticMesh* AMVE_GS_StageLevel::GetThrowMeshForUser(const FString& UserID) cons
 {
 	// FindRef는 키가 없으면 nullptr 반환
 	return UserThrowMeshes.FindRef(UserID);
+}
+
+float AMVE_GS_StageLevel::GetThrowMeshScaleForUser(const FString& UserID) const
+{
+	// FindRef는 키가 없으면 0.0f 반환 (기본값)
+	const float* Scale = UserThrowMeshScales.Find(UserID);
+	return Scale ? *Scale : 1.0f;  // 없으면 기본 Scale 1.0 반환
 }

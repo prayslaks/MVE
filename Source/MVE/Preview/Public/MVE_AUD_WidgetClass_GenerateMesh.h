@@ -153,6 +153,14 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Loading Animation")
 	float LoadingFrameRate = 0.1f;
 
+	/** 로딩 시작 시 재생할 사운드 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Loading Animation")
+	TObjectPtr<USoundBase> LoadingStartSound;
+
+	/** 로딩 중 반복 재생할 배경 음악 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Loading Animation")
+	TObjectPtr<USoundBase> LoadingLoopSound;
+
 	/**
 	 * 로딩 애니메이션 시작 (AI 서버 응답 대기 중 표시)
 	 */
@@ -177,5 +185,9 @@ private:
 
 	/** 로딩 애니메이션 프레임 업데이트 */
 	void UpdateLoadingFrame();
+
+	/** 로딩 배경음악 오디오 컴포넌트 */
+	UPROPERTY()
+	TObjectPtr<class UAudioComponent> LoadingAudioComponent;
 };
 

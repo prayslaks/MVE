@@ -13,6 +13,7 @@
 #include "Components/AudioComponent.h"
 #include "Engine/TextureRenderTarget2D.h"
 #include "Sound/SoundWave.h"
+#include "Sound/SoundBase.h"
 #include "Kismet/GameplayStatics.h"
 #include "glTFRuntimeFunctionLibrary.h"
 #include "glTFRuntimeAudioFunctionLibrary.h"
@@ -885,6 +886,24 @@ void UMVE_STU_WC_EffectSequencePreview::StartLoadingAnimation()
 	{
 		PRINTLOG(TEXT("❌ GetWorld() 실패 - 타이머 설정 불가"));
 	}
+
+	// ⭐ 사운드 재생
+	if (LoadingStartSound)
+	{
+		UGameplayStatics::PlaySound2D(this, LoadingStartSound);
+		PRINTLOG(TEXT("✅ Loading start sound played"));
+	}
+
+	if (LoadingLoopSound)
+	{
+		LoadingAudioComponent = UGameplayStatics::CreateSound2D(this, LoadingLoopSound);
+		if (LoadingAudioComponent)
+		{
+			LoadingAudioComponent->SetSound(LoadingLoopSound);
+			LoadingAudioComponent->Play();
+			PRINTLOG(TEXT("✅ Loading loop sound started (looping enabled)"));
+		}
+	}
 }
 
 void UMVE_STU_WC_EffectSequencePreview::StopLoadingAnimation()
@@ -911,6 +930,13 @@ void UMVE_STU_WC_EffectSequencePreview::StopLoadingAnimation()
 		LoadingOverlayImage->SetVisibility(ESlateVisibility::Collapsed);
 		LoadingBackgroundImage->SetVisibility(ESlateVisibility::Collapsed);
 		LoadingOverlay->SetVisibility(ESlateVisibility::Collapsed);
+	}
+
+	// ⭐ 사운드 중지
+	if (LoadingAudioComponent && LoadingAudioComponent->IsPlaying())
+	{
+		LoadingAudioComponent->Stop();
+		PRINTLOG(TEXT("✅ Loading sound stopped"));
 	}
 }
 

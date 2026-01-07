@@ -88,10 +88,14 @@ FString UMVE_AUD_CustomizationManager::OpenReferenceImageDialog()
 	return TEXT("");
 }
 
-void UMVE_AUD_CustomizationManager::RequestModelGeneration(const FString& PromptText, const FString& ImagePath)
+void UMVE_AUD_CustomizationManager::RequestModelGeneration(const FString& PromptText, const FString& ImagePath, bool bIsThrowMesh)
 {
 	PRINTLOG(TEXT("=== RequestModelGeneration ==="));
 	PRINTLOG(TEXT("Prompt: %s"), *PromptText);
+	PRINTLOG(TEXT("Is Throw Mesh: %s"), bIsThrowMesh ? TEXT("Yes") : TEXT("No"));
+
+	// ⭐ 던지기 메시 플래그 저장
+	bCurrentGenerationIsThrowMesh = bIsThrowMesh;
 
 	// 프롬프트 검증
 	if (PromptText.IsEmpty())
@@ -306,22 +310,38 @@ void UMVE_AUD_CustomizationManager::OnGetModelStatusComplete(bool bSuccess, cons
 					// CurrentGLBFilePath에 저장
 					CurrentGLBFilePath = SavePath;
 
-					// 프리뷰 시작
+					// ⭐ 프리뷰 시작 (던지기 메시 여부에 따라 다른 함수 호출)
 					if (MeshPreviewWidget)
 					{
-						StartMeshPreview(SavePath, MeshPreviewWidget);
+						if (bCurrentGenerationIsThrowMesh)
+						{
+							// 던지기 메시용 프리뷰 (ThrowMeshPreviewWidget 사용)
+							UMVE_AUD_WidgetClass_PreviewWidget* PreviewWidget =
+								Cast<UMVE_AUD_WidgetClass_PreviewWidget>(MeshPreviewWidget);
+							if (PreviewWidget)
+							{
+								StartThrowMeshPreview(SavePath, PreviewWidget);
+								PRINTLOG(TEXT("✅ StartThrowMeshPreview called for throw mesh"));
+							}
+						}
+						else
+						{
+							// 액세서리용 프리뷰
+							StartMeshPreview(SavePath, MeshPreviewWidget);
+							PRINTLOG(TEXT("✅ StartMeshPreview called for accessory"));
+						}
 					}
 
 					// 모델 생성 완료 델리게이트 브로드캐스트 (UI 업데이트용)
-					OnModelGenerationComplete.Broadcast(true);
-					PRINTLOG(TEXT("✅ OnModelGenerationComplete broadcast (success)"));
+					OnModelGenerationComplete.Broadcast(true, CurrentRemoteURL);
+					PRINTLOG(TEXT("✅ OnModelGenerationComplete broadcast (success, RemoteURL: %s)"), *CurrentRemoteURL);
 				}
 				else
 				{
 					PRINTLOG(TEXT("❌ Failed to save file: %s"), *SavePath);
 
 					// 실패 델리게이트 브로드캐스트
-					OnModelGenerationComplete.Broadcast(false);
+					OnModelGenerationComplete.Broadcast(false, TEXT(""));
 					PRINTLOG(TEXT("❌ OnModelGenerationComplete broadcast (failed - save error)"));
 				}
 			}
@@ -330,7 +350,7 @@ void UMVE_AUD_CustomizationManager::OnGetModelStatusComplete(bool bSuccess, cons
 				PRINTLOG(TEXT("❌ Model download failed: %s"), *ErrorMessage);
 
 				// 실패 델리게이트 브로드캐스트
-				OnModelGenerationComplete.Broadcast(false);
+				OnModelGenerationComplete.Broadcast(false, TEXT(""));
 				PRINTLOG(TEXT("❌ OnModelGenerationComplete broadcast (failed - download error)"));
 			}
 		});
@@ -351,7 +371,7 @@ void UMVE_AUD_CustomizationManager::OnGetModelStatusComplete(bool bSuccess, cons
 		}
 
 		// 실패 델리게이트 브로드캐스트
-		OnModelGenerationComplete.Broadcast(false);
+		OnModelGenerationComplete.Broadcast(false, TEXT(""));
 		PRINTLOG(TEXT("❌ OnModelGenerationComplete broadcast (failed - generation error)"));
 	}
 	else if (JobStatus.Status.Equals(TEXT("pending"), ESearchCase::IgnoreCase) ||
@@ -510,7 +530,7 @@ void UMVE_AUD_CustomizationManager::AttachMeshToSocket(const FName& SocketName)
 
         PRINTLOG(TEXT("✅ Accessory attached to socket: %s"), *SocketName.ToString());
 
-    	//ScaleMeshToCharacter();
+    	ScaleMeshToCharacter();
     }
     else
     {
@@ -1575,8 +1595,14 @@ void UMVE_AUD_CustomizationManager::OnThrowMeshLoaded(AActor* LoadedActor)
 	ThrowPreviewedMesh = LoadedActor;
 	PRINTLOG(TEXT("✅ Throw mesh actor loaded"));
 
-	FVector MeshLocation = ThrowPreviewedMesh->GetActorLocation();
-	PRINTLOG(TEXT("✅ Mesh location: %s"), *MeshLocation.ToString());
+	// ⭐ 던지기 메시 배치 (화면 밖 - 액세서리 및 캐릭터와 겹치지 않는 위치)
+	// 액세서리: (-10000, 10000, 0)
+	// 캐릭터 프리뷰: (-10000, 0, 0)
+	// 던지기 메시: (-10000, -10000, 0) ← 새로운 위치
+	FVector MeshLocation = FVector(-10000, -10000, 0);
+	ThrowPreviewedMesh->SetActorLocation(MeshLocation);
+	ThrowPreviewedMesh->SetActorRotation(FRotator::ZeroRotator);
+	PRINTLOG(TEXT("✅ Throw mesh positioned at: %s"), *MeshLocation.ToString());
 
 	ThrowMeshCaptureActor->SetCaptureTarget(ThrowPreviewedMesh);
 	PRINTLOG(TEXT("✅ Capture target set"));
@@ -1660,7 +1686,7 @@ void UMVE_AUD_CustomizationManager::SaveThrowMeshPreset(const FString& ModelUrl)
 	SavedThrowMeshData.ModelUrl = ModelUrl;
 	SavedThrowMeshData.RelativeLocation = FVector::ZeroVector;
 	SavedThrowMeshData.RelativeRotation = FRotator::ZeroRotator;
-	SavedThrowMeshData.RelativeScale = 1.0f;
+	SavedThrowMeshData.RelativeScale = 0.5f;
 
 	PRINTLOG(TEXT("✅ Throw mesh data saved to SavedThrowMeshData"));
 

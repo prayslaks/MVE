@@ -19,6 +19,9 @@
 #include "Misc/FileHelper.h"
 #include "Misc/Paths.h"
 #include "TimerManager.h"
+#include "Kismet/GameplayStatics.h"
+#include "Components/AudioComponent.h"
+#include "Sound/SoundBase.h"
 
 void UMVE_AUD_WidgetClass_GenerateMesh::NativeConstruct()
 {
@@ -74,13 +77,16 @@ void UMVE_AUD_WidgetClass_GenerateMesh::NativeConstruct()
 	// CustomizationManager 델리게이트 바인딩 (모델 생성 완료 시 로딩 애니메이션 중지)
 	if (UMVE_AUD_CustomizationManager* CustomizationManager = GetGameInstance()->GetSubsystem<UMVE_AUD_CustomizationManager>())
 	{
-		CustomizationManager->OnModelGenerationComplete.AddLambda([this](bool bSuccess)
+		CustomizationManager->OnModelGenerationComplete.AddLambda([this](bool bSuccess, const FString& RemoteURL)
 		{
-			UE_LOG(LogMVE, Log, TEXT("[GenerateMesh] OnModelGenerationComplete received - Success: %s"), bSuccess ? TEXT("Yes") : TEXT("No"));
+			UE_LOG(LogMVE, Log, TEXT("[GenerateMesh] OnModelGenerationComplete received - Success: %s, RemoteURL: %s"),
+				bSuccess ? TEXT("Yes") : TEXT("No"), *RemoteURL);
 			StopLoadingAnimation();
 
 			if (bSuccess)
 			{
+				// ⭐ RemoteURL 저장 (Save 버튼용) - 액세서리용이므로 필요시 사용
+				// LastReceivedMetadata.RemotePath = RemoteURL;
 				SetStatus(TEXT("모델 생성 완료!"));
 			}
 			else
@@ -647,6 +653,25 @@ void UMVE_AUD_WidgetClass_GenerateMesh::StartLoadingAnimation()
 		);
 		PRINTLOG(TEXT("✅ 로딩 애니메이션 타이머 시작"));
 	}
+
+	// ⭐ 사운드 재생
+	if (LoadingStartSound)
+	{
+		UGameplayStatics::PlaySound2D(this, LoadingStartSound);
+		PRINTLOG(TEXT("✅ Loading start sound played"));
+	}
+
+	if (LoadingLoopSound)
+	{
+		LoadingAudioComponent = UGameplayStatics::CreateSound2D(this, LoadingLoopSound);
+		if (LoadingAudioComponent)
+		{
+			//LoadingAudioComponent->bLooping = true;
+			LoadingAudioComponent->SetVolumeMultiplier(1.0f);
+			LoadingAudioComponent->Play();
+			PRINTLOG(TEXT("✅ Loading loop sound started (looping enabled)"));
+		}
+	}
 }
 
 void UMVE_AUD_WidgetClass_GenerateMesh::StopLoadingAnimation()
@@ -672,6 +697,13 @@ void UMVE_AUD_WidgetClass_GenerateMesh::StopLoadingAnimation()
 		LoadingOverlayImage->SetVisibility(ESlateVisibility::Collapsed);
 		LoadingBackgroundImage->SetVisibility(ESlateVisibility::Collapsed);
 		LoadingOverlay->SetVisibility(ESlateVisibility::Collapsed);
+	}
+
+	// ⭐ 사운드 중지
+	if (LoadingAudioComponent && LoadingAudioComponent->IsPlaying())
+	{
+		LoadingAudioComponent->Stop();
+		PRINTLOG(TEXT("✅ Loading sound stopped"));
 	}
 }
 
