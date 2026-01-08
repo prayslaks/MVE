@@ -134,7 +134,7 @@ public:
     // ================================================================================================
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "STT|Config")    
-    FString WebSocketURL = TEXT("ws://172.16.100.41:8001/ws");
+    FString WebSocketURL = TEXT("ws://172.16.100.57:8001/ws");
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "STT|Config")
     int32 SampleRate = 48000;
@@ -149,13 +149,13 @@ public:
     bool bUseAutoNormalization = true;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "STT|Config", meta = (ClampMin = "0.1", ClampMax = "1.0"))
-    float TargetRMS = 0.005f;
+    float TargetRMS = 0.003f;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "STT|Config")
     bool bUsePeakNormalization = true;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "STT|Config", meta = (ClampMin = "0.0", ClampMax = "0.1"))
-    float NoiseGateThreshold = 0.001f;
+    float NoiseGateThreshold = 0.005f;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "STT|Config")
     TMap<FString, FGameplayTag> KeywordTagMap;
