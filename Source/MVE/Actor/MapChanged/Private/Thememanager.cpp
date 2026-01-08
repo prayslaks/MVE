@@ -2,6 +2,8 @@
 
 #include "ThemeManager.h"
 #include "Net/UnrealNetwork.h"
+#include "Components/InputComponent.h"
+#include "InputCoreTypes.h"
 #include "Components/PrimitiveComponent.h"
 
 AThemeManager::AThemeManager()
@@ -29,6 +31,7 @@ void AThemeManager::BeginPlay()
     {
         InitializePool();
     }
+    SetupDebugInput();
 }
 
 void AThemeManager::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -447,8 +450,31 @@ void AThemeManager::CleanupPool()
     bPoolInitialized = false;
 }
 
-bool AThemeManager::HasClearKeyword(const FString& Text) const
+void AThemeManager::SetupDebugInput()
+{
+    APlayerController* PC = GetWorld()->GetFirstPlayerController();
+    if (PC)
     {
+        // 이 액터가 입력을 받을 수 있도록 활성화한다.
+        EnableInput(PC);
+
+        if (InputComponent)
+        {
+            // 숫자 1, 2, 3 키를 각 테마에 바인딩한다.
+            InputComponent->BindKey(EKeys::One, IE_Pressed, this, &AThemeManager::OnDebugKey_Theme1);
+            InputComponent->BindKey(EKeys::Two, IE_Pressed, this, &AThemeManager::OnDebugKey_Theme2);
+            InputComponent->BindKey(EKeys::Three, IE_Pressed, this, &AThemeManager::OnDebugKey_Theme3);
+
+            // 스페이스바를 누르면 다음 테마로 순환한다.
+            InputComponent->BindKey(EKeys::SpaceBar, IE_Pressed, this, &AThemeManager::OnDebugKey_Next);
+            
+            UE_LOG(LogTemp, Log, TEXT("ThemeManager: 디버그 키 바인딩 완료 (1, 2, 3, Space)"));
+        }
+    }
+}
+
+bool AThemeManager::HasClearKeyword(const FString& Text) const
+{
         for (const FString& Keyword : ClearKeywords)
         {
             if (Text.Contains(Keyword, ESearchCase::IgnoreCase))
@@ -457,5 +483,37 @@ bool AThemeManager::HasClearKeyword(const FString& Text) const
             }
         }
         return false;
-    }
+}
 
+void AThemeManager::OnDebugKey_Theme1()
+{
+    // 인덱스 0번 테마 활성화
+    UE_LOG(LogTemp, Log, TEXT("ThemeManager: [Debug] 1번 키 입력 -> 테마 0 전환 시도"));
+    ActivateTheme(0); 
+}
+
+void AThemeManager::OnDebugKey_Theme2()
+{
+    // 인덱스 1번 테마 활성화
+    UE_LOG(LogTemp, Log, TEXT("ThemeManager: [Debug] 2번 키 입력 -> 테마 1 전환 시도"));
+    ActivateTheme(1);
+}
+
+void AThemeManager::OnDebugKey_Theme3()
+{
+    // 인덱스 2번 테마 활성화
+    UE_LOG(LogTemp, Log, TEXT("ThemeManager: [Debug] 3번 키 입력 -> 테마 2 전환 시도"));
+    ActivateTheme(2);
+}
+
+void AThemeManager::OnDebugKey_Next()
+{
+    // 현재 테마 다음 번호로 순환 (토글 기능)
+    int32 NextIndex = (CurrentThemeIndex + 1) % Themes.Num();
+    
+    // 테마가 하나도 없으면 중단
+    if (Themes.Num() == 0) return;
+
+    UE_LOG(LogTemp, Log, TEXT("ThemeManager: [Debug] Space 입력 -> 다음 테마(%d) 전환"), NextIndex);
+    ActivateTheme(NextIndex);
+}

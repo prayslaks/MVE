@@ -171,7 +171,17 @@ private:
     
     UPROPERTY(EditAnywhere, Category = "Theme|Config")
     TArray<FString> ClearKeywords = { TEXT("되돌려"), TEXT("원래대로"), TEXT("초기화"), TEXT("끄") };
+    
+    void SetupDebugInput();
+    
+    /** 숫자 키 입력 핸들러 */
+    void OnDebugKey_Theme1(); // 1번 키 -> 인덱스 0
+    void OnDebugKey_Theme2(); // 2번 키 -> 인덱스 1
+    void OnDebugKey_Theme3(); // 3번 키 -> 인덱스 2
+    void OnDebugKey_Next();   // SpaceBar -> 다음 테마 순환
 
 private:
     bool HasClearKeyword(const FString& Text) const;
+    
+    
 };
